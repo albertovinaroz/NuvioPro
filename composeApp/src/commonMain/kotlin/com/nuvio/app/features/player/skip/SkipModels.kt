@@ -28,6 +28,14 @@ enum class NextEpisodeThresholdMode {
     MINUTES_BEFORE_END,
 }
 
+@Serializable
+data class ArmEntry(
+    @SerialName("myanimelist") val myanimelist: Int? = null,
+    @SerialName("anilist") val anilist: Int? = null,
+    @SerialName("kitsu") val kitsu: Int? = null,
+    @SerialName("imdb") val imdb: String? = null,
+)
+
 // --- IntroDb API response models ---
 
 @Serializable
@@ -82,16 +90,6 @@ data class AniSkipResult(
 data class AniSkipInterval(
     @SerialName("startTime") val startTime: Double,
     @SerialName("endTime") val endTime: Double,
-)
-
-// --- ARM API response models ---
-
-@Serializable
-data class ArmEntry(
-    @SerialName("myanimelist") val myanimelist: Int? = null,
-    @SerialName("anilist") val anilist: Int? = null,
-    @SerialName("kitsu") val kitsu: Int? = null,
-    @SerialName("imdb") val imdb: String? = null,
 )
 
 // --- Anime-Skip GraphQL API response models ---
