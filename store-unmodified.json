@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.14",
+          "buildVersion": "118",
+          "date": "2026-09-06T10:09:52Z",
+          "localizedDescription": "# Nuvio Unmodified 0.4.14 (draft)\n\nUnmodified build of the NuvioMedia source. Not affiliated with or endorsed by NuvioMedia.\n\n### Changelog\n- fix(player): original audio language preference @tapframe\n- fix(player): allow minimum device brightness @tapframe\n- use Android User-Agent so IPTV DASH streams do not 403 (#1863) @halibiram\n- feat: updated Spanish string resource file for application localization (#1861) @IberianSoldierPC\n- fix(player): align mobile control icons with tv @tapframe\n- i18n(el): translate delayed addon content state strings (#1851) @nosvasedis\n- fix(streams): honor autoplay source loading scope @tapframe\n- Updated BG translation and fixes with later versiond (#1838) @viiktr\n- fix(player): persist next episode dismissal @tapframe\n- Use Simkl for anime ID resolution in skip-intro (replaces ARM) (#1836) @skoruppa\n- fix(details): map addon specials season posters @tapframe\n- fix(details): optimize large vertical episode lists (#1835) @ThePunpun\n- fix(updater): apply theme gradient to download progress @tapframe\n- fix(player): keep subtitle picker stable for duplicate tracks (#1800) @halibiram",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.14/nuvio-0.4.14-unmodified-release.ipa",
+          "size": 51778438,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.13",
           "buildVersion": "117",
           "date": "2026-08-31T08:09:29Z",
