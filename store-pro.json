@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.14-b1",
+          "buildVersion": "133",
+          "date": "2026-09-06T12:01:53Z",
+          "localizedDescription": "# Nuvio Pro 0.4.14-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- fix(ios): implement audio language preferences bridge @luqmanfadlli\n- fix(player): original audio language preference @tapframe\n- fix(player): allow minimum device brightness @tapframe\n- use Android User-Agent so IPTV DASH streams do not 403 (#1863) @halibiram\n- feat: updated Spanish string resource file for application localization (#1861) @IberianSoldierPC\n- fix(player): align mobile control icons with tv @tapframe\n- i18n(el): translate delayed addon content state strings (#1851) @nosvasedis\n- fix(streams): honor autoplay source loading scope @tapframe\n- Updated BG translation and fixes with later versiond (#1838) @viiktr\n- fix(player): persist next episode dismissal @tapframe\n- Use Simkl for anime ID resolution in skip-intro (replaces ARM) (#1836) @skoruppa\n- fix(details): map addon specials season posters @tapframe\n- fix(details): optimize large vertical episode lists (#1835) @ThePunpun\n- fix(updater): apply theme gradient to download progress @tapframe\n- fix(player): keep subtitle picker stable for duplicate tracks (#1800) @halibiram\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.14-b1/nuvio-0.4.14-b1-pro-release.ipa",
+          "size": 66826422,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.13-b7",
           "buildVersion": "132",
           "date": "2026-09-04T12:30:56Z",
