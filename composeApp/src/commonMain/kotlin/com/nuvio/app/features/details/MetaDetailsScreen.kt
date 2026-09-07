@@ -652,10 +652,19 @@ fun MetaDetailsScreen(
                         heroTrailerPlaybackSource = source
                     }
                 }
-                val onBackFromDetails: () -> Unit = {
+                // Stops the hero trailer (audio + the native mute button it drives, see
+                // HeroTrailerAudioState) before leaving this screen for any reason — the back
+                // button, or actually starting playback. Without this, playWhenReady stays true
+                // and the trailer keeps playing (audibly) behind whatever screen comes next, and
+                // its native overlay button — rendered outside Compose's own screen bounds for the
+                // glass-blur effect — stays visually stuck on top of it too.
+                val stopHeroTrailerForNavigation: () -> Unit = {
                     isLeavingDetails = true
                     heroTrailerReady = false
                     heroTrailerFinished = true
+                }
+                val onBackFromDetails: () -> Unit = {
+                    stopHeroTrailerForNavigation()
                     onBack()
                 }
                 val resolveTrailer: (MetaTrailer) -> Unit = remember(meta.id, inAppTrailerPlaybackEnabled, uriHandler) {
@@ -709,6 +718,7 @@ fun MetaDetailsScreen(
                     }
                 }
                 val onPrimaryPlayClick: () -> Unit = {
+                    stopHeroTrailerForNavigation()
                     when {
                         (meta.type == "series" || hasEpisodes) && seriesAction != null -> {
                             onPlay?.invoke(
@@ -755,6 +765,7 @@ fun MetaDetailsScreen(
                     ?.takeIf { showManualPlayOption }
                     ?.let { manualPlay ->
                         {
+                            stopHeroTrailerForNavigation()
                             when {
                                 (meta.type == "series" || hasEpisodes) && seriesAction != null -> {
                                     manualPlay(
@@ -813,6 +824,7 @@ fun MetaDetailsScreen(
                         episodeNumber = episode,
                     )
                         ?.takeUnless { it.isCompleted }
+                    stopHeroTrailerForNavigation()
                     onPlay?.invoke(
                         meta.type,
                         streamVideoId,
@@ -847,6 +859,7 @@ fun MetaDetailsScreen(
                         episodeNumber = episode,
                     )
                         ?.takeUnless { it.isCompleted }
+                    stopHeroTrailerForNavigation()
                     onPlayManually?.invoke(
                         meta.type,
                         streamVideoId,
