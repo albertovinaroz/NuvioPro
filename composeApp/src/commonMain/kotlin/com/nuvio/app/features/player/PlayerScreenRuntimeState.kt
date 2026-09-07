@@ -225,6 +225,27 @@ internal class PlayerScreenRuntime(
     var subtitleAutoSyncState by mutableStateOf(SubtitleAutoSyncUiState())
 
     /**
+     * True while subtitles are showing only because [notifyRewindOccurred] or
+     * [notifyVolumeLevelForAutoSubtitle] turned them on automatically — not because the user (or a
+     * restored/persisted preference) actually chose a track. See PlayerScreenRuntimeAutoSubtitles.kt.
+     */
+    var isAutoSubtitleShowing by mutableStateOf(false)
+
+    /** Non-null while an auto-show triggered by rewinding is still waiting to hide again: the
+     * playback position it needs to reach (going forward, normal playback) before it does. */
+    var autoSubtitleRewindWatermarkMs by mutableStateOf<Long?>(null)
+
+    /** True while an auto-show triggered by muting (or zero volume) is still in effect. */
+    var isAutoSubtitleMuteActive by mutableStateOf(false)
+
+    /** Whether the previous volume/mute reading was muted — lets us detect the mute→unmute edge. */
+    var wasAutoSubtitleVolumeMuted by mutableStateOf(false)
+
+    /** Pending activate/deactivate triggered by a mute-state change, deferred off the volume drag
+     * gesture's per-frame callback (see notifyVolumeLevelForAutoSubtitle). */
+    var autoSubtitleMuteActivationJob by mutableStateOf<Job?>(null)
+
+    /**
      * True while anything above the player surface owns the screen. Keyboard shortcuts are
      * suppressed then, so an overlay's own keys (a subtitle search field, list navigation) keep
      * working. Kept here rather than rebuilt at each call site so the modal set only has to be
