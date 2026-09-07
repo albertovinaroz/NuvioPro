@@ -324,6 +324,7 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         }
     }
 
+    /// Asset shown while this tab *is* selected — the original solid glyph, unchanged.
     var iconAssetName: String {
         switch self {
         case .home: return "NuvioTabHome"
@@ -331,6 +332,19 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         case .library: return "NuvioTabLibrary"
         case .liveTv: return "NuvioTabLiveTv"
         case .settings: return "NuvioTabProfile"
+        }
+    }
+
+    /// Asset shown while this tab is *not* selected — the same glyph traced as a stroke instead
+    /// of filled, so the unselected state reads as "empty" rather than only changing tint. Nil
+    /// where there's no bespoke outline asset (Live TV, Settings) — those fall back to
+    /// [outlineFallbackSystemImage] / the profile avatar instead.
+    var outlineIconAssetName: String? {
+        switch self {
+        case .home: return "NuvioTabHomeOutline"
+        case .search: return "NuvioTabSearchOutline"
+        case .library: return "NuvioTabLibraryOutline"
+        case .liveTv, .settings: return nil
         }
     }
 
@@ -343,13 +357,24 @@ enum NuvioAppTab: String, CaseIterable, Hashable {
         case .settings: return "person.crop.circle.fill"
         }
     }
+
+    var outlineFallbackSystemImage: String {
+        switch self {
+        case .home: return "house"
+        case .search: return "magnifyingglass"
+        case .library: return "rectangle.stack"
+        case .liveTv: return "tv"
+        case .settings: return "person.crop.circle"
+        }
+    }
 }
 
 private enum NuvioNativeTabIcon {
     private static let legacyStaticIconSize = CGSize(width: 25, height: 25)
 
-    static func image(for tab: NuvioAppTab) -> UIImage {
-        if let asset = UIImage(named: tab.iconAssetName) {
+    static func image(for tab: NuvioAppTab, selected: Bool) -> UIImage {
+        let assetName = selected ? tab.iconAssetName : (tab.outlineIconAssetName ?? tab.iconAssetName)
+        if let asset = UIImage(named: assetName) {
             return UIGraphicsImageRenderer(size: legacyStaticIconSize).image { _ in
                 asset
                     .withRenderingMode(.alwaysOriginal)
@@ -357,7 +382,8 @@ private enum NuvioNativeTabIcon {
             }.withRenderingMode(.alwaysTemplate)
         }
 
-        return (UIImage(systemName: tab.fallbackSystemImage) ?? UIImage())
+        let symbolName = selected ? tab.fallbackSystemImage : tab.outlineFallbackSystemImage
+        return (UIImage(systemName: symbolName) ?? UIImage())
             .withRenderingMode(.alwaysTemplate)
     }
 
@@ -370,7 +396,7 @@ private enum NuvioNativeTabIcon {
         accent: UIColor
     ) -> UIImage {
         guard name != nil || avatarColor != nil || avatarImage != nil else {
-            return image(for: .settings)
+            return image(for: .settings, selected: selected)
         }
 
         let size = CGSize(width: 28, height: 28)
@@ -406,7 +432,7 @@ private enum NuvioNativeTabIcon {
                     withAttributes: attributes
                 )
             } else {
-                image(for: .settings)
+                image(for: .settings, selected: selected)
                     .withTintColor(baseColor, renderingMode: .alwaysOriginal)
                     .draw(in: rect.insetBy(dx: 5.5, dy: 5.5))
             }
@@ -481,7 +507,7 @@ final class NativeTabIconStore: ObservableObject {
 
     func image(for tab: NuvioAppTab, selected: Bool) -> UIImage {
         guard tab == .settings else {
-            return NuvioNativeTabIcon.image(for: tab)
+            return NuvioNativeTabIcon.image(for: tab, selected: selected)
         }
 
         let defaults = UserDefaults.standard

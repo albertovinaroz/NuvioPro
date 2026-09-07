@@ -28,9 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -102,9 +100,6 @@ import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_live_tv
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
-import nuvio.composeapp.generated.resources.sidebar_library
-import nuvio.composeapp.generated.resources.sidebar_search
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -304,7 +299,7 @@ internal fun TabletFloatingTopBar(
                     onClick = { onTabSelected(AppScreenTab.Home) },
                     icon = {
                         Icon(
-                            imageVector = Icons.Filled.Home,
+                            imageVector = AppScreenTab.Home.icon(selectedTab == AppScreenTab.Home),
                             contentDescription = stringResource(Res.string.compose_nav_home),
                             modifier = Modifier.size(NuvioTokens.Space.s18),
                             tint = if (selectedTab == AppScreenTab.Home) {
@@ -321,7 +316,7 @@ internal fun TabletFloatingTopBar(
                     onClick = { onTabSelected(AppScreenTab.Search) },
                     icon = {
                         Icon(
-                            painter = painterResource(Res.drawable.sidebar_search),
+                            imageVector = AppScreenTab.Search.icon(selectedTab == AppScreenTab.Search),
                             contentDescription = stringResource(Res.string.compose_nav_search),
                             modifier = Modifier.size(NuvioTokens.Space.s18),
                             tint = if (selectedTab == AppScreenTab.Search) {
@@ -338,7 +333,7 @@ internal fun TabletFloatingTopBar(
                     onClick = { onTabSelected(AppScreenTab.Library) },
                     icon = {
                         Icon(
-                            painter = painterResource(Res.drawable.sidebar_library),
+                            imageVector = AppScreenTab.Library.icon(selectedTab == AppScreenTab.Library),
                             contentDescription = stringResource(Res.string.compose_nav_library),
                             modifier = Modifier.size(NuvioTokens.Space.s18),
                             tint = if (selectedTab == AppScreenTab.Library) {
@@ -356,7 +351,7 @@ internal fun TabletFloatingTopBar(
                         onClick = { onTabSelected(AppScreenTab.LiveTv) },
                         icon = {
                             Icon(
-                                imageVector = Icons.Filled.Tv,
+                                imageVector = AppScreenTab.LiveTv.icon(selectedTab == AppScreenTab.LiveTv),
                                 contentDescription = stringResource(Res.string.compose_nav_live_tv),
                                 modifier = Modifier.size(18.dp),
                                 tint = if (selectedTab == AppScreenTab.LiveTv) {

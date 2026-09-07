@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -38,8 +35,6 @@ import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_live_tv
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
-import nuvio.composeapp.generated.resources.sidebar_library
-import nuvio.composeapp.generated.resources.sidebar_search
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -87,26 +82,26 @@ internal fun MainTabsDestination(
                         NavItem(
                             selected = selectedTab == AppScreenTab.Home,
                             onClick = { onTabSelected(AppScreenTab.Home) },
-                            icon = Icons.Filled.Home,
+                            icon = AppScreenTab.Home.icon(selectedTab == AppScreenTab.Home),
                             contentDescription = stringResource(Res.string.compose_nav_home),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Search,
                             onClick = { onTabSelected(AppScreenTab.Search) },
-                            icon = Res.drawable.sidebar_search,
+                            icon = AppScreenTab.Search.icon(selectedTab == AppScreenTab.Search),
                             contentDescription = stringResource(Res.string.compose_nav_search),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
                             onClick = { onTabSelected(AppScreenTab.Library) },
-                            icon = Res.drawable.sidebar_library,
+                            icon = AppScreenTab.Library.icon(selectedTab == AppScreenTab.Library),
                             contentDescription = stringResource(Res.string.compose_nav_library),
                         )
                         if (showLiveTvInNavigation) {
                             NavItem(
                                 selected = selectedTab == AppScreenTab.LiveTv,
                                 onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                                icon = Icons.Filled.Tv,
+                                icon = AppScreenTab.LiveTv.icon(selectedTab == AppScreenTab.LiveTv),
                                 contentDescription = stringResource(Res.string.compose_nav_live_tv),
                             )
                         }
@@ -174,21 +169,21 @@ internal fun MainTabsDestination(
                         NavItem(
                             selected = selectedTab == AppScreenTab.Home,
                             onClick = { onTabSelected(AppScreenTab.Home) },
-                            icon = Icons.Filled.Home,
+                            icon = AppScreenTab.Home.icon(selectedTab == AppScreenTab.Home),
                             contentDescription = stringResource(Res.string.compose_nav_home),
                             label = stringResource(Res.string.compose_nav_home),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Search,
                             onClick = { onTabSelected(AppScreenTab.Search) },
-                            icon = Res.drawable.sidebar_search,
+                            icon = AppScreenTab.Search.icon(selectedTab == AppScreenTab.Search),
                             contentDescription = stringResource(Res.string.compose_nav_search),
                             label = stringResource(Res.string.compose_nav_search),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
                             onClick = { onTabSelected(AppScreenTab.Library) },
-                            icon = Res.drawable.sidebar_library,
+                            icon = AppScreenTab.Library.icon(selectedTab == AppScreenTab.Library),
                             contentDescription = stringResource(Res.string.compose_nav_library),
                             label = stringResource(Res.string.compose_nav_library),
                         )
@@ -196,7 +191,7 @@ internal fun MainTabsDestination(
                             NavItem(
                                 selected = selectedTab == AppScreenTab.LiveTv,
                                 onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                                icon = Icons.Filled.Tv,
+                                icon = AppScreenTab.LiveTv.icon(selectedTab == AppScreenTab.LiveTv),
                                 contentDescription = stringResource(Res.string.compose_nav_live_tv),
                                 label = stringResource(Res.string.compose_nav_live_tv),
                             )
