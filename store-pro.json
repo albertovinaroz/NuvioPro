@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.14-b2",
+          "buildVersion": "134",
+          "date": "2026-09-07T12:16:52Z",
+          "localizedDescription": "# Nuvio Pro 0.4.14-b2\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n- fix(downloads): fix custom download folder not sticking, and picker not opening on iPad @albertovinaroz\n- feat(player): auto-show subtitles on rewind and mute @albertovinaroz\n- fix(details): stop hero trailer when leaving details to play something @albertovinaroz\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.14-b2/nuvio-0.4.14-b2-pro-release.ipa",
+          "size": 66831263,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14-b1",
           "buildVersion": "133",
           "date": "2026-09-06T12:01:53Z",
