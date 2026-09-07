@@ -4,15 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.nuvio.app.core.ui.topmostPresentingViewController
 import com.nuvio.app.features.downloads.createDownloadLocationBookmarkBase64
 import com.nuvio.app.features.downloads.resolveDownloadLocationBookmark
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.Foundation.NSURL
-import platform.UIKit.UIApplication
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerMode
 import platform.UIKit.UIDocumentPickerViewController
-import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 
 @OptIn(ExperimentalForeignApi::class)
@@ -26,7 +25,7 @@ internal actual fun DownloadLocationPicker(
     val delegateHolder = remember { mutableStateOf<DownloadLocationDocumentPickerDelegate?>(null) }
 
     LaunchedEffect(Unit) {
-        val presenter = topmostViewController()
+        val presenter = topmostPresentingViewController()
         if (presenter == null) {
             onDismiss()
             return@LaunchedEffect
@@ -73,12 +72,4 @@ private class DownloadLocationDocumentPickerDelegate(
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
         onDismissed()
     }
-}
-
-private fun topmostViewController(): UIViewController? {
-    var controller = UIApplication.sharedApplication.keyWindow?.rootViewController
-    while (controller?.presentedViewController != null) {
-        controller = controller.presentedViewController
-    }
-    return controller
 }

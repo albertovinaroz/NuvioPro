@@ -25,17 +25,20 @@ internal actual object DownloadsStorage {
             ?.apply()
     }
 
+    // Device-level, deliberately *not* profile-scoped (see DownloadsSettingsRepository) — unlike
+    // payloadKey above, which is per-profile on purpose since each profile's downloaded content
+    // list is its own.
     actual fun getDownloadLocationUri(): String? =
-        preferences?.getString(ProfileScopedKey.of(downloadLocationUriKey), null)
+        preferences?.getString(downloadLocationUriKey, null)
 
     actual fun setDownloadLocationUri(uri: String?) {
         preferences
             ?.edit()
             ?.run {
                 if (uri == null) {
-                    remove(ProfileScopedKey.of(downloadLocationUriKey))
+                    remove(downloadLocationUriKey)
                 } else {
-                    putString(ProfileScopedKey.of(downloadLocationUriKey), uri)
+                    putString(downloadLocationUriKey, uri)
                 }
             }
             ?.apply()
