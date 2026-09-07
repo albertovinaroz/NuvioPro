@@ -67,11 +67,56 @@ struct NuvioGlassTabBar: View {
         isExpanded ? appCoordinator.availableTabs : [selectedTab]
     }
 
+    // Real UITabBar-hosted content gets drag-across-tabs for free from UIKit; this custom pill
+    // (the only tab bar instrument `morphed` shows — see the real bar staying hidden below) never
+    // had that, since it was built from a row of plain Buttons that only ever recognize taps. This
+    // reproduces it by hand: track each item's frame, and while the drag gesture below is active,
+    // whichever tab the finger is currently over becomes selected — matching the system bar's own
+    // feel, including a haptic tick on every tab it crosses into.
+    private static let tabBarCoordinateSpaceName = "nuvio.tabbar.row"
+    @State private var tabFrames: [NuvioAppTab: CGRect] = [:]
+    @State private var dragActiveTab: NuvioAppTab?
+
+    private struct TabFramePreferenceKey: PreferenceKey {
+        static var defaultValue: [NuvioAppTab: CGRect] = [:]
+        static func reduce(value: inout [NuvioAppTab: CGRect], nextValue: () -> [NuvioAppTab: CGRect]) {
+            value.merge(nextValue()) { _, new in new }
+        }
+    }
+
+    private var dragAcrossTabsGesture: some Gesture {
+        DragGesture(minimumDistance: 8, coordinateSpace: .named(Self.tabBarCoordinateSpaceName))
+            .onChanged { value in
+                guard isExpanded else { return }
+                guard let hitTab = tabFrames.first(where: { $0.value.contains(value.location) })?.key,
+                      hitTab != selectedTab else { return }
+                if dragActiveTab != hitTab {
+                    dragActiveTab = hitTab
+                    if Self.tapHapticsEnabled {
+                        Self.tapFeedback.impactOccurred()
+                        Self.tapFeedback.prepare()
+                    }
+                    appCoordinator.selectedTab = hitTab
+                }
+            }
+            .onEnded { _ in
+                dragActiveTab = nil
+            }
+    }
+
     var body: some View {
         GlassEffectContainer(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(visibleTabs, id: \.self) { tab in
                     item(for: tab)
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear.preference(
+                                    key: TabFramePreferenceKey.self,
+                                    value: [tab: geometry.frame(in: .named(Self.tabBarCoordinateSpaceName))]
+                                )
+                            }
+                        )
                         .transition(.opacity)
                 }
             }
@@ -80,6 +125,9 @@ struct NuvioGlassTabBar: View {
             .glassEffect(.clear.interactive(), in: Capsule())
             .glassEffectID(Self.barGlassID, in: glassNamespace)
         }
+        .coordinateSpace(name: Self.tabBarCoordinateSpaceName)
+        .onPreferenceChange(TabFramePreferenceKey.self) { tabFrames = $0 }
+        .simultaneousGesture(dragAcrossTabsGesture)
         .frame(maxWidth: .infinity, alignment: isExpanded ? .center : .leading)
         .padding(.horizontal, isExpanded ? 20 : 16)
         .padding(.bottom, bottomInset)
