@@ -547,7 +547,12 @@ private fun MobileStreamsLayout(
                 }
 
                 Column(modifier = Modifier.fillMaxSize()) {
-                    if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
+                    // AnimatedVisibility, not a raw `if` — see the matching comment in
+                    // StreamsTabletLayout.kt (luqmanfadlli/NuvioMobile-Enhanced#99).
+                    AnimatedVisibility(
+                        visible = (resumePositionMs != null && resumePositionMs > 0L) ||
+                            (resumeProgressFraction != null && resumeProgressFraction > 0f),
+                    ) {
                         ResumeBanner(
                             positionMs = resumePositionMs,
                             progressFraction = resumeProgressFraction,

@@ -1182,8 +1182,20 @@ private struct DetailDestinationView: View {
         // it against the nav bar's own (shorter than 44pt) row height, which looks the same as
         // the original oval/shadow symptom from further away. A plain overlay avoids the toolbar's
         // sizing entirely, same as Home's copy of this button, which has never had this problem.
+        //
+        // Gated to DetailRoute specifically (not just !usesComposeNavigationHeader, which also
+        // covers StreamRoute): a hero trailer only ever plays on the actual metadata detail page.
+        // Ungated, this observed the same global HeroTrailerAudioState on every route pushed
+        // through this view — including StreamRoute — so a trailer that was still (or briefly)
+        // reported "visible" when the user tapped Play left this 44x44 native button alive in the
+        // top-trailing corner of the stream-selection screen too, in the same on-screen region as
+        // its addon filter chips in landscape. Investigated as a lead for
+        // luqmanfadlli/NuvioMobile-Enhanced#99 but ruled out as the (sole) cause — the actual
+        // culprit was the native nav bar, see StreamRoute.hidesNavigationBar. Still a real,
+        // independent bug worth fixing on its own: this button has no business showing up outside
+        // the actual detail page regardless.
         .overlay(alignment: .topTrailing) {
-            if trailerMuteViewModel.visible {
+            if wrapper.route is DetailRoute && trailerMuteViewModel.visible {
                 HeroTrailerMuteButton(muted: trailerMuteViewModel.muted) {
                     trailerMuteViewModel.toggle()
                 }
@@ -1208,8 +1220,16 @@ private struct DetailDestinationView: View {
             wrapper.route.hidesNavigationBar ? Visibility.hidden : Visibility.visible,
             for: .navigationBar
         )
-        .onAppear(perform: trailerMuteViewModel.startObserving)
-        .onDisappear(perform: trailerMuteViewModel.stopObserving)
+        .onAppear {
+            if wrapper.route is DetailRoute {
+                trailerMuteViewModel.startObserving()
+            }
+        }
+        .onDisappear {
+            if wrapper.route is DetailRoute {
+                trailerMuteViewModel.stopObserving()
+            }
+        }
     }
 
     @ViewBuilder

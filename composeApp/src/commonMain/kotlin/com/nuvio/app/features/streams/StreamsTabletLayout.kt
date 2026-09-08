@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -185,7 +186,16 @@ internal fun TabletStreamsLayout(
                             .fillMaxSize()
                             .padding(16.dp),
                     ) {
-                        if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
+                        // AnimatedVisibility, not a raw `if`: a plain conditional insertion of a
+                        // sibling into a Column is a real (if minor) hit-test/animation footgun in
+                        // Compose. Investigated as a lead for luqmanfadlli/NuvioMobile-Enhanced#99
+                        // (addon chips unreachable in landscape on first play) but ruled out — the
+                        // actual cause was the native nav bar, see StreamRoute.hidesNavigationBar.
+                        // Left as a harmless correctness improvement.
+                        AnimatedVisibility(
+                            visible = (resumePositionMs != null && resumePositionMs > 0L) ||
+                                (resumeProgressFraction != null && resumeProgressFraction > 0f),
+                        ) {
                             ResumeBanner(
                                 positionMs = resumePositionMs,
                                 progressFraction = resumeProgressFraction,

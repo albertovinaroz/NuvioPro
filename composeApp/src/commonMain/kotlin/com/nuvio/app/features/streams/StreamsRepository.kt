@@ -277,12 +277,15 @@ object StreamsRepository {
 
             fun publishAddonGroup(group: AddonStreamGroup) {
                 _uiState.update { current ->
-                    val updated = StreamAutoPlaySelector.orderAddonStreams(
-                        groups = current.groups.map { currentGroup ->
-                            if (currentGroup.addonId == group.addonId) group else currentGroup
-                        },
-                        installedOrder = installedAddonOrder,
-                    )
+                    // Deliberately NOT re-running orderAddonStreams here: that would re-rank
+                    // (and can promote a direct-debrid group to the front of) the addon filter
+                    // row every time one addon finishes loading, making its chips visibly jump
+                    // around while streams are still streaming in — the user ends up chasing a
+                    // moving target. Each addon's position is locked in once at initialGroups
+                    // construction; later updates only refresh a group's own data in place.
+                    val updated = current.groups.map { currentGroup ->
+                        if (currentGroup.addonId == group.addonId) group else currentGroup
+                    }
                     val anyLoading = updated.any { it.isLoading }
                     current.copy(
                         groups = updated,
@@ -558,31 +561,30 @@ object StreamsRepository {
                         }
 
                         _uiState.update { current ->
-                            val updated = StreamAutoPlaySelector.orderAddonStreams(
-                                groups = current.groups.map { group ->
-                                    if (group.addonId != completion.addonId) {
-                                        group
+                            // See the comment on the equivalent update in publishAddonGroup above:
+                            // no re-sort here either, so this group's chip stays put.
+                            val updated = current.groups.map { group ->
+                                if (group.addonId != completion.addonId) {
+                                    group
+                                } else {
+                                    val mergedStreams = if (completion.streams.isEmpty()) {
+                                        group.streams
                                     } else {
-                                        val mergedStreams = if (completion.streams.isEmpty()) {
-                                            group.streams
-                                        } else {
-                                            (group.streams + completion.streams).sortedForGroupedDisplay()
-                                        }
-                                        val stillLoading = remaining > 0
-                                        val finalError = if (mergedStreams.isEmpty() && !stillLoading) {
-                                            pluginFirstErrorByAddonId[completion.addonId]
-                                        } else {
-                                            null
-                                        }
-                                        group.copy(
-                                            streams = mergedStreams,
-                                            isLoading = stillLoading,
-                                            error = finalError,
-                                        )
+                                        (group.streams + completion.streams).sortedForGroupedDisplay()
                                     }
-                                },
-                                installedOrder = installedAddonOrder,
-                            )
+                                    val stillLoading = remaining > 0
+                                    val finalError = if (mergedStreams.isEmpty() && !stillLoading) {
+                                        pluginFirstErrorByAddonId[completion.addonId]
+                                    } else {
+                                        null
+                                    }
+                                    group.copy(
+                                        streams = mergedStreams,
+                                        isLoading = stillLoading,
+                                        error = finalError,
+                                    )
+                                }
+                            }
                             val anyLoading = updated.any { it.isLoading }
                             current.copy(
                                 groups = updated,

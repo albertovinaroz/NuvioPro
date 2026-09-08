@@ -133,7 +133,22 @@ data class FolderDetailRoute(
 data class StreamRoute(
     val launchId: Long,
     override val title: String = "",
-) : AppRoute
+) : AppRoute {
+    // Real native nav bar left visible (the default) meant StreamsScreen's own NuvioBackButton
+    // silently rendered nothing (see NuvioBackButton's early-return on
+    // LocalUseNativeNavigation.current && !LocalNativeNavigationBarHidden.current) — the "<"
+    // button on screen was always the *native* one, not Compose's. On iOS 26 that real
+    // UINavigationBar also participates in the system's automatic content-scroll-view detection
+    // (the same contentScrollView(for:) machinery fought at length elsewhere in the tab bar), and
+    // its actual native touch-intercepting bounds don't reliably match what's visually drawn —
+    // root cause of luqmanfadlli/NuvioMobile-Enhanced#99 (addon filter chips unreachable in
+    // landscape on first play: touches were being swallowed by this native bar before ever
+    // reaching Compose, confirmed by an on-screen tap logger not seeing them at all). Hiding it
+    // removes the native chrome entirely and hands the back button to Compose instead, matching
+    // what this screen's own code already assumed it was doing.
+    override val hidesNavigationBar: Boolean
+        get() = true
+}
 
 @Serializable
 data class CatalogRoute(
