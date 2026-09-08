@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.14-b4",
+          "buildVersion": "136",
+          "date": "2026-09-08T12:47:55Z",
+          "localizedDescription": "# Nuvio Pro 0.4.14-b4\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n- fix(streams): stop native nav bar from swallowing addon filter taps in landscape @albertovinaroz\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.14-b4/nuvio-0.4.14-b4-pro-release.ipa",
+          "size": 66849927,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14-b3",
           "buildVersion": "135",
           "date": "2026-09-07T21:54:19Z",
