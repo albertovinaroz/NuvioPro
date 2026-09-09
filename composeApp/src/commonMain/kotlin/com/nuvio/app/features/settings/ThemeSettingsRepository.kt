@@ -74,7 +74,7 @@ object ThemeSettingsRepository {
         _liquidGlassNativeTabBarEnabled.value = NuvioTabBarBehavior.Default.isEnabled
         _dynamicArtworkBackgroundEnabled.value = false
         _showCatalogAccentEnabled.value = false
-        NativeTabBridge.publishAccentColor(AppTheme.WHITE.nativeTabAccentHex())
+        NativeTabBridge.publishAccentColor(ThemeColors.getColorPalette(AppTheme.WHITE).nativeAccentHex)
         NativeTabBridge.publishTabBarBehavior(NuvioTabBarBehavior.Default)
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarStyle.value = NavBarStyle.ADAPTIVE
