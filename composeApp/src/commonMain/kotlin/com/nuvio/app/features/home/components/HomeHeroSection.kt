@@ -326,8 +326,6 @@ internal fun HomeHeroSection(
                     }
                 }
             }
-            val heroScrollScale = heroBackgroundScrollScale(scrollOffsetPx)
-            val heroScrollTranslationY = heroBackgroundScrollTranslationY(scrollOffsetPx)
             val currentPage = pagerState.currentPage.coerceIn(items.indices)
             val visiblePages = listOf(
                 currentPage,
@@ -510,13 +508,12 @@ internal fun HomeHeroSection(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .graphicsLayer {
+                                            val scrollScale = if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
                                             alpha = layer.visibility
                                             translationX = -layer.offset * heroWidthPx * artworkParallax
-                                            translationY = if (isCardStyle) 0f else heroScrollTranslationY
-                                            scaleX = artworkBaseScale *
-                                                if (isCardStyle) 1f else heroScrollScale
-                                            scaleY = artworkBaseScale *
-                                                if (isCardStyle) 1f else heroScrollScale
+                                            translationY = if (isCardStyle) 0f else heroBackgroundScrollTranslationY(scrollOffsetPx)
+                                            scaleX = artworkBaseScale * scrollScale
+                                            scaleY = artworkBaseScale * scrollScale
                                         },
                                     alignment = if (layout.isTablet) Alignment.TopCenter else Alignment.Center,
                                     contentScale = ContentScale.Crop,
@@ -547,11 +544,12 @@ internal fun HomeHeroSection(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .graphicsLayer {
+                                        val scrollScale = if (isCardStyle) 1f else heroBackgroundScrollScale(scrollOffsetPx)
                                         alpha = trailerReadyAlpha * currentPageVisibility
                                         translationX = -currentPageOffset * heroWidthPx * artworkParallax
-                                        translationY = if (isCardStyle) 0f else heroScrollTranslationY
-                                        scaleX = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
-                                        scaleY = artworkBaseScale * if (isCardStyle) 1f else heroScrollScale
+                                        translationY = if (isCardStyle) 0f else heroBackgroundScrollTranslationY(scrollOffsetPx)
+                                        scaleX = artworkBaseScale * scrollScale
+                                        scaleY = artworkBaseScale * scrollScale
                                     },
                                 onReady = {
                                     if (!heroTrailerFinished) heroTrailerReady = true
@@ -1103,7 +1101,11 @@ private fun mobileHeroHeight(
 
     val viewportDrivenHeight = viewportHeightDp?.let { (it * MOBILE_HERO_VIEWPORT_RATIO).dp }
     val widthFallbackHeight = (maxWidthDp * 1.16f).dp
-    val baseHeight = viewportDrivenHeight ?: widthFallbackHeight
+    val baseHeight = if (mobileBelowSectionHeightHintDp == null) {
+        viewportDrivenHeight?.coerceAtMost(widthFallbackHeight) ?: widthFallbackHeight
+    } else {
+        viewportDrivenHeight ?: widthFallbackHeight
+    }
 
     val maxAllowedFromViewportDp = if (viewportHeightDp != null && mobileBelowSectionHeightHintDp != null) {
         viewportHeightDp - mobileBelowSectionHeightHintDp

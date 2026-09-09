@@ -159,7 +159,7 @@ object DownloadsRepository {
             episodeTitle = episodeTitle,
             fallbackTitle = stream.streamLabel,
             sourceUrl = sourceUrl,
-            nowEpochMs = now,
+            downloadId = downloadId,
         )
 
         val item = DownloadItem(
@@ -254,6 +254,16 @@ object DownloadsRepository {
         resumeDownload(downloadId)
     }
 
+    internal fun reattachBackgroundDownload(downloadId: String) {
+        if (!hasLoaded) return
+        val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
+        activeHandles.remove(downloadId)?.cancel()
+        val restored = DownloadsPlatformDownloader.restoreItem(item)
+        replaceItem(restored)
+        persist()
+        if (restored.status == DownloadStatus.Downloading) startDownload(restored)
+    }
+
     fun cancelDownload(downloadId: String) {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
@@ -278,14 +288,7 @@ object DownloadsRepository {
         var shouldPersistNormalized = false
         val normalized = DownloadsCodec.decodeItems(payload)
             .map { item ->
-                val statusNormalized = if (item.status == DownloadStatus.Downloading) {
-                    item.copy(
-                        status = DownloadStatus.Paused,
-                        errorMessage = null,
-                    )
-                } else {
-                    item
-                }
+                val statusNormalized = DownloadsPlatformDownloader.restoreItem(item)
 
                 val localUriNormalized = normalizeCompletedLocalFileUri(statusNormalized)
                 if (localUriNormalized != item) {
@@ -299,6 +302,8 @@ object DownloadsRepository {
         if (shouldPersistNormalized) {
             persist()
         }
+        normalized.filter { it.status == DownloadStatus.Downloading && it.id !in activeHandles }
+            .forEach(::startDownload)
     }
 
     private fun startDownload(item: DownloadItem) {
@@ -307,6 +312,7 @@ object DownloadsRepository {
             onProgress = { downloadedBytes, totalBytes -> reportPlatformProgress(item.id, downloadedBytes, totalBytes) },
             onSuccess = { localFileUri, totalBytes -> reportPlatformSuccess(item.id, localFileUri, totalBytes) },
             onFailure = { message -> reportPlatformFailure(item.id, message) },
+            onPaused = { reportPlatformPaused(item.id) },
         )
 
         activeHandles[item.id] = handle
@@ -370,6 +376,17 @@ object DownloadsRepository {
         }
     }
 
+    internal fun reportPlatformPaused(downloadId: String) {
+        ensureLoaded()
+        activeHandles.remove(downloadId)
+        mutateItem(downloadId) { current ->
+            if (current.status != DownloadStatus.Downloading) current else current.copy(
+                status = DownloadStatus.Paused,
+                errorMessage = null,
+            )
+        }
+    }
+
     /**
      * Rebuilds the request for a download the platform layer knows only by ID — used when a
      * background transfer's completion callback fires with no in-memory registration left (a cold
@@ -380,12 +397,7 @@ object DownloadsRepository {
         return _uiState.value.items.firstOrNull { it.id == downloadId }?.toPlatformRequest()
     }
 
-    private fun DownloadItem.toPlatformRequest(): DownloadPlatformRequest = DownloadPlatformRequest(
-        downloadId = id,
-        sourceUrl = sourceUrl,
-        sourceHeaders = sourceHeaders,
-        destinationFileName = fileName,
-    )
+    private fun DownloadItem.toPlatformRequest(): DownloadPlatformRequest = DownloadPlatformRequest(item = this)
 
     private fun mutateItem(downloadId: String, transform: (DownloadItem) -> DownloadItem) {
         var changed = false
@@ -534,7 +546,7 @@ private fun buildFileName(
     episodeTitle: String?,
     fallbackTitle: String,
     sourceUrl: String,
-    nowEpochMs: Long,
+    downloadId: String,
 ): String {
     val baseTitle = if (seasonNumber != null && episodeNumber != null) {
         buildString {
@@ -556,7 +568,7 @@ private fun buildFileName(
     return buildString {
         append(baseTitle.sanitizeFileName().ifBlank { "download" }.take(92))
         append('_')
-        append(nowEpochMs.toString(36))
+        append(downloadId)
         append('.')
         append(extension)
     }
