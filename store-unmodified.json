@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15",
+          "buildVersion": "120",
+          "date": "2026-09-09T14:48:01Z",
+          "localizedDescription": "# Nuvio Unmodified 0.4.15\n\nUnmodified build of the NuvioMedia source. Not affiliated with or endorsed by NuvioMedia.\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-unmodified.json\n```\n\n### Changelog\n- fix(auth): synchronize shared client initialization @tapframe\n- fix(home): restore hero position when switching profiles @tapframe\n- fix(playback): disable play when no source is available @tapframe\n- fix(home): reduce hero height without continue watching @tapframe\n- Fix NetworkOnMainThreadException when starting a download (#1893) @Axl-Lvy\n- feat: custom static colours @tapframe\n- feat(members): custom gradient @tapframe\n- Added Russian translation (#1886) @zamalatb\n- fix(downloads): exclude foreground service from playstore builds @tapframe\n- fix(player): preserve each foreground service start notification @tapframe\n- fix(player): synchronize native subtitle rendering @tapframe\n- fix(player): resolve subtitle formats off the main thread @tapframe\n- feat(ui): unify skeleton loading states @tapframe\n- perf(home): improve lazy list item reuse @tapframe\n- perf(startup): avoid redundant collection and catalog processing @tapframe\n- perf(ios): release temporary GIF decoding resources @tapframe\n- perf(loading): cache bundled animation resource reads @tapframe\n- perf(ui): defer loading and parallax state reads @tapframe\n- fix(streams): refresh resume position Fixes #1866 @tapframe\n- fix(android): background downloads @tapframe",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.15/nuvio-0.4.15-unmodified-release.ipa",
+          "size": 52821009,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14",
           "buildVersion": "118",
           "date": "2026-09-06T10:09:52Z",
