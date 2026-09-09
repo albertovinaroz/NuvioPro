@@ -188,6 +188,9 @@ object HomeRepository {
                 val customTitle = preference?.customTitle.orEmpty()
                 section.copy(
                     title = customTitle.ifBlank { definition.titleFor(snapshot.showCatalogType) },
+                    top10StyleEnabled = preference?.top10StyleEnabled ?: false,
+                    landscapeModeEnabled = preference?.landscapeModeEnabled ?: false,
+                    top10OutlinedNumberEnabled = preference?.top10OutlinedNumberEnabled ?: false,
                 )
             }
 

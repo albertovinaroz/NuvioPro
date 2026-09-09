@@ -751,6 +751,15 @@
     <string name="settings_homescreen_limit_reached">%1$s • Limit reached (max %2$d)</string>
     <string name="settings_homescreen_no_sources_selected">No hero sources selected</string>
     <string name="settings_homescreen_not_in_hero">Not in hero</string>
+    <string name="settings_homescreen_landscape_mode">View mode</string>
+    <string name="settings_homescreen_landscape_mode_description">Choose whether this catalog's posters show as portrait covers or wide landscape thumbnails.</string>
+    <string name="settings_homescreen_top10_style">Top 10 look</string>
+    <string name="settings_homescreen_top10_style_description">Show a big rank number next to the poster for this catalog's items.</string>
+    <string name="settings_homescreen_top10_style_on">Top 10 look</string>
+    <string name="settings_homescreen_top10_orientation_portrait">Portrait</string>
+    <string name="settings_homescreen_top10_orientation_landscape">Landscape</string>
+    <string name="settings_homescreen_top10_number_filled">Filled</string>
+    <string name="settings_homescreen_top10_number_outlined">Outlined</string>
     <string name="settings_homescreen_pin_to_move_toast">Remove pin to top from collection to move</string>
     <string name="settings_homescreen_pinned">Pinned</string>
     <string name="settings_homescreen_pinned_to_top">Pinned to top</string>

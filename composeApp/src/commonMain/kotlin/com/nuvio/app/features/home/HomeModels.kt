@@ -37,6 +37,9 @@ data class HomeCatalogSection(
     val items: List<MetaPreview>,
     val availableItemCount: Int = items.size,
     val hasMore: Boolean = false,
+    val top10StyleEnabled: Boolean = false,
+    val landscapeModeEnabled: Boolean = false,
+    val top10OutlinedNumberEnabled: Boolean = false,
 )
 
 fun HomeCatalogSection.canOpenCatalog(previewLimit: Int): Boolean =

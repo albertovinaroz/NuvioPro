@@ -35,6 +35,9 @@ data class SyncCatalogItem(
     @SerialName("is_collection") val isCollection: Boolean = false,
     @SerialName("collection_id") val collectionId: String = "",
     val key: String = "",
+    @SerialName("top10_style_enabled") val top10StyleEnabled: Boolean = false,
+    @SerialName("landscape_mode_enabled") val landscapeModeEnabled: Boolean = false,
+    @SerialName("top10_outlined_number_enabled") val top10OutlinedNumberEnabled: Boolean = false,
 )
 
 @Serializable

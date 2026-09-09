@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,14 +38,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.home_view_all
@@ -215,6 +220,199 @@ fun NuvioPosterCard(
             }
 
             NuvioPosterWatchedOverlay(isWatched = isWatched)
+        }
+        if (shouldShowTitleBelow) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = tokens.colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!detailLine.isNullOrBlank()) {
+                Text(
+                    text = detailLine,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Box(modifier = Modifier.height(NuvioTokens.Space.none))
+            }
+        } else {
+            Box(modifier = Modifier.height(NuvioTokens.Space.none))
+        }
+    }
+}
+
+// How much of the poster's own width the number column adds, and how much of that column the
+// poster is then pulled back over — together giving the classic Netflix "Top 10" look of a big
+// numeral partly tucked behind the poster's left edge, rather than sitting fully beside it. A
+// two-digit rank needs a noticeably wider number column and a lighter overlap, or the poster ends
+// up covering its trailing digit entirely.
+//
+// Landscape posters are already wide (see landscapePosterWidth), so reusing the portrait
+// fractions here would make the combined card absurdly wide relative to the poster itself. Instead
+// the number column is kept narrow and pulled in with a much heavier overlap — and the width that
+// approach *doesn't* spend gets handed back to the poster itself via posterWidthBoost, so the card
+// stays a similar overall footprint while the poster reads bigger than its normal landscape size.
+private const val Top10NumberAreaWidthFraction = 0.62f
+private const val Top10NumberAreaWidthFractionTwoDigits = 0.86f
+private const val Top10NumberPosterOverlapFraction = 0.35f
+private const val Top10NumberPosterOverlapFractionTwoDigits = 0.16f
+private const val Top10LandscapeNumberAreaWidthFraction = 0.30f
+private const val Top10LandscapeNumberAreaWidthFractionTwoDigits = 0.40f
+private const val Top10LandscapeNumberPosterOverlapFraction = 0.55f
+private const val Top10LandscapeNumberPosterOverlapFractionTwoDigits = 0.40f
+private const val Top10LandscapePosterWidthBoost = 1.18f
+
+/**
+ * The large-rank-number card used for "Top 10"-style rows (see
+ * HomeCatalogSettingsRepository.setTop10StyleEnabled) — a poster with a big numeral to its left,
+ * the two overlapping slightly to read as one wide unit rather than two separate elements.
+ */
+@Composable
+fun NuvioTop10PosterCard(
+    rank: Int,
+    title: String,
+    imageUrl: String?,
+    modifier: Modifier = Modifier,
+    shape: NuvioPosterShape = NuvioPosterShape.Poster,
+    outlinedNumber: Boolean = false,
+    bottomLeftLogoUrl: String? = null,
+    bottomLeftText: String? = null,
+    detailLine: String? = null,
+    showTitleBelow: Boolean = true,
+    isWatched: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+) {
+    val posterCardStyle = rememberPosterCardStyleUiState()
+    val tokens = MaterialTheme.nuvio
+    val density = LocalDensity.current
+    val isTwoDigitRank = rank >= 10
+    val isLandscape = shape == NuvioPosterShape.Landscape
+    val posterWidth = shape.cardWidth(posterCardStyle.widthDp) *
+        if (isLandscape) Top10LandscapePosterWidthBoost else 1f
+    val posterHeight = posterWidth / shape.aspectRatio
+    val cardShape = RoundedCornerShape(posterCardStyle.cornerRadiusDp.dp)
+    val numberAreaWidthFraction = if (isLandscape) {
+        if (isTwoDigitRank) Top10LandscapeNumberAreaWidthFractionTwoDigits else Top10LandscapeNumberAreaWidthFraction
+    } else {
+        if (isTwoDigitRank) Top10NumberAreaWidthFractionTwoDigits else Top10NumberAreaWidthFraction
+    }
+    val overlapFraction = if (isLandscape) {
+        if (isTwoDigitRank) Top10LandscapeNumberPosterOverlapFractionTwoDigits else Top10LandscapeNumberPosterOverlapFraction
+    } else {
+        if (isTwoDigitRank) Top10NumberPosterOverlapFractionTwoDigits else Top10NumberPosterOverlapFraction
+    }
+    val numberAreaWidth = posterWidth * numberAreaWidthFraction
+    val overlap = numberAreaWidth * overlapFraction
+    val totalWidth = numberAreaWidth + posterWidth - overlap
+    val shouldShowTitleBelow = showTitleBelow && !posterCardStyle.hideLabelsEnabled
+
+    Column(
+        modifier = modifier.width(totalWidth),
+        verticalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s6),
+    ) {
+        Box(
+            modifier = Modifier
+                .width(totalWidth)
+                .height(posterHeight),
+        ) {
+            Text(
+                text = rank.toString(),
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontSize = with(density) {
+                        (posterHeight * if (isTwoDigitRank) 0.78f else 0.88f).toSp()
+                    },
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = if (isTwoDigitRank) (-3).sp else (-1.5).sp,
+                    drawStyle = if (outlinedNumber) {
+                        Stroke(width = with(density) { (posterHeight.value * 0.007f).dp.toPx() })
+                    } else {
+                        null
+                    },
+                ),
+                color = tokens.colors.textPrimary,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(y = posterHeight * 0.05f),
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(posterWidth)
+                    .height(posterHeight)
+                    .clip(cardShape)
+                    .background(tokens.colors.surface)
+                    .nuvioCardDepth(
+                        shape = cardShape,
+                        surface = NuvioCardDepthSurface.Posters,
+                    )
+                    .posterCardClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                        zoomImageUrl = imageUrl,
+                        zoomCornerRadius = posterCardStyle.cornerRadiusDp.dp,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = title,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Text(
+                        text = title,
+                        modifier = Modifier.padding(horizontal = NuvioTokens.Space.s14),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = tokens.colors.textMuted,
+                        textAlign = TextAlign.Center,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (!bottomLeftLogoUrl.isNullOrBlank() || !bottomLeftText.isNullOrBlank()) {
+                    val catalogLogoOverlaySize = catalogLogoOverlaySize(
+                        basePosterWidthDp = posterCardStyle.widthDp,
+                        shape = shape,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(horizontal = NuvioTokens.Space.s10, vertical = NuvioTokens.Space.s10),
+                    ) {
+                        if (!bottomLeftLogoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = bottomLeftLogoUrl,
+                                contentDescription = stringResource(Res.string.poster_logo_content_description, title),
+                                modifier = Modifier
+                                    .width(catalogLogoOverlaySize.width)
+                                    .height(catalogLogoOverlaySize.height),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Text(
+                                text = bottomLeftText.orEmpty(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = tokens.colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.widthIn(max = catalogLogoOverlaySize.textMaxWidth),
+                            )
+                        }
+                    }
+                }
+                NuvioPosterWatchedOverlay(isWatched = isWatched)
+            }
         }
         if (shouldShowTitleBelow) {
             Text(

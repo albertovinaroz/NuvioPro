@@ -527,6 +527,9 @@ private fun HomescreenCatalogList(
                                 },
                                 onTitleChange = { HomeCatalogSettingsRepository.setCustomTitle(item.key, it) },
                                 onEnabledChange = { HomeCatalogSettingsRepository.setEnabled(item.key, it) },
+                                onTop10StyleChange = { HomeCatalogSettingsRepository.setTop10StyleEnabled(item.key, it) },
+                                onLandscapeModeChange = { HomeCatalogSettingsRepository.setLandscapeModeEnabled(item.key, it) },
+                                onTop10OutlinedNumberChange = { HomeCatalogSettingsRepository.setTop10OutlinedNumberEnabled(item.key, it) },
                                 dragHandleScope = this@ReorderableItem,
                                 onPinnedDragAttempt = onPinnedDragAttempt,
                             )

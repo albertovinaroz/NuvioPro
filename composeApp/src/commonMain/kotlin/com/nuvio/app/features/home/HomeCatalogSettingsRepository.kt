@@ -26,6 +26,9 @@ data class HomeCatalogSettingsItem(
     val isCollection: Boolean = false,
     val collectionId: String? = null,
     val isPinnedToTop: Boolean = false,
+    val top10StyleEnabled: Boolean = false,
+    val landscapeModeEnabled: Boolean = false,
+    val top10OutlinedNumberEnabled: Boolean = false,
 ) {
     val displayTitle: String
         get() = customTitle.ifBlank { defaultTitle }
@@ -101,6 +104,9 @@ internal data class HomeCatalogPreference(
     val enabled: Boolean,
     val heroSourceEnabled: Boolean,
     val order: Int,
+    val top10StyleEnabled: Boolean,
+    val landscapeModeEnabled: Boolean,
+    val top10OutlinedNumberEnabled: Boolean,
 )
 
 internal data class HomeCatalogSettingsSnapshot(
@@ -118,6 +124,9 @@ private data class StoredHomeCatalogPreference(
     val enabled: Boolean = true,
     val heroSourceEnabled: Boolean = true,
     val order: Int = 0,
+    val top10StyleEnabled: Boolean = false,
+    val landscapeModeEnabled: Boolean = false,
+    val top10OutlinedNumberEnabled: Boolean = false,
 )
 
 @Serializable
@@ -228,6 +237,9 @@ object HomeCatalogSettingsRepository {
                     enabled = value.enabled,
                     heroSourceEnabled = value.heroSourceEnabled,
                     order = value.order,
+                    top10StyleEnabled = value.top10StyleEnabled,
+                    landscapeModeEnabled = value.landscapeModeEnabled,
+                    top10OutlinedNumberEnabled = value.top10OutlinedNumberEnabled,
                 )
             },
         )
@@ -316,6 +328,31 @@ object HomeCatalogSettingsRepository {
     fun setCustomTitle(key: String, title: String) {
         updatePreference(key) { preference ->
             preference.copy(customTitle = title)
+        }
+    }
+
+    /**
+     * The large-rank-number "Top 10" row style — see NuvioTop10PosterCard. Only ever applied to
+     * the first 10 items of a catalog at render time; enabling it here just marks the catalog as
+     * eligible.
+     */
+    fun setTop10StyleEnabled(key: String, enabled: Boolean) {
+        updatePreference(key) { preference ->
+            preference.copy(top10StyleEnabled = enabled)
+        }
+    }
+
+    /** Whether the Top 10 card uses the wide backdrop/banner image instead of the poster. */
+    fun setLandscapeModeEnabled(key: String, enabled: Boolean) {
+        updatePreference(key) { preference ->
+            preference.copy(landscapeModeEnabled = enabled)
+        }
+    }
+
+    /** Whether the Top 10 rank numeral is drawn hollow/outlined instead of solid. */
+    fun setTop10OutlinedNumberEnabled(key: String, enabled: Boolean) {
+        updatePreference(key) { preference ->
+            preference.copy(top10OutlinedNumberEnabled = enabled)
         }
     }
 
@@ -440,6 +477,9 @@ object HomeCatalogSettingsRepository {
                 enabled = stored?.enabled ?: true,
                 heroSourceEnabled = heroSourceEnabled,
                 order = stored?.order ?: nextOrder++,
+                top10StyleEnabled = stored?.top10StyleEnabled ?: false,
+                landscapeModeEnabled = stored?.landscapeModeEnabled ?: false,
+                top10OutlinedNumberEnabled = stored?.top10OutlinedNumberEnabled ?: false,
             )
         }
         preferences = normalized.toMap()
@@ -458,6 +498,9 @@ object HomeCatalogSettingsRepository {
                     enabled = preference?.enabled ?: true,
                     heroSourceEnabled = preference?.heroSourceEnabled ?: true,
                     order = preference?.order ?: 0,
+                    top10StyleEnabled = preference?.top10StyleEnabled ?: false,
+                    landscapeModeEnabled = preference?.landscapeModeEnabled ?: false,
+                    top10OutlinedNumberEnabled = preference?.top10OutlinedNumberEnabled ?: false,
                 )
             }
 
@@ -593,6 +636,9 @@ object HomeCatalogSettingsRepository {
                     customTitle = pref.customTitle,
                     isCollection = false,
                     key = pref.key,
+                    top10StyleEnabled = pref.top10StyleEnabled,
+                    landscapeModeEnabled = pref.landscapeModeEnabled,
+                    top10OutlinedNumberEnabled = pref.top10OutlinedNumberEnabled,
                 )
             }
         }
@@ -617,6 +663,9 @@ object HomeCatalogSettingsRepository {
                     enabled = item.enabled,
                     heroSourceEnabled = existingHeroState[key] ?: true,
                     order = item.order,
+                    top10StyleEnabled = item.top10StyleEnabled,
+                    landscapeModeEnabled = item.landscapeModeEnabled,
+                    top10OutlinedNumberEnabled = item.top10OutlinedNumberEnabled,
                 )
             }
             val remoteKeys = remotePreferences.keys
@@ -678,6 +727,9 @@ object HomeCatalogSettingsRepository {
                 selectedHeroSourceCount(excludingKey = key) < HERO_SOURCE_SELECTION_LIMIT,
             order = _uiState.value.items.firstOrNull { it.key == key }?.order
                 ?: ((preferences.values.maxOfOrNull { it.order } ?: -1) + 1),
+            top10StyleEnabled = false,
+            landscapeModeEnabled = false,
+            top10OutlinedNumberEnabled = false,
         )
     }
 

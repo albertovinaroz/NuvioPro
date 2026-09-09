@@ -44,6 +44,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -59,10 +60,19 @@ import nuvio.composeapp.generated.resources.settings_homescreen_collection_with_
 import nuvio.composeapp.generated.resources.settings_homescreen_display_name
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_source
 import nuvio.composeapp.generated.resources.settings_homescreen_hidden
+import nuvio.composeapp.generated.resources.settings_homescreen_landscape_mode
+import nuvio.composeapp.generated.resources.settings_homescreen_landscape_mode_description
 import nuvio.composeapp.generated.resources.settings_homescreen_not_in_hero
 import nuvio.composeapp.generated.resources.settings_homescreen_pinned
 import nuvio.composeapp.generated.resources.settings_homescreen_pinned_to_top
 import nuvio.composeapp.generated.resources.settings_homescreen_reorder
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_number_filled
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_number_outlined
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_orientation_landscape
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_orientation_portrait
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_style
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_style_description
+import nuvio.composeapp.generated.resources.settings_homescreen_top10_style_on
 import nuvio.composeapp.generated.resources.settings_homescreen_visible
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
@@ -425,6 +435,9 @@ internal fun HomescreenCatalogRow(
     onExpandedChange: (Boolean) -> Unit,
     onTitleChange: (String) -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onTop10StyleChange: (Boolean) -> Unit,
+    onLandscapeModeChange: (Boolean) -> Unit,
+    onTop10OutlinedNumberChange: (Boolean) -> Unit,
     dragHandleScope: ReorderableCollectionItemScope,
     onPinnedDragAttempt: () -> Unit = {},
 ) {
@@ -492,6 +505,14 @@ internal fun HomescreenCatalogRow(
                                     stringResource(Res.string.settings_homescreen_not_in_hero)
                                 },
                             )
+                            if (item.landscapeModeEnabled) {
+                                append(" • ")
+                                append(stringResource(Res.string.settings_homescreen_top10_orientation_landscape))
+                            }
+                            if (item.top10StyleEnabled) {
+                                append(" • ")
+                                append(stringResource(Res.string.settings_homescreen_top10_style_on))
+                            }
                         }
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -565,7 +586,118 @@ internal fun HomescreenCatalogRow(
                         disabledContainerColor = tokens.colors.surface,
                     ),
                 )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(Res.string.settings_homescreen_landscape_mode),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tokens.colors.textPrimary,
+                    )
+                    Text(
+                        text = stringResource(Res.string.settings_homescreen_landscape_mode_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tokens.colors.textMuted,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Top10OrientationOption(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(Res.string.settings_homescreen_top10_orientation_portrait),
+                            selected = !item.landscapeModeEnabled,
+                            onClick = { onLandscapeModeChange(false) },
+                        )
+                        Top10OrientationOption(
+                            modifier = Modifier.weight(1f),
+                            label = stringResource(Res.string.settings_homescreen_top10_orientation_landscape),
+                            selected = item.landscapeModeEnabled,
+                            onClick = { onLandscapeModeChange(true) },
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onTop10StyleChange(!item.top10StyleEnabled) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f).padding(end = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.settings_homescreen_top10_style),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = tokens.colors.textPrimary,
+                        )
+                        Text(
+                            text = stringResource(Res.string.settings_homescreen_top10_style_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = tokens.colors.textMuted,
+                        )
+                    }
+                    Switch(
+                        checked = item.top10StyleEnabled,
+                        onCheckedChange = onTop10StyleChange,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = tokens.colors.onAccent,
+                            checkedTrackColor = tokens.colors.accent,
+                            uncheckedThumbColor = tokens.colors.textMuted,
+                            uncheckedTrackColor = tokens.colors.borderDefault,
+                        ),
+                    )
+                }
+                AnimatedVisibility(visible = item.top10StyleEnabled) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Top10OrientationOption(
+                                modifier = Modifier.weight(1f),
+                                label = stringResource(Res.string.settings_homescreen_top10_number_filled),
+                                selected = !item.top10OutlinedNumberEnabled,
+                                onClick = { onTop10OutlinedNumberChange(false) },
+                            )
+                            Top10OrientationOption(
+                                modifier = Modifier.weight(1f),
+                                label = stringResource(Res.string.settings_homescreen_top10_number_outlined),
+                                selected = item.top10OutlinedNumberEnabled,
+                                onClick = { onTop10OutlinedNumberChange(true) },
+                            )
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun Top10OrientationOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = if (selected) {
+            tokens.colors.accent.copy(alpha = tokens.opacity.selected)
+        } else {
+            tokens.colors.surfaceCard.copy(alpha = tokens.opacity.medium)
+        },
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) tokens.colors.accent else tokens.colors.textMuted,
+            textAlign = TextAlign.Center,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
     }
 }

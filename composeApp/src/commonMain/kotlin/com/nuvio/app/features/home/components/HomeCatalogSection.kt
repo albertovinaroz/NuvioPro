@@ -79,16 +79,33 @@ private fun HomeCatalogRowSectionContent(
         viewAllPillSize = NuvioViewAllPillSize.Compact,
         key = { item -> item.stableKey() },
     ) { item ->
-        HomePosterCard(
-            item = item,
-            useLandscapeBackdropMode = posterCardStyle.catalogLandscapeModeEnabled,
-            isWatched = WatchingState.isPosterWatched(
-                watchedKeys = watchedKeys,
+        val rank = if (section.top10StyleEnabled) entries.indexOf(item) + 1 else 0
+        if (rank > 0) {
+            HomeTop10PosterCard(
+                rank = rank,
                 item = item,
-                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-            ),
-            onClick = onPosterClick?.let { { it(item) } },
-            onLongClick = onPosterLongClick?.let { { it(item) } },
-        )
+                useLandscapePoster = section.landscapeModeEnabled,
+                outlinedNumber = section.top10OutlinedNumberEnabled,
+                isWatched = WatchingState.isPosterWatched(
+                    watchedKeys = watchedKeys,
+                    item = item,
+                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                ),
+                onClick = onPosterClick?.let { { it(item) } },
+                onLongClick = onPosterLongClick?.let { { it(item) } },
+            )
+        } else {
+            HomePosterCard(
+                item = item,
+                useLandscapeBackdropMode = section.landscapeModeEnabled || posterCardStyle.catalogLandscapeModeEnabled,
+                isWatched = WatchingState.isPosterWatched(
+                    watchedKeys = watchedKeys,
+                    item = item,
+                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                ),
+                onClick = onPosterClick?.let { { it(item) } },
+                onLongClick = onPosterLongClick?.let { { it(item) } },
+            )
+        }
     }
 }
