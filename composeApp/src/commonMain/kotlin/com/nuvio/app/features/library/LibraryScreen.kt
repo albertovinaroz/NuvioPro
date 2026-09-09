@@ -573,6 +573,11 @@ fun LibraryScreen(
             onDismiss = { showReleaseCalendar = false },
             onPosterClick = onPosterClick,
             onCalendarEpisodeClick = onCalendarEpisodeClick,
+            onMonthRequested = { month ->
+                coroutineScope.launch {
+                    LibraryReleaseCalendarCache.ensureMonth(uiState.items, month.key)
+                }
+            },
         )
     }
 }
@@ -1328,11 +1333,12 @@ private fun LibraryReleaseCalendarPanel(
     onDismiss: () -> Unit,
     onPosterClick: ((LibraryItem) -> Unit)?,
     onCalendarEpisodeClick: ((LibraryItem, Int?, Int?) -> Unit)?,
+    onMonthRequested: (LibraryCalendarMonth) -> Unit,
 ) {
     val today = remember { parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: LibraryCalendarDate(1970, 1, 1) }
     val todayIso = today.iso
     val initialMonth = remember { initialLibraryCalendarMonth() }
-    var calendarSelection by remember(events) {
+    var calendarSelection by remember(initialMonth, todayIso) {
         mutableStateOf(defaultLibraryCalendarSelection(events, initialMonth, todayIso))
     }
     val visibleMonth = calendarSelection.month
@@ -1426,6 +1432,7 @@ private fun LibraryReleaseCalendarPanel(
                                             selectedDateIso = selectedDateIso,
                                             todayIso = todayIso,
                                             onPrevious = {
+                                                onMonthRequested(visibleMonth.previous())
                                                 calendarSelection = defaultLibraryCalendarSelection(
                                                     events = events,
                                                     month = visibleMonth.previous(),
@@ -1433,6 +1440,7 @@ private fun LibraryReleaseCalendarPanel(
                                                 )
                                             },
                                             onNext = {
+                                                onMonthRequested(visibleMonth.next())
                                                 calendarSelection = defaultLibraryCalendarSelection(
                                                     events = events,
                                                     month = visibleMonth.next(),
@@ -1476,6 +1484,7 @@ private fun LibraryReleaseCalendarPanel(
                                         selectedDateIso = selectedDateIso,
                                         todayIso = todayIso,
                                         onPrevious = {
+                                            onMonthRequested(visibleMonth.previous())
                                             calendarSelection = defaultLibraryCalendarSelection(
                                                 events = events,
                                                 month = visibleMonth.previous(),
@@ -1483,6 +1492,7 @@ private fun LibraryReleaseCalendarPanel(
                                             )
                                         },
                                         onNext = {
+                                            onMonthRequested(visibleMonth.next())
                                             calendarSelection = defaultLibraryCalendarSelection(
                                                 events = events,
                                                 month = visibleMonth.next(),
@@ -2243,6 +2253,7 @@ private data class LibraryReleaseCalendarCacheState(
     val events: List<LibraryCalendarEvent> = emptyList(),
     val isWarming: Boolean = false,
     val isReady: Boolean = false,
+    val loadedMonthKeys: Set<String> = emptySet(),
 )
 
 /**
@@ -2285,6 +2296,7 @@ private object LibraryReleaseCalendarCache {
                     cacheKey = cacheKey,
                     events = warmedEvents,
                     isReady = true,
+                    loadedMonthKeys = libraryCalendarWarmMonthKeys(),
                 )
             }
         } finally {
@@ -2293,6 +2305,31 @@ private object LibraryReleaseCalendarCache {
             }
             if (activeCacheKey == cacheKey) {
                 activeCacheKey = null
+            }
+        }
+    }
+
+    suspend fun ensureMonth(items: List<LibraryItem>, monthKey: String) {
+        val cacheKey = cacheKeyFor(items)
+        if (_state.value.cacheKey != cacheKey || monthKey in _state.value.loadedMonthKeys || activeCacheKey != null) return
+        activeCacheKey = cacheKey
+        _state.value = _state.value.copy(isWarming = true)
+        try {
+            val monthEvents = buildLibraryReleaseCalendarEvents(items, setOf(monthKey))
+            if (activeCacheKey == cacheKey && _state.value.cacheKey == cacheKey) {
+                val merged = (_state.value.events + monthEvents)
+                    .distinctBy { it.key }
+                    .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.sortTitle.lowercase() })
+                _state.value = _state.value.copy(
+                    events = merged,
+                    isWarming = false,
+                    loadedMonthKeys = _state.value.loadedMonthKeys + monthKey,
+                )
+            }
+        } finally {
+            if (activeCacheKey == cacheKey) {
+                activeCacheKey = null
+                if (_state.value.isWarming) _state.value = _state.value.copy(isWarming = false)
             }
         }
     }
