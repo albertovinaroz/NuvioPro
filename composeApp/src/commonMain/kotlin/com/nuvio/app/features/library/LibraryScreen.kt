@@ -1,6 +1,10 @@
 package com.nuvio.app.features.library
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1341,6 +1347,7 @@ private fun LibraryReleaseCalendarPanel(
     var calendarSelection by remember(initialMonth, todayIso) {
         mutableStateOf(defaultLibraryCalendarSelection(events, initialMonth, todayIso))
     }
+    var monthNavigationDirection by remember { mutableStateOf(1) }
     val visibleMonth = calendarSelection.month
     val selectedDateIso = calendarSelection.dateIso
     val monthEvents = remember(events, visibleMonth) {
@@ -1425,13 +1432,23 @@ private fun LibraryReleaseCalendarPanel(
                             ) {
                                 LazyColumn(modifier = Modifier.weight(1f)) {
                                     item {
+                                        AnimatedContent(
+                                            targetState = visibleMonth,
+                                            transitionSpec = {
+                                                val direction = monthNavigationDirection
+                                                (slideInHorizontally { width -> direction * width } togetherWith
+                                                    slideOutHorizontally { width -> -direction * width })
+                                            },
+                                            label = "library-calendar-month",
+                                        ) { animatedMonth ->
                                         LibraryCalendarCard(
-                                            month = visibleMonth,
+                                            month = animatedMonth,
                                             monthEventCount = monthEvents.size,
                                             eventsByDate = eventsByDate,
                                             selectedDateIso = selectedDateIso,
                                             todayIso = todayIso,
                                             onPrevious = {
+                                                monthNavigationDirection = -1
                                                 onMonthRequested(visibleMonth.previous())
                                                 calendarSelection = defaultLibraryCalendarSelection(
                                                     events = events,
@@ -1440,6 +1457,7 @@ private fun LibraryReleaseCalendarPanel(
                                                 )
                                             },
                                             onNext = {
+                                                monthNavigationDirection = 1
                                                 onMonthRequested(visibleMonth.next())
                                                 calendarSelection = defaultLibraryCalendarSelection(
                                                     events = events,
@@ -1457,6 +1475,7 @@ private fun LibraryReleaseCalendarPanel(
                                                 calendarSelection = calendarSelection.copy(dateIso = date.iso)
                                             },
                                         )
+                                        }
                                     }
                                 }
                                 LazyColumn(modifier = Modifier.weight(1f)) {
@@ -1477,13 +1496,23 @@ private fun LibraryReleaseCalendarPanel(
                                     .fillMaxWidth(),
                             ) {
                                 item {
+                                    AnimatedContent(
+                                        targetState = visibleMonth,
+                                        transitionSpec = {
+                                            val direction = monthNavigationDirection
+                                            (slideInHorizontally { width -> direction * width } togetherWith
+                                                slideOutHorizontally { width -> -direction * width })
+                                        },
+                                        label = "library-calendar-month",
+                                    ) { animatedMonth ->
                                     LibraryCalendarCard(
-                                        month = visibleMonth,
+                                        month = animatedMonth,
                                         monthEventCount = monthEvents.size,
                                         eventsByDate = eventsByDate,
                                         selectedDateIso = selectedDateIso,
                                         todayIso = todayIso,
                                         onPrevious = {
+                                            monthNavigationDirection = -1
                                             onMonthRequested(visibleMonth.previous())
                                             calendarSelection = defaultLibraryCalendarSelection(
                                                 events = events,
@@ -1492,6 +1521,7 @@ private fun LibraryReleaseCalendarPanel(
                                             )
                                         },
                                         onNext = {
+                                            monthNavigationDirection = 1
                                             onMonthRequested(visibleMonth.next())
                                             calendarSelection = defaultLibraryCalendarSelection(
                                                 events = events,
@@ -1509,6 +1539,7 @@ private fun LibraryReleaseCalendarPanel(
                                             calendarSelection = calendarSelection.copy(dateIso = date.iso)
                                         },
                                     )
+                                    }
                                 }
                                 libraryCalendarAgendaContent(
                                     selectedDate = selectedDate,
@@ -1794,9 +1825,22 @@ private fun LibraryCalendarCard(
     onToday: () -> Unit,
     onDateSelected: (LibraryCalendarDate) -> Unit,
 ) {
+    val swipeModifier = Modifier.pointerInput(month) {
+        var totalDrag = 0f
+        detectHorizontalDragGestures(
+            onDragStart = { totalDrag = 0f },
+            onHorizontalDrag = { _, dragAmount -> totalDrag += dragAmount },
+            onDragEnd = {
+                when {
+                    totalDrag <= -48f -> onNext()
+                    totalDrag >= 48f -> onPrevious()
+                }
+            },
+            onDragCancel = { totalDrag = 0f },
+        )
+    }
     Surface(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = swipeModifier.fillMaxWidth(),
         color = MaterialTheme.nuvio.colors.surface,
         shape = RoundedCornerShape(28.dp),
         border = BorderStroke(
