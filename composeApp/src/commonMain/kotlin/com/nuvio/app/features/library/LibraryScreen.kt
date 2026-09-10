@@ -338,98 +338,98 @@ fun LibraryScreen(
         emptyList()
     }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
-
-        NuvioScreen(
-            modifier = Modifier.fillMaxSize(),
-            horizontalPadding = 0.dp,
-            listState = listState,
-            autoHidesNativeTabBar = true,
-        ) {
-            stickyHeader {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(MaterialTheme.colorScheme.background)
-                            .nuvioConsumePointerEvents(),
-                    )
-                    androidx.compose.foundation.layout.Column(
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        NuvioScreenHeader(
-                            title = if (sourceMode == LibraryViewMode.Cloud) {
-                                stringResource(Res.string.library_title)
+    // Title and the source switch sit outside the scrollable list entirely (rather than in a
+    // stickyHeader within it) so they're permanently pinned no matter how far the list scrolls —
+    // matching Search's header, which is the reference for this. LibrarySavedControls (the
+    // section/type/sort row) keeps its own stickyHeader further down, the same way Search's own
+    // filter row does.
+    Column(modifier = modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                NuvioScreenHeader(
+                    title = if (sourceMode == LibraryViewMode.Cloud) {
+                        stringResource(Res.string.library_title)
+                    } else {
+                        when (uiState.sourceMode) {
+                            LibrarySourceMode.LOCAL -> stringResource(Res.string.library_title)
+                            LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
+                            LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    actions = {
+                        if (sourceMode == LibraryViewMode.Saved) {
+                            val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+                                LibraryLayoutMode.VERTICAL
                             } else {
-                                when (uiState.sourceMode) {
-                                    LibrarySourceMode.LOCAL -> stringResource(Res.string.library_title)
-                                    LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
-                                    LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            actions = {
-                                if (sourceMode == LibraryViewMode.Saved) {
-                                    val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
-                                        LibraryLayoutMode.VERTICAL
-                                    } else {
-                                        LibraryLayoutMode.HORIZONTAL
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
+                                LibraryLayoutMode.HORIZONTAL
+                            }
+                            IconButton(
+                                onClick = {
+                                    LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
+                                },
+                            ) {
+                                Crossfade(
+                                    targetState = targetLayout,
+                                    animationSpec = tween(durationMillis = 140),
+                                    label = "libraryLayoutAction",
+                                ) { animatedTargetLayout ->
+                                    Icon(
+                                        imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                            Icons.Rounded.GridView
+                                        } else {
+                                            Icons.Rounded.ViewAgenda
                                         },
-                                    ) {
-                                        Crossfade(
-                                            targetState = targetLayout,
-                                            animationSpec = tween(durationMillis = 140),
-                                            label = "libraryLayoutAction",
-                                        ) { animatedTargetLayout ->
-                                            Icon(
-                                                imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                                    Icons.Rounded.GridView
-                                                } else {
-                                                    Icons.Rounded.ViewAgenda
-                                                },
-                                                contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                                    stringResource(Res.string.library_layout_show_vertical)
-                                                } else {
-                                                    stringResource(Res.string.library_layout_show_horizontal)
-                                                },
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
+                                        contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                            stringResource(Res.string.library_layout_show_vertical)
+                                        } else {
+                                            stringResource(Res.string.library_layout_show_horizontal)
+                                        },
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
-                                if (sourceMode != LibraryViewMode.Cloud) {
-                                    val openCalendarLabel = stringResource(Res.string.library_calendar_open)
-                                    IconButton(
-                                        onClick = { showReleaseCalendar = true },
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .semantics { contentDescription = openCalendarLabel },
-                                    ) {
-                                        LibraryCalendarGlyph(
-                                            modifier = Modifier.size(19.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            cutoutColor = MaterialTheme.colorScheme.background,
-                                        )
-                                    }
-                                }
-                            },
-                        )
-                        LibrarySourceSwitch(
-                            selectedMode = sourceMode,
-                            onModeSelected = { mode ->
-                                sourceModeName = mode.name
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                }
+                            }
+                        }
+                        if (sourceMode != LibraryViewMode.Cloud) {
+                            val openCalendarLabel = stringResource(Res.string.library_calendar_open)
+                            IconButton(
+                                onClick = { showReleaseCalendar = true },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .semantics { contentDescription = openCalendarLabel },
+                            ) {
+                                LibraryCalendarGlyph(
+                                    modifier = Modifier.size(19.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    cutoutColor = MaterialTheme.colorScheme.background,
+                                )
+                            }
+                        }
+                    },
+                )
+                LibrarySourceSwitch(
+                    selectedMode = sourceMode,
+                    onModeSelected = { mode ->
+                        sourceModeName = mode.name
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
             }
+        }
+
+        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+            val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
+
+            NuvioScreen(
+                modifier = Modifier.fillMaxSize(),
+                horizontalPadding = 0.dp,
+                topPadding = 0.dp,
+                listState = listState,
+                autoHidesNativeTabBar = true,
+            ) {
 
             if (sourceMode == LibraryViewMode.Cloud) {
                 cloudLibraryContent(
@@ -520,24 +520,36 @@ fun LibraryScreen(
                     }
 
                     else -> {
-                        item(
+                        // Sticky like Search's own DiscoverFilterRow, so the section/type/sort
+                        // controls stay pinned under the fixed title while the grid scrolls under
+                        // them instead of carrying the controls away with it.
+                        stickyHeader(
                             key = "library-saved-controls:${uiState.sourceMode}:" +
                                 "${displaySettings.layoutMode}:$effectiveSortOption",
                         ) {
-                            LibrarySavedControls(
-                                layoutMode = displaySettings.layoutMode,
-                                sourceMode = uiState.sourceMode,
-                                sortOption = effectiveSortOption,
-                                verticalProjection = verticalProjection,
-                                onSectionSelected = { sectionKey ->
-                                    selectedLibrarySectionKey = sectionKey
-                                    selectedLibraryType = null
-                                },
-                                onTypeSelected = { type -> selectedLibraryType = type },
-                                onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
-                                modifier = libraryContentTransitionModifier()
-                                    .padding(horizontal = 16.dp),
-                            )
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .nuvioConsumePointerEvents(),
+                                )
+                                LibrarySavedControls(
+                                    layoutMode = displaySettings.layoutMode,
+                                    sourceMode = uiState.sourceMode,
+                                    sortOption = effectiveSortOption,
+                                    verticalProjection = verticalProjection,
+                                    onSectionSelected = { sectionKey ->
+                                        selectedLibrarySectionKey = sectionKey
+                                        selectedLibraryType = null
+                                    },
+                                    onTypeSelected = { type -> selectedLibraryType = type },
+                                    onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
+                                    modifier = libraryContentTransitionModifier()
+                                        .padding(horizontal = 16.dp)
+                                        .padding(top = 8.dp, bottom = 14.dp),
+                                )
+                            }
                         }
                         when (displaySettings.layoutMode) {
                             LibraryLayoutMode.HORIZONTAL -> librarySections(
@@ -565,6 +577,7 @@ fun LibraryScreen(
                 }
             }
         }
+    }
     }
 
     if (showReleaseCalendar) {
