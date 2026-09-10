@@ -65,9 +65,19 @@ Everything below is added on top of upstream Nuvio Mobile.
 |---|---|---|
 | **Hero trailer autoplay** — trailers play in the hero carousel instead of static artwork. The carousel stops auto-advancing while a trailer plays, so it only moves when you swipe. | Settings → Layout → Home Layout → **Hero Trailer Playback** | Off |
 | **Trailer start delay** — how long the artwork holds before the trailer starts, `Instant` to 10 s. Appears once trailer playback is on. | Settings → Layout → Home Layout → **Trailer Start Delay** | Instant |
-| **Hero style** — `Full-bleed` (artwork spans the screen) or `Card` (rounded, inset). | Settings → Layout → Home Layout → **Hero Style** | Full-bleed |
+| **Hero style** — `Full-bleed` (artwork spans the screen), `Card` (rounded, inset), or `Poster` (taller, HBO Max–style layout with the title and details grouped to the left). | Settings → Layout → Home Layout → **Hero Style** | Full-bleed |
+| **Home notifications & downloads bar** — a bell (opens the notification feed) and a downloads shortcut float above the hero in every style; hide either one independently for a cleaner look. | Settings → Layout → Home Layout → **Notifications icon** / **Downloads icon** | Both on |
+| **Top 10 rank cards & catalog view mode** — a wide card with a big rank numeral for any catalog, plus a per-catalog Portrait/Landscape view mode that also applies to regular cards. | Settings → Layout → Home Layout → expand a catalog | Off |
+| **Long-press to add to a list** — long-press the hero's add-to-library button to add or remove the item from specific custom lists instead of just toggling the default. | Hero → add-to-library button | — |
 | **Dynamic background** — tints the home screen with a gradient pulled from the featured artwork's colours. | Settings → Layout → **Dynamic background color** | Off |
 | **Catalog accent underline** — accent rule under each catalog row heading. | Settings → Layout → **Catalog accent underline** | Off |
+
+### Notifications
+
+| Feature | Where | Default |
+|---|---|---|
+| **In-app notification feed** — every episode/premiere alert lands in a running list instead of only firing a system notification; mark items read, remove one, or clear the whole feed. | Bell icon above the Home hero | — |
+| **Test entries in the feed** — Send Test Notification also drops a preview card into the feed, so you can see how it looks without waiting for a real release. | Settings → Notifications → **Send Test Notification** | — |
 
 ### Player
 
@@ -80,6 +90,7 @@ Everything below is added on top of upstream Nuvio Mobile.
 | **Swipe to Seek toggle** — turn off horizontal swipe-to-seek to prevent accidental seeking, while keeping the up/down brightness and volume swipes. | Settings → Playback → **Swipe to Seek** (under Touch Gestures) | On |
 | **Hardware keyboard shortcuts** — <kbd>Space</kbd> play/pause, <kbd>←</kbd> / <kbd>→</kbd> seek 10 s, <kbd>Esc</kbd> leave the player. Inert while a panel is open or the controls are locked. | — | Always on |
 | **Adjustable subtitle transparency** | Settings → Playback → Subtitle Rendering → **Background Color** | — |
+| **Auto-show subtitles on rewind or mute** — when subtitles are off, they switch on while you rewind or while muted/volume-zero, then hide again once playback catches up or you unmute. Two independent toggles. | Settings → Playback → **Auto-Show Subtitles on Rewind** / **on Mute** | Both on |
 
 ### Live TV
 
@@ -150,6 +161,7 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **Native-style Settings rows** — plain icon and chevron, no colored chips or section labels, matching the stock iOS/WhatsApp settings list look. | Settings | Always on |
 | **Pill-shaped search bars** — every search field (Settings, Search, Live TV, Player live channels, Cloud Library) uses a fully rounded pill, matching iOS conventions. | — | Always on |
 | **Liquid Glass mute button** — mutes the hero trailer without leaving Home, in the app's Liquid Glass style. | Top-right of the hero, while a trailer is playing | — |
+| **Filled/outlined tab bar icons** — Home, Search, Library and Live TV glyphs swap between filled and outlined artwork based on selection instead of only changing tint. | — | Always on |
 
 ---
 
