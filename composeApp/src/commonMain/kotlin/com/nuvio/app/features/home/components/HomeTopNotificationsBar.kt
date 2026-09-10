@@ -49,8 +49,16 @@ internal val HOME_NOTIFICATIONS_BAR_HEIGHT = 56.dp
 
 /** The bar's own dark scrim only needs to reach just past the icons it holds, not the full mute
  * clearance above. */
-private val HOME_NOTIFICATIONS_BAR_VISIBLE_HEIGHT = 46.dp
+private val HOME_NOTIFICATIONS_BAR_VISIBLE_HEIGHT = 50.dp
 
+/** Extra nudge below [topInset] for the icon row alone — moves the icons down a bit without
+ * touching the bar's own height or the mute button clearance above, which key off [topInset]
+ * and [HOME_NOTIFICATIONS_BAR_HEIGHT] directly. */
+private val ICON_ROW_TOP_OFFSET = 6.dp
+
+/** Scroll has to pass this point before the bar starts darkening at all — without it the fade
+ * begins the instant scrolling starts, which read as too eager. */
+private const val BAR_BACKGROUND_FADE_START_DP = 80f
 private const val BAR_BACKGROUND_FADE_DISTANCE_DP = 120f
 
 /**
@@ -73,13 +81,14 @@ internal fun HomeTopNotificationsBar(
     if (!notificationsIconEnabled && !downloadsIconEnabled) return
 
     val density = LocalDensity.current
+    val fadeStartPx = with(density) { BAR_BACKGROUND_FADE_START_DP.dp.toPx() }
     val fadeDistancePx = with(density) { BAR_BACKGROUND_FADE_DISTANCE_DP.dp.toPx() }
     val backgroundVisibility by remember(listState) {
         derivedStateOf {
             if (listState.firstVisibleItemIndex > 0) {
                 1f
             } else {
-                (listState.firstVisibleItemScrollOffset / fadeDistancePx).coerceIn(0f, 1f)
+                ((listState.firstVisibleItemScrollOffset - fadeStartPx) / fadeDistancePx).coerceIn(0f, 1f)
             }
         }
     }
@@ -112,10 +121,10 @@ internal fun HomeTopNotificationsBar(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    top = topInset,
+                    top = topInset + ICON_ROW_TOP_OFFSET,
                     end = if (isTablet) 32.dp else 18.dp,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.End),
             verticalAlignment = Alignment.Top,
         ) {
             if (downloadsIconEnabled) {
