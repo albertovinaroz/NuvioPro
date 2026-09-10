@@ -25,6 +25,14 @@ object NotificationFeedRepository {
     private var hasLoaded = false
     private var items: List<NotificationFeedItem> = emptyList()
 
+    // Most-recently-dismissed first. recordItems rebuilds its input from scratch every refresh
+    // (whatever should currently be in the feed for followed shows), so without this it has no way
+    // to know "the user already removed this one" and just re-adds it the next time that runs —
+    // often the very next app launch. upsertUnread deliberately ignores this list: it's used for
+    // explicit re-triggers (the test-notification button, the app-update check) that should always
+    // show regardless of a past dismissal.
+    private var dismissedIds: List<String> = emptyList()
+
     fun ensureLoaded() {
         if (hasLoaded) return
         loadFromDisk()
@@ -37,14 +45,18 @@ object NotificationFeedRepository {
     /**
      * Merges newly-built items in, newest release first, keeping each existing item's read state
      * and never re-surfacing one already recorded (a show's requests are rebuilt in full on every
-     * refresh, so most calls are almost entirely re-seen ids).
+     * refresh, so most calls are almost entirely re-seen ids) or one the user has since dismissed.
      */
     fun recordItems(newItems: List<NotificationFeedItem>) {
         if (newItems.isEmpty()) return
         ensureLoaded()
 
         val existingById = items.associateBy(NotificationFeedItem::id)
-        val merged = (newItems.map { incoming -> existingById[incoming.id] ?: incoming } + items)
+        val merged = (
+            newItems
+                .filterNot { incoming -> incoming.id in dismissedIds }
+                .map { incoming -> existingById[incoming.id] ?: incoming } + items
+            )
             .distinctBy(NotificationFeedItem::id)
             .sortedByDescending(NotificationFeedItem::releaseDateIso)
             .take(MaxNotificationFeedItems)
@@ -92,6 +104,7 @@ object NotificationFeedRepository {
         val updated = items.filterNot { it.id == id }
         if (updated.size == items.size) return
         items = updated
+        rememberDismissed(listOf(id))
         publish()
         persist()
     }
@@ -99,21 +112,30 @@ object NotificationFeedRepository {
     fun clearAll() {
         ensureLoaded()
         if (items.isEmpty()) return
+        rememberDismissed(items.map(NotificationFeedItem::id))
         items = emptyList()
         publish()
         persist()
     }
 
+    private fun rememberDismissed(ids: List<String>) {
+        dismissedIds = (ids + dismissedIds)
+            .distinct()
+            .take(MaxDismissedNotificationFeedIds)
+    }
+
     private fun loadFromDisk() {
         hasLoaded = true
         val payload = NotificationFeedStorage.loadPayload().orEmpty().trim()
-        items = if (payload.isEmpty()) {
-            emptyList()
+        val stored = if (payload.isEmpty()) {
+            StoredNotificationFeedPayload()
         } else {
             runCatching {
                 json.decodeFromString<StoredNotificationFeedPayload>(payload)
-            }.getOrDefault(StoredNotificationFeedPayload()).items.take(MaxNotificationFeedItems)
+            }.getOrDefault(StoredNotificationFeedPayload())
         }
+        items = stored.items.take(MaxNotificationFeedItems)
+        dismissedIds = stored.dismissedIds.take(MaxDismissedNotificationFeedIds)
         publish()
     }
 
@@ -125,6 +147,8 @@ object NotificationFeedRepository {
     }
 
     private fun persist() {
-        NotificationFeedStorage.savePayload(json.encodeToString(StoredNotificationFeedPayload(items)))
+        NotificationFeedStorage.savePayload(
+            json.encodeToString(StoredNotificationFeedPayload(items = items, dismissedIds = dismissedIds)),
+        )
     }
 }

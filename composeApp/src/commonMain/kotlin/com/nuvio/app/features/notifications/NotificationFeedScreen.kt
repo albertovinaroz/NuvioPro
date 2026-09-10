@@ -1,5 +1,6 @@
 package com.nuvio.app.features.notifications
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,11 +40,13 @@ import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_remove
+import nuvio.composeapp.generated.resources.app_icon_original
 import nuvio.composeapp.generated.resources.notifications_feed_clear_all
 import nuvio.composeapp.generated.resources.notifications_feed_empty_description
 import nuvio.composeapp.generated.resources.notifications_feed_empty_title
 import nuvio.composeapp.generated.resources.notifications_feed_mark_all_read
 import nuvio.composeapp.generated.resources.notifications_feed_title
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -118,15 +122,33 @@ private fun NotificationFeedRow(
             modifier = Modifier
                 .size(width = 96.dp, height = 54.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(
+                    if (item.contentType == "app_update") {
+                        Color.Black
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            item.backdropUrl?.let { url ->
-                AsyncImage(
-                    model = url,
+            if (item.contentType == "app_update") {
+                Image(
+                    painter = painterResource(Res.drawable.app_icon_original),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(9.dp)),
+                    contentScale = ContentScale.Fit,
                 )
+            } else {
+                item.backdropUrl?.let { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
             }
         }
 

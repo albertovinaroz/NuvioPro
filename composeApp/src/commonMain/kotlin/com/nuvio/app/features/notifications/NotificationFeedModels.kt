@@ -26,11 +26,23 @@ data class NotificationFeedItem(
     val episodeNumber: Int? = null,
     val backdropUrl: String? = null,
     val isRead: Boolean = false,
+    /** Set only for items that don't point at real app content (e.g. an app-update alert) — tapping
+     * opens this externally instead of navigating to [contentType]/[contentId] as a details route. */
+    val linkUrl: String? = null,
 )
 
 @Serializable
 internal data class StoredNotificationFeedPayload(
     val items: List<NotificationFeedItem> = emptyList(),
+    /**
+     * Ids the user has explicitly removed or cleared — [NotificationFeedRepository.recordItems]
+     * excludes these from what it re-adds, since it rebuilds its input from scratch on every
+     * refresh (whatever should currently be in the feed based on followed shows) with no memory of
+     * its own for "the user already dismissed this one." Without this list, removing or clearing an
+     * item is undone the next time that rebuild runs — often the very next app launch.
+     */
+    val dismissedIds: List<String> = emptyList(),
 )
 
 internal const val MaxNotificationFeedItems = 200
+internal const val MaxDismissedNotificationFeedIds = 500
