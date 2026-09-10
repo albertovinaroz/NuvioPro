@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15-b2",
+          "buildVersion": "139",
+          "date": "2026-09-10T12:02:56Z",
+          "localizedDescription": "# Nuvio Pro 0.4.15-b2\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n- feat(home): add Poster hero style @albertovinaroz\n- feat(notifications): add in-app notification feed with a persistent home bell and downloads shortcut @albertovinaroz\n\n> **Tip:** the new hero style is off by default — go to **Settings → Layout → Home Layout** and pick **Poster** under Hero Style. A notifications bell and a downloads shortcut now sit above the hero in every style, not just Poster; each can be turned off independently a bit further down in the same section if you'd rather keep a clean hero. The bell opens a full notification feed — try it with **Settings → Notifications → Send Test Notification**.\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.15-b2/nuvio-0.4.15-b2-pro-release.ipa",
+          "size": 68027493,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.15-b1",
           "buildVersion": "138",
           "date": "2026-09-10T06:57:48Z",
