@@ -72,6 +72,12 @@ data class SettingsPageRoute(
     override val title: String,
 ) : SettingsDestinationRoute
 
+/** Reached from Home's notifications bell (poster hero style), not nested under any tab. */
+@Serializable
+data class NotificationFeedRoute(
+    override val title: String,
+) : AppRoute
+
 @Serializable
 data class HomescreenSettingsRoute(override val title: String = "") : SettingsDestinationRoute
 

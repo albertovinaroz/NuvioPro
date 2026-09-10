@@ -177,6 +177,9 @@ private const val CARD_WIDE_MAX_VIEWPORT_FRACTION = 0.72f
 internal val HERO_CARD_CORNER_RADIUS = 28.dp
 internal val HERO_CARD_HORIZONTAL_PADDING = 12.dp
 internal val HERO_CARD_TOP_PADDING = 8.dp
+private val HERO_TOP_BAR_SCRIM_HEIGHT = 140.dp
+private const val POSTER_HERO_HEIGHT_BOOST = 1.18f
+private const val POSTER_MAX_VIEWPORT_FRACTION = 0.82f
 
 /**
  * Card mode follows the shape of the screen: a 2:3 poster in portrait, a 16:9 backdrop in landscape
@@ -257,6 +260,7 @@ internal fun HomeHeroSection(
     }
 
     val isCardStyle = heroStyle == HomeHeroStyle.CARD
+    val isPosterStyle = heroStyle == HomeHeroStyle.POSTER
     val statusBarTopPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val cardInsetModifier = if (isCardStyle) {
         Modifier.padding(
@@ -293,23 +297,41 @@ internal fun HomeHeroSection(
                 viewportHeightDp = viewportHeight?.value,
                 mobileBelowSectionHeightHintDp = mobileBelowSectionHeightHint?.value,
             )
-            // In card mode the height is dictated by the artwork ratio, not the viewport.
-            val layout = if (isCardStyle) {
-                baseLayout.copy(
+            // Poster style falls back to the backdrop on a wide/tablet viewport exactly like card
+            // style does — a tall poster would look cramped and mostly-empty at that aspect.
+            val posterUsesWideArtwork = heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet)
+            // In card mode the height is dictated by the artwork ratio, not the viewport. Poster
+            // mode keeps full-bleed's viewport-driven height but boosted taller, capped against the
+            // viewport so it can't run into the row content below on a short/narrow phone.
+            val layout = when {
+                isCardStyle -> baseLayout.copy(
                     heroHeight = cardHeroHeight(
                         maxWidth = maxWidth,
                         viewportHeight = viewportHeight,
                         isTablet = baseLayout.isTablet,
                     ),
                 )
-            } else {
-                baseLayout
+                isPosterStyle && !posterUsesWideArtwork -> {
+                    val boostedHeight = baseLayout.heroHeight * POSTER_HERO_HEIGHT_BOOST
+                    val cappedHeight = viewportHeight?.let { viewport ->
+                        minOf(boostedHeight, viewport * POSTER_MAX_VIEWPORT_FRACTION)
+                    } ?: boostedHeight
+                    baseLayout.copy(heroHeight = cappedHeight)
+                }
+                else -> baseLayout
             }
             val effectiveArtworkSource = when {
-                !isCardStyle -> HomeHeroArtworkSource.BACKDROP
-                heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet) ->
+                isCardStyle -> if (heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet)) {
                     HomeHeroArtworkSource.BACKDROP
-                else -> HomeHeroArtworkSource.POSTER
+                } else {
+                    HomeHeroArtworkSource.POSTER
+                }
+                isPosterStyle -> if (posterUsesWideArtwork) {
+                    HomeHeroArtworkSource.BACKDROP
+                } else {
+                    HomeHeroArtworkSource.POSTER
+                }
+                else -> HomeHeroArtworkSource.BACKDROP
             }
             // The card is sized to the artwork's own ratio, so the zoom and parallax that exist to hide
             // the edges of a cropped full-bleed backdrop would only crop the artwork for no reason.
@@ -603,6 +625,32 @@ internal fun HomeHeroSection(
                         )
                     }
 
+                    // Full-bleed and poster both sit directly under HomeTopNotificationsBar's icons
+                    // (card style doesn't — it has no top bar content of its own), and that bar's own
+                    // background is fully transparent until scrolled, so its icons rely entirely on
+                    // this for contrast at the top of the screen. The subtle 0.02-alpha start of the
+                    // scrim above isn't enough by itself. Deliberately not theme-tied (unlike the
+                    // scrims above): its only job is contrast against whatever artwork is behind it,
+                    // the same way the mute button's white icon assumes a dark enough backdrop
+                    // regardless of app theme.
+                    if (!isCardStyle) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(statusBarTopPadding + HERO_TOP_BAR_SCRIM_HEIGHT)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Black.copy(alpha = 0.85f),
+                                            Color.Black.copy(alpha = 0.55f),
+                                            Color.Black.copy(alpha = 0f),
+                                        ),
+                                    ),
+                                ),
+                        )
+                    }
+
                     if (isCardStyle) {
                         // Clean artwork: the whole card is the touch target instead of a details button.
                         Box(
@@ -621,13 +669,21 @@ internal fun HomeHeroSection(
                                     horizontal = layout.contentHorizontalPadding,
                                     vertical = layout.contentVerticalPadding,
                                 ),
-                            horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
+                            horizontalAlignment = if (layout.isTablet || isPosterStyle) {
+                                Alignment.Start
+                            } else {
+                                Alignment.CenterHorizontally
+                            },
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth(layout.contentWidthFraction)
                                     .widthIn(max = layout.contentMaxWidth),
-                                contentAlignment = if (layout.isTablet) Alignment.CenterStart else Alignment.Center,
+                                contentAlignment = if (layout.isTablet || isPosterStyle) {
+                                    Alignment.CenterStart
+                                } else {
+                                    Alignment.Center
+                                },
                             ) {
                                 visiblePages.forEach { layer ->
                                     Box(
@@ -639,6 +695,7 @@ internal fun HomeHeroSection(
                                         HeroContentBlock(
                                             item = items[layer.page],
                                             layout = layout,
+                                            leftAligned = layout.isTablet || isPosterStyle,
                                             onItemClick = onItemClick,
                                         )
                                     }
@@ -648,7 +705,15 @@ internal fun HomeHeroSection(
                             if (!layout.isTablet) {
                                 Spacer(modifier = Modifier.height(14.dp))
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    // Poster style groups the title/logo and "view details" together on
+                                    // the left (matching the HBO Max reference), pushing add-to-library
+                                    // to the far right instead of packing both buttons together.
+                                    modifier = if (isPosterStyle) Modifier.fillMaxWidth() else Modifier,
+                                    horizontalArrangement = if (isPosterStyle) {
+                                        Arrangement.SpaceBetween
+                                    } else {
+                                        Arrangement.spacedBy(12.dp)
+                                    },
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Surface(
@@ -719,6 +784,9 @@ internal fun HomeHeroSection(
                     DisposableEffect(Unit) {
                         onDispose { HeroTrailerAudioState.setVisible(false) }
                     }
+                    // Pushed down below HomeTopNotificationsBar's fixed zone (see HomeScreen —
+                    // that bar overlays every hero style, not just this one) so the two never
+                    // overlap when both happen to be visible at once.
                     if ((heroTrailerMuteVisible || heroTrailerMuteAlpha > 0.01f) && !LocalUseNativeNavigation.current) {
                         HeroGlassIconButton(
                             hazeState = heroHazeState,
@@ -726,7 +794,7 @@ internal fun HomeHeroSection(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(
-                                    top = statusBarTopPadding + 12.dp,
+                                    top = statusBarTopPadding + HOME_NOTIFICATIONS_BAR_HEIGHT + 12.dp,
                                     end = if (layout.isTablet) 32.dp else 18.dp,
                                 )
                                 .graphicsLayer { alpha = heroTrailerMuteAlpha },
@@ -932,6 +1000,7 @@ internal fun HomeHeroReservedSpace(
 private fun HeroContentBlock(
     item: MetaPreview,
     layout: HomeHeroLayout,
+    leftAligned: Boolean,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -941,7 +1010,7 @@ private fun HeroContentBlock(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (layout.isTablet) Alignment.Start else Alignment.CenterHorizontally,
+        horizontalAlignment = if (leftAligned) Alignment.Start else Alignment.CenterHorizontally,
     ) {
         if (logoUrl != null && !logoLoadError) {
             AsyncImage(
@@ -953,7 +1022,7 @@ private fun HeroContentBlock(
                     .clickable(enabled = onItemClick != null) {
                         onItemClick?.invoke(item)
                     },
-                alignment = if (layout.isTablet) Alignment.CenterStart else Alignment.Center,
+                alignment = if (leftAligned) Alignment.CenterStart else Alignment.Center,
                 contentScale = ContentScale.Fit,
                 onError = { logoLoadError = true },
             )
@@ -965,14 +1034,10 @@ private fun HeroContentBlock(
                     .clickable(enabled = onItemClick != null) {
                         onItemClick?.invoke(item)
                     },
-                style = if (layout.isTablet) {
-                    MaterialTheme.typography.displaySmall
-                } else {
-                    MaterialTheme.typography.displaySmall
-                },
+                style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Black,
-                textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center,
+                textAlign = if (leftAligned) TextAlign.Start else TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -981,7 +1046,7 @@ private fun HeroContentBlock(
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (layout.isTablet) {
+            horizontalArrangement = if (leftAligned) {
                 Arrangement.spacedBy(8.dp, Alignment.Start)
             } else {
                 Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)

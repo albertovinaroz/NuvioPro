@@ -53,6 +53,10 @@ import nuvio.composeapp.generated.resources.layout_hide_unreleased
 import nuvio.composeapp.generated.resources.layout_hide_unreleased_sub
 import nuvio.composeapp.generated.resources.layout_catalog_type
 import nuvio.composeapp.generated.resources.layout_catalog_type_sub
+import nuvio.composeapp.generated.resources.settings_homescreen_notifications_icon
+import nuvio.composeapp.generated.resources.settings_homescreen_notifications_icon_description
+import nuvio.composeapp.generated.resources.settings_homescreen_downloads_icon
+import nuvio.composeapp.generated.resources.settings_homescreen_downloads_icon_description
 import nuvio.composeapp.generated.resources.settings_homescreen_empty_message
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_card
@@ -60,6 +64,8 @@ import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_card_
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_description
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed
 import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_full_bleed_description
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_poster
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_poster_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_instant
@@ -96,6 +102,8 @@ internal fun LazyListScope.homescreenSettingsContent(
     heroTrailerStartDelaySeconds: Int,
     showCatalogType: Boolean,
     hideUnreleasedContent: Boolean,
+    notificationsIconEnabled: Boolean,
+    downloadsIconEnabled: Boolean,
     items: List<HomeCatalogSettingsItem>,
     isCatalogLoading: Boolean,
     catalogErrorMessage: String?,
@@ -171,6 +179,22 @@ internal fun LazyListScope.homescreenSettingsContent(
                     checked = hideUnreleasedContent,
                     isTablet = isTablet,
                     onCheckedChange = HomeCatalogSettingsRepository::setHideUnreleasedContent,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_homescreen_notifications_icon),
+                    description = stringResource(Res.string.settings_homescreen_notifications_icon_description),
+                    checked = notificationsIconEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = HomeCatalogSettingsRepository::setHeroNotificationsIconEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_homescreen_downloads_icon),
+                    description = stringResource(Res.string.settings_homescreen_downloads_icon_description),
+                    checked = downloadsIconEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = HomeCatalogSettingsRepository::setHeroDownloadsIconEnabled,
                 )
             }
         }
@@ -305,6 +329,15 @@ private fun HeroStyleOptions(
                     title = stringResource(Res.string.settings_homescreen_hero_style_card),
                     description = stringResource(
                         Res.string.settings_homescreen_hero_style_card_description,
+                    ),
+                )
+                HeroStyleOption(
+                    modifier = Modifier.weight(1f),
+                    style = HomeHeroStyle.POSTER,
+                    selectedStyle = selectedStyle,
+                    title = stringResource(Res.string.settings_homescreen_hero_style_poster),
+                    description = stringResource(
+                        Res.string.settings_homescreen_hero_style_poster_description,
                     ),
                 )
             }

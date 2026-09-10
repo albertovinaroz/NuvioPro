@@ -775,6 +775,8 @@
     <string name="settings_homescreen_hero_style_full_bleed_description">Nuvio Default. Artwork fills the width of the screen.</string>
     <string name="settings_homescreen_hero_style_card">Card</string>
     <string name="settings_homescreen_hero_style_card_description">A clean rounded shaped card.</string>
+    <string name="settings_homescreen_hero_style_poster">Poster</string>
+    <string name="settings_homescreen_hero_style_poster_description">Full-bleed poster art with a notifications button up top.</string>
     <string name="settings_homescreen_catalogs_source">Catalogs Source</string>
     <string name="settings_homescreen_selected_count">%1$d of %2$d selected</string>
     <string name="settings_homescreen_show_hero">Show Hero Section</string>
@@ -787,6 +789,10 @@
     <string name="settings_hero_trailer_start_delay_value">%1$d s</string>
     <string name="layout_hide_unreleased">Hide Unreleased Content</string>
     <string name="layout_hide_unreleased_sub">Hide movies and shows that haven't been released yet.</string>
+    <string name="settings_homescreen_notifications_icon">Notifications icon</string>
+    <string name="settings_homescreen_notifications_icon_description">Show the notifications bell above the home screen.</string>
+    <string name="settings_homescreen_downloads_icon">Downloads icon</string>
+    <string name="settings_homescreen_downloads_icon_description">Show the downloads shortcut above the home screen.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
     <string name="layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
     <string name="settings_homescreen_summary">%1$d of %2$d catalogs visible • %3$d hero sources selected</string>
@@ -1082,6 +1088,11 @@
     <string name="settings_meta_tab_layout_description">Group sections into tabs like the TV app. Assign up to 3 sections per tab group.</string>
     <string name="settings_meta_trailers">Trailers</string>
     <string name="settings_meta_trailers_description">Trailer rail and playback shortcuts.</string>
+    <string name="notifications_feed_title">Notifications</string>
+    <string name="notifications_feed_empty_title">No notifications yet</string>
+    <string name="notifications_feed_empty_description">Episode release alerts for shows you save to your library will show up here. Turn them on in Settings, under Notifications.</string>
+    <string name="notifications_feed_mark_all_read">Mark all read</string>
+    <string name="notifications_feed_clear_all">Clear all</string>
     <string name="settings_notifications_disabled_in_app">Notifications are currently disabled in Nuvio.</string>
     <string name="settings_notifications_episode_release_alerts">Episode release alerts</string>
     <string name="settings_notifications_episode_release_alerts_description">Schedule local notifications when a new episode for a saved show becomes available.</string>

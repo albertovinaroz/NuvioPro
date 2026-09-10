@@ -8,7 +8,6 @@ import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
 import com.nuvio.app.features.profiles.ProfileRepository
-import com.nuvio.app.core.time.EpisodeReleaseDatePlatform
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -205,13 +204,33 @@ object EpisodeReleaseNotificationsRepository {
                 return@launch
             }
 
+            // Deliberately stable (no timestamp) — re-testing replaces the same feed entry instead
+            // of piling up a new one per tap, and re-marks it unread so the badge visibly reacts
+            // again each time rather than silently no-op'ing against an id it's already seen.
+            val testRequestId = "episode-release-test-${ProfileRepository.activeProfileId}"
+            val testBody = getString(Res.string.notifications_test_preview_body)
+            val testBackdropUrl = target.banner ?: target.poster
             val request = EpisodeReleaseNotificationRequest(
-                requestId = "episode-release-test-${ProfileRepository.activeProfileId}-${EpisodeReleaseDatePlatform.nowEpochMs()}",
+                requestId = testRequestId,
                 notificationTitle = target.name,
-                notificationBody = getString(Res.string.notifications_test_preview_body),
+                notificationBody = testBody,
                 releaseDateIso = CurrentDateProvider.todayIsoDate(),
                 deepLinkUrl = buildMetaDeepLinkUrl(type = target.type, id = target.id),
-                backdropUrl = target.banner ?: target.poster,
+                backdropUrl = testBackdropUrl,
+            )
+            // Also recorded in the in-app feed — otherwise this button (the only way to preview the
+            // feature without waiting on a real followed show's release date) has no visible effect
+            // there at all, unlike a real scheduled notification.
+            NotificationFeedRepository.upsertUnread(
+                NotificationFeedItem(
+                    id = testRequestId,
+                    contentType = target.type,
+                    contentId = target.id,
+                    title = target.name,
+                    body = testBody,
+                    releaseDateIso = request.releaseDateIso,
+                    backdropUrl = testBackdropUrl,
+                ),
             )
 
             runCatching {
@@ -394,19 +413,32 @@ object EpisodeReleaseNotificationsRepository {
             }
 
             val semaphore = Semaphore(metadataFetchConcurrency)
-            val requests = trackedShowsByKey.values.map { trackedShow ->
+            val buildResults = trackedShowsByKey.values.map { trackedShow ->
                 scope.async {
                     semaphore.withPermit {
                         buildRequestsForShow(trackedShow)
                     }
                 }
             }.awaitAll().flatten()
+            val requests = buildResults.map(EpisodeReleaseBuildResult::request)
 
             runCatching {
                 EpisodeReleaseNotificationPlatform.scheduleEpisodeReleaseNotifications(requests)
             }.onFailure { error ->
                 log.e(error) { "Failed to schedule episode release notifications" }
             }
+
+            // Recorded in the in-app feed regardless of OS scheduling success above — the feed is a
+            // user-facing history of releases, not a mirror of what the OS actually accepted. Only
+            // releases that have actually happened, though: buildRequestsForShow returns every
+            // upcoming episode too (it needs those to schedule their future OS notifications), but
+            // the feed is a record of alerts already delivered, not a preview of ones still to come.
+            val today = CurrentDateProvider.todayIsoDate()
+            NotificationFeedRepository.recordItems(
+                buildResults
+                    .map(EpisodeReleaseBuildResult::feedItem)
+                    .filter { feedItem -> feedItem.releaseDateIso <= today },
+            )
 
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
@@ -431,7 +463,7 @@ object EpisodeReleaseNotificationsRepository {
             ?: libraryItems.firstOrNull()
     }
 
-    private suspend fun buildRequestsForShow(trackedShow: TrackedFollowedShow): List<EpisodeReleaseNotificationRequest> {
+    private suspend fun buildRequestsForShow(trackedShow: TrackedFollowedShow): List<EpisodeReleaseBuildResult> {
         val meta = runCatching {
             MetaDetailsRepository.fetch(
                 type = trackedShow.contentType,
@@ -448,27 +480,49 @@ object EpisodeReleaseNotificationsRepository {
             if (releaseDate < trackedShow.followedOnIsoDate) return@mapNotNull null
             if (episode.season == null && episode.episode == null) return@mapNotNull null
 
-            EpisodeReleaseNotificationRequest(
-                requestId = buildEpisodeReleaseNotificationId(
-                    profileId = ProfileRepository.activeProfileId,
+            val requestId = buildEpisodeReleaseNotificationId(
+                profileId = ProfileRepository.activeProfileId,
+                contentType = trackedShow.contentType,
+                contentId = trackedShow.contentId,
+                episodeId = episode.id,
+                releaseDateIso = releaseDate,
+            )
+            val body = buildEpisodeReleaseNotificationBody(
+                seasonNumber = episode.season,
+                episodeNumber = episode.episode,
+                episodeTitle = episode.title,
+            )
+            val backdropUrl = meta.background ?: episode.thumbnail ?: episode.seasonPoster ?: meta.poster
+
+            EpisodeReleaseBuildResult(
+                request = EpisodeReleaseNotificationRequest(
+                    requestId = requestId,
+                    notificationTitle = showTitle,
+                    notificationBody = body,
+                    releaseDateIso = releaseDate,
+                    deepLinkUrl = buildMetaDeepLinkUrl(
+                        type = trackedShow.contentType,
+                        id = trackedShow.contentId,
+                    ),
+                    backdropUrl = backdropUrl,
+                ),
+                feedItem = NotificationFeedItem(
+                    id = requestId,
                     contentType = trackedShow.contentType,
                     contentId = trackedShow.contentId,
-                    episodeId = episode.id,
+                    title = showTitle,
+                    body = body,
                     releaseDateIso = releaseDate,
-                ),
-                notificationTitle = showTitle,
-                notificationBody = buildEpisodeReleaseNotificationBody(
                     seasonNumber = episode.season,
                     episodeNumber = episode.episode,
-                    episodeTitle = episode.title,
+                    backdropUrl = backdropUrl,
                 ),
-                releaseDateIso = releaseDate,
-                deepLinkUrl = buildMetaDeepLinkUrl(
-                    type = trackedShow.contentType,
-                    id = trackedShow.contentId,
-                ),
-                backdropUrl = meta.background ?: episode.thumbnail ?: episode.seasonPoster ?: meta.poster,
             )
         }
     }
 }
+
+private data class EpisodeReleaseBuildResult(
+    val request: EpisodeReleaseNotificationRequest,
+    val feedItem: NotificationFeedItem,
+)

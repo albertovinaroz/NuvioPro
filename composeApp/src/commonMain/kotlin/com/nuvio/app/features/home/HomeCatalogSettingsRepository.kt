@@ -41,6 +41,8 @@ internal data class HomeCatalogSettingsUiState(
     val heroTrailerStartDelaySeconds: Int = HomeCatalogSettingsRepository.DEFAULT_HERO_TRAILER_START_DELAY_SECONDS,
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
+    val heroNotificationsIconEnabled: Boolean = true,
+    val heroDownloadsIconEnabled: Boolean = true,
     val items: List<HomeCatalogSettingsItem> = emptyList(),
 ) {
     val signature: String
@@ -56,6 +58,10 @@ internal data class HomeCatalogSettingsUiState(
             append(showCatalogType)
             append('|')
             append(hideUnreleasedContent)
+            append('|')
+            append(heroNotificationsIconEnabled)
+            append('|')
+            append(heroDownloadsIconEnabled)
             append('|')
             append(
                 items.joinToString(separator = "|") { item ->
@@ -84,13 +90,16 @@ internal enum class HomeHeroArtworkSource(
 
 /**
  * Full-bleed keeps the original edge-to-edge hero. Card renders the artwork inside a rounded
- * TMDB-poster-ratio card inset from the screen edges, below the status bar.
+ * TMDB-poster-ratio card inset from the screen edges, below the status bar. Poster is also
+ * edge-to-edge like full-bleed, but uses the tall poster artwork instead of the backdrop and adds
+ * a dark scrim at the very top for legibility of the floating notifications button there.
  */
 internal enum class HomeHeroStyle(
     val storageValue: String,
 ) {
     FULL_BLEED("full_bleed"),
     CARD("card"),
+    POSTER("poster"),
     ;
 
     companion object {
@@ -137,6 +146,8 @@ private data class StoredHomeCatalogSettingsPayload(
     val heroTrailerStartDelaySeconds: Int = HomeCatalogSettingsRepository.DEFAULT_HERO_TRAILER_START_DELAY_SECONDS,
     val showCatalogType: Boolean = true,
     val hideUnreleasedContent: Boolean = false,
+    val heroNotificationsIconEnabled: Boolean = true,
+    val heroDownloadsIconEnabled: Boolean = true,
     val items: List<StoredHomeCatalogPreference> = emptyList(),
 )
 
@@ -171,6 +182,8 @@ object HomeCatalogSettingsRepository {
     private var heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
     private var showCatalogType = true
     private var hideUnreleasedContent = false
+    private var heroNotificationsIconEnabled = true
+    private var heroDownloadsIconEnabled = true
 
     fun onProfileChanged() {
         hasLoaded = false
@@ -181,6 +194,8 @@ object HomeCatalogSettingsRepository {
         heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         showCatalogType = true
         hideUnreleasedContent = false
+        heroNotificationsIconEnabled = true
+        heroDownloadsIconEnabled = true
         definitions = emptyList()
         collectionDefinitions = emptyList()
         _uiState.value = HomeCatalogSettingsUiState()
@@ -197,6 +212,8 @@ object HomeCatalogSettingsRepository {
         heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         showCatalogType = true
         hideUnreleasedContent = false
+        heroNotificationsIconEnabled = true
+        heroDownloadsIconEnabled = true
         _uiState.value = HomeCatalogSettingsUiState()
     }
 
@@ -307,6 +324,24 @@ object HomeCatalogSettingsRepository {
         HomeCatalogSettingsSyncService.triggerPush()
     }
 
+    /** Independent of [heroDownloadsIconEnabled] — either can be turned off on its own for a
+     * cleaner-looking hero without losing the other. */
+    fun setHeroNotificationsIconEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (heroNotificationsIconEnabled == enabled) return
+        heroNotificationsIconEnabled = enabled
+        publish()
+        persist()
+    }
+
+    fun setHeroDownloadsIconEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (heroDownloadsIconEnabled == enabled) return
+        heroDownloadsIconEnabled = enabled
+        publish()
+        persist()
+    }
+
     fun setHeroSourceEnabled(key: String, enabled: Boolean) {
         updatePreference(key, pushRemote = false) { preference ->
             if (!enabled) {
@@ -364,6 +399,8 @@ object HomeCatalogSettingsRepository {
         heroTrailerStartDelaySeconds = DEFAULT_HERO_TRAILER_START_DELAY_SECONDS
         showCatalogType = true
         hideUnreleasedContent = false
+        heroNotificationsIconEnabled = true
+        heroDownloadsIconEnabled = true
         preferences = emptyMap()
         normalizePreferences()
         publish()
@@ -421,6 +458,8 @@ object HomeCatalogSettingsRepository {
             )
             showCatalogType = parsedPayload.showCatalogType
             hideUnreleasedContent = parsedPayload.hideUnreleasedContent
+            heroNotificationsIconEnabled = parsedPayload.heroNotificationsIconEnabled
+            heroDownloadsIconEnabled = parsedPayload.heroDownloadsIconEnabled
             preferences = parsedPayload.items.associateBy { it.key }
             publish()
             return
@@ -530,6 +569,8 @@ object HomeCatalogSettingsRepository {
             heroTrailerStartDelaySeconds = heroTrailerStartDelaySeconds,
             showCatalogType = showCatalogType,
             hideUnreleasedContent = hideUnreleasedContent,
+            heroNotificationsIconEnabled = heroNotificationsIconEnabled,
+            heroDownloadsIconEnabled = heroDownloadsIconEnabled,
             items = items,
         )
     }
@@ -544,6 +585,8 @@ object HomeCatalogSettingsRepository {
                     heroTrailerStartDelaySeconds = heroTrailerStartDelaySeconds,
                     showCatalogType = showCatalogType,
                     hideUnreleasedContent = hideUnreleasedContent,
+                    heroNotificationsIconEnabled = heroNotificationsIconEnabled,
+                    heroDownloadsIconEnabled = heroDownloadsIconEnabled,
                     items = preferences.values.sortedBy { it.order },
                 ),
             ),

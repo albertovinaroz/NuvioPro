@@ -78,6 +78,8 @@ fun HomescreenSettingsScreen(
             heroTrailerStartDelaySeconds = homescreenSettingsUiState.heroTrailerStartDelaySeconds,
             showCatalogType = homescreenSettingsUiState.showCatalogType,
             hideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
+            notificationsIconEnabled = homescreenSettingsUiState.heroNotificationsIconEnabled,
+            downloadsIconEnabled = homescreenSettingsUiState.heroDownloadsIconEnabled,
             items = homescreenSettingsUiState.items,
             isCatalogLoading = addonManifestsLoading,
             catalogErrorMessage = addonManifestErrorMessage,

@@ -1097,12 +1097,16 @@ struct TabContentView: View {
         // Home's hero has no visible navigation bar to host a toolbar item in (it's hidden
         // above), so its mute button is a floating overlay instead — Details gets a real toolbar
         // item since its navigation bar is visible.
+        //
+        // Pushed down below HomeTopNotificationsBar's fixed zone on the Compose side (56pt) so the
+        // two never overlap — that bar has no native counterpart of its own yet since it's rendered
+        // by Compose regardless of tab bar style, unlike this button.
         .overlay(alignment: .topTrailing) {
             if tab == .home && coordinator.path.isEmpty && trailerMuteViewModel.visible {
                 HeroTrailerMuteButton(muted: trailerMuteViewModel.muted) {
                     trailerMuteViewModel.toggle()
                 }
-                .padding(.top, 8)
+                .padding(.top, 8 + 56)
                 .padding(.trailing, 18)
                 .transition(.opacity)
             }

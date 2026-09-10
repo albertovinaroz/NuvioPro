@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
@@ -51,6 +52,7 @@ import com.nuvio.app.features.home.components.HomeHeroReservedSpace
 import com.nuvio.app.features.home.components.HomeHeroSection
 import com.nuvio.app.features.home.components.HomeSkeletonHero
 import com.nuvio.app.features.home.components.HomeSkeletonRow
+import com.nuvio.app.features.home.components.HomeTopNotificationsBar
 import com.nuvio.app.features.home.components.HomeContinueWatchingSectionBottomPadding
 import com.nuvio.app.features.home.components.ContinueWatchingLayout
 import com.nuvio.app.features.tracking.TrackingSettingsRepository
@@ -120,6 +122,8 @@ fun HomeScreen(
     continueWatchingDisintegrationRequest: DisintegrationRequest<String>? = null,
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
+    onNotificationsClick: (() -> Unit)? = null,
+    onDownloadsClick: (() -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -1134,6 +1138,16 @@ fun HomeScreen(
                 }
             }
         }
+
+        HomeTopNotificationsBar(
+            listState = homeListState,
+            isTablet = maxWidth.value >= 600f,
+            notificationsIconEnabled = homeSettingsUiState.heroNotificationsIconEnabled,
+            downloadsIconEnabled = homeSettingsUiState.heroDownloadsIconEnabled,
+            onNotificationsClick = onNotificationsClick,
+            onDownloadsClick = onDownloadsClick,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
     }
 }
 

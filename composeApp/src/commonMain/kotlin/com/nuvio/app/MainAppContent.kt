@@ -119,6 +119,8 @@ import com.nuvio.app.features.livetv.LiveTvChannel
 import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
+import com.nuvio.app.features.notifications.NotificationFeedItem
+import com.nuvio.app.features.notifications.NotificationFeedScreen
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.player.ExternalPlayerIntentResult
 import com.nuvio.app.features.player.ExternalPlayerPlatform
@@ -326,6 +328,7 @@ internal fun MainAppContent(
     val metaScreenSettingsTitle = stringResource(Res.string.compose_settings_page_meta_screen)
     val continueWatchingSettingsTitle = stringResource(Res.string.compose_settings_page_continue_watching)
     val debridSettingsTitle = stringResource(Res.string.compose_settings_page_debrid)
+    val notificationsFeedTitle = stringResource(Res.string.notifications_feed_title)
     val downloadsSettingsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
@@ -1446,6 +1449,15 @@ internal fun MainAppContent(
                                     )
                                 },
                                 onLibrarySectionViewAllClick = onLibrarySectionViewAllClick,
+                                onNotificationsClick = {
+                                    navController.navigate(NotificationFeedRoute(title = notificationsFeedTitle))
+                                },
+                                onDownloadsClick = {
+                                    activateTab(AppScreenTab.Settings)
+                                    navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle)) {
+                                        launchSingleTop = true
+                                    }
+                                },
                                 onCloudFilePlay = { item, file ->
                                     coroutineScope.launch {
                                         val resumeItem = WatchProgressRepository
@@ -1643,6 +1655,24 @@ internal fun MainAppContent(
                 entry<ContinueWatchingSettingsRoute> { route ->
                     SettingsDestination(route, navController) { onBack ->
                         ContinueWatchingSettingsScreen(onBack = onBack)
+                    }
+                }
+                entry<NotificationFeedRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        NotificationFeedScreen(
+                            onBack = onBack,
+                            onItemClick = { feedItem: NotificationFeedItem ->
+                                navController.navigate(
+                                    DetailRoute(
+                                        type = feedItem.contentType,
+                                        id = feedItem.contentId,
+                                        title = feedItem.title,
+                                        initialSeasonNumber = feedItem.seasonNumber,
+                                        initialEpisodeNumber = feedItem.episodeNumber,
+                                    ),
+                                )
+                            },
+                        )
                     }
                 }
                 entry<SettingsPageRoute> { route ->
