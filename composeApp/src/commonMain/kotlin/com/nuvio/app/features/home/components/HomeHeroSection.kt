@@ -297,8 +297,9 @@ internal fun HomeHeroSection(
                 viewportHeightDp = viewportHeight?.value,
                 mobileBelowSectionHeightHintDp = mobileBelowSectionHeightHint?.value,
             )
-            // Poster style falls back to the backdrop on a wide/tablet viewport exactly like card
-            // style does — a tall poster would look cramped and mostly-empty at that aspect.
+            // Only used to gate the height boost below — poster style always uses the backdrop
+            // for its artwork (see effectiveArtworkSource) so a wide/tablet viewport doesn't need
+            // a separate artwork fallback the way card style does.
             val posterUsesWideArtwork = heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet)
             // In card mode the height is dictated by the artwork ratio, not the viewport. Poster
             // mode keeps full-bleed's viewport-driven height but boosted taller, capped against the
@@ -320,13 +321,14 @@ internal fun HomeHeroSection(
                 }
                 else -> baseLayout
             }
+            // Poster style deliberately uses the backdrop, not the poster artwork: posters usually
+            // have the title baked into the art itself, which would double up with the separate
+            // clearlogo overlay HeroContentBlock already draws on top (the same one full-bleed
+            // relies on). Using the backdrop keeps the logo living only in that overlay, exactly
+            // like full-bleed — poster style's "poster" look comes from its taller, boosted height
+            // and left-aligned content, not from the underlying artwork source.
             val effectiveArtworkSource = when {
                 isCardStyle -> if (heroUsesWideArtwork(maxWidth, viewportHeight, baseLayout.isTablet)) {
-                    HomeHeroArtworkSource.BACKDROP
-                } else {
-                    HomeHeroArtworkSource.POSTER
-                }
-                isPosterStyle -> if (posterUsesWideArtwork) {
                     HomeHeroArtworkSource.BACKDROP
                 } else {
                     HomeHeroArtworkSource.POSTER
