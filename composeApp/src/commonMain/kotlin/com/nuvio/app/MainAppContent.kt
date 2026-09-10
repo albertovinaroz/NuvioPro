@@ -1453,10 +1453,18 @@ internal fun MainAppContent(
                                     navController.navigate(NotificationFeedRoute(title = notificationsFeedTitle))
                                 },
                                 onDownloadsClick = {
-                                    activateTab(AppScreenTab.Settings)
-                                    navController.navigate(DownloadsSettingsRoute(downloadsSettingsTitle)) {
-                                        launchSingleTop = true
-                                    }
+                                    // The real fix: DownloadsSettingsRoute is a
+                                    // SettingsDestinationRoute everywhere else, which hardcodes
+                                    // preferredTabName = "Settings" — the native side (ContentView's
+                                    // AppNavigationCoordinator.push) reads that before it ever
+                                    // considers which tab the push came from, so no amount of
+                                    // Kotlin-side launchSingleTop/activateTab juggling could keep
+                                    // this one on Home. forceSettingsTab = false opts out, so it
+                                    // falls back to the origin tab instead, same as
+                                    // NotificationFeedRoute (which has no tab preference at all).
+                                    navController.navigate(
+                                        DownloadsSettingsRoute(downloadsSettingsTitle, forceSettingsTab = false),
+                                    )
                                 },
                                 onCloudFilePlay = { item, file ->
                                     coroutineScope.launch {
@@ -1662,15 +1670,20 @@ internal fun MainAppContent(
                         NotificationFeedScreen(
                             onBack = onBack,
                             onItemClick = { feedItem: NotificationFeedItem ->
-                                navController.navigate(
-                                    DetailRoute(
-                                        type = feedItem.contentType,
-                                        id = feedItem.contentId,
-                                        title = feedItem.title,
-                                        initialSeasonNumber = feedItem.seasonNumber,
-                                        initialEpisodeNumber = feedItem.episodeNumber,
-                                    ),
-                                )
+                                val linkUrl = feedItem.linkUrl
+                                if (linkUrl != null) {
+                                    uriHandler.openUri(linkUrl)
+                                } else {
+                                    navController.navigate(
+                                        DetailRoute(
+                                            type = feedItem.contentType,
+                                            id = feedItem.contentId,
+                                            title = feedItem.title,
+                                            initialSeasonNumber = feedItem.seasonNumber,
+                                            initialEpisodeNumber = feedItem.episodeNumber,
+                                        ),
+                                    )
+                                }
                             },
                         )
                     }
