@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15-b1",
+          "buildVersion": "138",
+          "date": "2026-09-10T06:57:48Z",
+          "localizedDescription": "# Nuvio Pro 0.4.15-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- fix(calendar): open series detail at selected episode from library calendar @luqmanfadlli\n- fix(calendar): load calendar releases on demand by month @luqmanfadlli\n- feat(calendar): add swipe calendar month navigation @luqmanfadlli\n- fix(discover): keep discover filters visible while scrolling @luqmanfadlli\n- fix(auth): synchronize shared client initialization @tapframe\n- fix(home): restore hero position when switching profiles @tapframe\n- fix(playback): disable play when no source is available @tapframe\n- fix(home): reduce hero height without continue watching @tapframe\n- Fix NetworkOnMainThreadException when starting a download (#1893) @Axl-Lvy\n- feat: custom static colours @tapframe\n- feat(members): custom gradient @tapframe\n- Added Russian translation (#1886) @zamalatb\n- fix(downloads): exclude foreground service from playstore builds @tapframe\n- fix(player): preserve each foreground service start notification @tapframe\n- fix(player): synchronize native subtitle rendering @tapframe\n- fix(player): resolve subtitle formats off the main thread @tapframe\n- feat(ui): unify skeleton loading states @tapframe\n- perf(home): improve lazy list item reuse @tapframe\n- perf(startup): avoid redundant collection and catalog processing @tapframe\n- perf(ios): release temporary GIF decoding resources @tapframe\n- perf(loading): cache bundled animation resource reads @tapframe\n- perf(ui): defer loading and parallax state reads @tapframe\n- fix(streams): refresh resume position Fixes #1866 @tapframe\n- fix(android): background downloads @tapframe\n\n### Pro\n- fix(theme): use ThemeColors palette accent for tab bar reset @albertovinaroz\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.15-b1/nuvio-0.4.15-b1-pro-release.ipa",
+          "size": 67954825,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.14-b5",
           "buildVersion": "137",
           "date": "2026-09-09T11:39:15Z",
