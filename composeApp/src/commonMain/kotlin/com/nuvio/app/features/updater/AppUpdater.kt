@@ -36,6 +36,7 @@ data class AppUpdate(
     val assetName: String,
     val assetUrl: String,
     val assetSizeBytes: Long?,
+    val publishedAt: String? = null,
 )
 
 data class AppUpdaterUiState(
@@ -60,6 +61,7 @@ private data class GitHubReleaseDto(
     val prerelease: Boolean = false,
     @SerialName("html_url") val htmlUrl: String? = null,
     @SerialName("target_commitish") val targetCommitish: String? = null,
+    @SerialName("published_at") val publishedAt: String? = null,
     val assets: List<GitHubAssetDto> = emptyList(),
 )
 
@@ -80,7 +82,7 @@ private class NoChannelReleaseException : IllegalStateException(
     runBlocking { getString(Res.string.updates_no_channel_release) },
 )
 
-private object VersionUtils {
+internal object VersionUtils {
     fun normalize(raw: String?): String {
         if (raw.isNullOrBlank()) return ""
         return raw.trim().removePrefix("v").removePrefix("V")
@@ -90,9 +92,15 @@ private object VersionUtils {
         val normalized = normalize(raw)
         if (normalized.isBlank()) return null
 
+        // Drop any leading non-digit prefix per token before reading the digit run, so a build
+        // suffix like "b2" contributes 2 instead of being dropped entirely — without this, every
+        // "X.Y.Z-bN" tag compared equal regardless of N, since "bN" alone starts with a letter and
+        // takeWhile{isDigit} on it returns nothing.
         val parts = normalized.split('.', '-', '_')
             .filter { it.isNotBlank() }
-            .mapNotNull { token -> token.takeWhile { it.isDigit() }.toIntOrNull() }
+            .mapNotNull { token ->
+                token.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() }.toIntOrNull()
+            }
 
         return parts.takeIf { it.isNotEmpty() }
     }
@@ -117,8 +125,48 @@ private object VersionUtils {
     }
 }
 
-private object AppUpdaterRepository {
+internal data class LatestChannelRelease(
+    val tag: String,
+    val releaseUrl: String?,
+    val publishedAt: String?,
+)
+
+internal object AppUpdaterRepository {
     suspend fun getLatestChannelUpdate(): Result<AppUpdate> = runCatching {
+        val release = fetchLatestChannelRelease()
+        val tag = release.tagOrName()
+
+        val asset = chooseBestApkAsset(release.assets)
+            ?: error(getString(Res.string.updates_apk_asset_missing))
+
+        AppUpdate(
+            tag = tag,
+            title = release.name?.takeIf { it.isNotBlank() } ?: tag,
+            notes = release.body.orEmpty(),
+            releaseUrl = release.htmlUrl,
+            assetName = asset.name,
+            assetUrl = asset.browserDownloadUrl,
+            assetSizeBytes = asset.size,
+            publishedAt = release.publishedAt,
+        )
+    }
+
+    /**
+     * Same channel release [getLatestChannelUpdate] resolves, without requiring a downloadable
+     * asset — for platforms that can only point at the release, not install it (see
+     * [AppUpdateFeedNotifier]), which would otherwise fail here on every check since Pro's iOS
+     * releases carry an .ipa, never the .apk [chooseBestApkAsset] looks for.
+     */
+    suspend fun getLatestChannelRelease(): Result<LatestChannelRelease> = runCatching {
+        val release = fetchLatestChannelRelease()
+        LatestChannelRelease(
+            tag = release.tagOrName(),
+            releaseUrl = release.htmlUrl,
+            publishedAt = release.publishedAt,
+        )
+    }
+
+    private suspend fun fetchLatestChannelRelease(): GitHubReleaseDto {
         val response = httpRequestRaw(
             method = "GET",
             url = "$gitHubApiBase/repos/$gitHubOwner/$gitHubRepo/releases?per_page=20",
@@ -133,26 +181,14 @@ private object AppUpdaterRepository {
         }
 
         val releases = appUpdaterJson.decodeFromString<List<GitHubReleaseDto>>(response.body)
-        val release = releases.firstOrNull { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
+        return releases.firstOrNull { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
             ?: throw NoChannelReleaseException()
-
-        val tag = release.tagName?.takeIf { it.isNotBlank() }
-            ?: release.name?.takeIf { it.isNotBlank() }
-            ?: error(getString(Res.string.updates_release_missing_title))
-
-        val asset = chooseBestApkAsset(release.assets)
-            ?: error(getString(Res.string.updates_apk_asset_missing))
-
-        AppUpdate(
-            tag = tag,
-            title = release.name?.takeIf { it.isNotBlank() } ?: tag,
-            notes = release.body.orEmpty(),
-            releaseUrl = release.htmlUrl,
-            assetName = asset.name,
-            assetUrl = asset.browserDownloadUrl,
-            assetSizeBytes = asset.size,
-        )
     }
+
+    private suspend fun GitHubReleaseDto.tagOrName(): String =
+        tagName?.takeIf { it.isNotBlank() }
+            ?: name?.takeIf { it.isNotBlank() }
+            ?: error(getString(Res.string.updates_release_missing_title))
 
     private fun GitHubReleaseDto.matchesRequestedChannel(): Boolean {
         val channel = releaseChannelBranch

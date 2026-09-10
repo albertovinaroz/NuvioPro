@@ -16,6 +16,9 @@ expect object AppFeaturePolicy {
     val trailerPlaybackMode: TrailerPlaybackMode
     val heroTrailerPlaybackSupported: Boolean
     val inAppUpdaterEnabled: Boolean
+    /** Passive counterpart to [inAppUpdaterEnabled] for channels that can't download/install their
+     * own update — a new release drops a card into the notification feed instead of a banner. */
+    val altStoreUpdateAlertsEnabled: Boolean
     val imdbRatingLogoEnabled: Boolean
     val mediaPlaybackForegroundServiceEnabled: Boolean
     val downloadForegroundServiceEnabled: Boolean

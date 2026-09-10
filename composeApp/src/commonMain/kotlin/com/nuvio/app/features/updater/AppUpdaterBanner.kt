@@ -85,6 +85,13 @@ fun AppUpdaterHost(
     content: @Composable () -> Unit,
 ) {
     if (!AppFeaturePolicy.inAppUpdaterEnabled || !AppUpdaterPlatform.isSupported) {
+        // Can't offer a direct install here — fall back to a passive feed alert instead, on
+        // channels that opt into it (see AppFeaturePolicy.altStoreUpdateAlertsEnabled).
+        if (AppFeaturePolicy.altStoreUpdateAlertsEnabled) {
+            LaunchedEffect(Unit) {
+                AppUpdateFeedNotifier.ensureChecked()
+            }
+        }
         content()
         return
     }
