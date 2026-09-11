@@ -349,6 +349,15 @@ object LibraryRepository {
         pushToServer(snapshot)
     }
 
+    /** Hides the "recently added" poster dot early, once the user has opened the item. */
+    fun markPosterOpened(item: LibraryItem) {
+        if (!item.isRecentlyAdded()) return
+        ensureLoaded()
+        val snapshot = localState.updateLocalOnly(item.copy(recentlyAddedDismissed = true))
+        persist(snapshot)
+        publish()
+    }
+
     fun remove(id: String) {
         ensureLoaded()
         val result = localState.removeById(id)

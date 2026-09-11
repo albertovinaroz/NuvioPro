@@ -126,6 +126,7 @@ internal fun LazyListScope.libraryVerticalContent(
                 .padding(horizontal = 16.dp),
             watchedKeys = watchedKeys,
             fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+            isRecentlyAdded = { preview -> rowEntries.findEntry(preview)?.item?.isRecentlyAdded() == true },
             onPosterClick = onPosterClick?.let { callback ->
                 { preview -> rowEntries.findEntry(preview)?.item?.let(callback) }
             },

@@ -149,6 +149,13 @@ fun LibraryScreen(
         LibraryRepository.ensureLoaded()
         LibraryRepository.uiState
     }.collectAsStateWithLifecycle()
+    // Opening a poster acknowledges it — hide its "recently added" dot going forward.
+    val wrappedOnPosterClick = onPosterClick?.let { callback ->
+        { item: LibraryItem ->
+            LibraryRepository.markPosterOpened(item)
+            callback(item)
+        }
+    }
     val cloudUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
     val cloudSettings by remember {
         DebridSettingsRepository.ensureLoaded()
@@ -558,7 +565,7 @@ fun LibraryScreen(
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 sortOption = effectiveSortOption,
-                                onPosterClick = onPosterClick,
+                                onPosterClick = wrappedOnPosterClick,
                                 onSectionViewAllClick = onSectionViewAllClick,
                                 onPosterLongClick = onPosterLongClick,
                                 onDisintegrated = disintegration::onExited,
@@ -569,7 +576,7 @@ fun LibraryScreen(
                                 releaseInfoFor = releaseInfoFor,
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                                onPosterClick = onPosterClick,
+                                onPosterClick = wrappedOnPosterClick,
                                 onPosterLongClick = onPosterLongClick,
                             )
                         }
@@ -585,7 +592,7 @@ fun LibraryScreen(
             events = releaseCalendarEvents,
             isLoading = releaseCalendarLoading,
             onDismiss = { showReleaseCalendar = false },
-            onPosterClick = onPosterClick,
+            onPosterClick = wrappedOnPosterClick,
             onCalendarEpisodeClick = onCalendarEpisodeClick,
             onMonthRequested = { month ->
                 coroutineScope.launch {
@@ -1691,6 +1698,7 @@ private fun LazyListScope.librarySections(
                         item = posterItem,
                         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                     ),
+                    isRecentlyAdded = item.isRecentlyAdded(),
                     onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
                     onLongClick = if (entry.exiting || entrySource == null) {
                         null

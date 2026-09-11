@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
+import com.nuvio.app.core.ui.NuvioPosterRecentlyAddedOverlay
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
 import com.nuvio.app.core.ui.nuvioCardDepth
@@ -51,6 +52,7 @@ internal fun PosterGridRow(
     modifier: Modifier = Modifier,
     watchedKeys: Set<String> = emptySet(),
     fullyWatchedSeriesKeys: Set<String> = emptySet(),
+    isRecentlyAdded: (MetaPreview) -> Boolean = { false },
     onPosterClick: ((MetaPreview) -> Unit)? = null,
     onPosterLongClick: ((MetaPreview) -> Unit)? = null,
 ) {
@@ -72,6 +74,7 @@ internal fun PosterGridRow(
                     item = item,
                     fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                 ),
+                isRecentlyAdded = isRecentlyAdded(item),
                 onClick = onPosterClick?.let { { it(item) } },
                 onLongClick = onPosterLongClick?.let { { it(item) } },
             )
@@ -111,6 +114,7 @@ private fun PosterGridTile(
     hideLabels: Boolean,
     modifier: Modifier = Modifier,
     isWatched: Boolean = false,
+    isRecentlyAdded: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -144,6 +148,7 @@ private fun PosterGridTile(
                 )
             }
             NuvioPosterWatchedOverlay(isWatched = isWatched)
+            NuvioPosterRecentlyAddedOverlay(isRecentlyAdded = isRecentlyAdded)
         }
         if (!hideLabels) {
             Text(

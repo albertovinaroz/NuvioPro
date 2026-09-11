@@ -264,6 +264,21 @@ internal class LibraryLocalState {
         snapshotLocked()
     }
 
+    /**
+     * Replaces an already-saved item in place without queuing it for a server push — for
+     * cosmetic, device-only fields (e.g. [LibraryItem.recentlyAddedDismissed]) that aren't part
+     * of the synced membership data. No-ops if the item isn't currently saved.
+     */
+    fun updateLocalOnly(item: LibraryItem): LibraryLocalSnapshot = synchronized(lock) {
+        val key = libraryItemKey(item.id, item.type)
+        if (itemsById.containsKey(key)) {
+            itemsById[key] = item
+            revision += 1L
+            contentRevision += 1L
+        }
+        snapshotLocked()
+    }
+
     fun toggle(item: LibraryItem): LibraryLocalToggleResult = synchronized(lock) {
         val key = libraryItemKey(item.id, item.type)
         val removedItem = itemsById.remove(key)

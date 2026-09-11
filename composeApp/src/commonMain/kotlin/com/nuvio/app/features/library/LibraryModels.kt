@@ -32,6 +32,8 @@ data class LibraryItem(
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null,
     val savedAtEpochMs: Long,
+    /** Set once the user opens this item after saving it — hides the "recently added" dot early. */
+    val recentlyAddedDismissed: Boolean = false,
 ) : TrackingAttributedItem {
     override val trackingContentId: String
         get() = id
@@ -45,6 +47,12 @@ data class LibrarySection(
 
 internal fun librarySectionItemKey(sectionType: String, item: LibraryItem): String =
     "$sectionType|${item.type}|${item.id}"
+
+// How long a saved item keeps showing the "recently added" dot on its poster.
+private const val RECENTLY_ADDED_WINDOW_MS = 3L * 24 * 60 * 60 * 1000
+
+fun LibraryItem.isRecentlyAdded(nowEpochMs: Long = LibraryClock.nowEpochMs()): Boolean =
+    !recentlyAddedDismissed && (nowEpochMs - savedAtEpochMs) in 0 until RECENTLY_ADDED_WINDOW_MS
 
 enum class LibrarySourceMode {
     LOCAL,
