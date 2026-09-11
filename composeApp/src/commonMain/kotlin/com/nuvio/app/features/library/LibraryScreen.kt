@@ -650,8 +650,6 @@ private fun LazyListScope.cloudLibraryContent(
             val effectiveSelectedType = selectedType?.takeIf { type -> type in availableTypes }
             val typeFilteredItems = providerItems
                 .filter { item -> effectiveSelectedType == null || item.type == effectiveSelectedType }
-            // Local filter over the already-loaded library. Matches the item name or any of its
-            // file names, since the useful identifier is often in the filename, not the title.
             val trimmedQuery = searchQuery.trim()
             val hasActiveFilter = selectedProviderId != null || effectiveSelectedType != null || trimmedQuery.isNotEmpty()
             val filteredItems = if (trimmedQuery.isEmpty()) {
