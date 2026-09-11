@@ -89,7 +89,7 @@ internal fun MainTabsDestination(
                 FloatingNavigationItem(
                     selected = selectedTab == AppScreenTab.Search,
                     onClick = { onTabSelected(AppScreenTab.Search) },
-                    drawable = Res.drawable.sidebar_search,
+                    icon = AppScreenTab.Search.icon(selectedTab == AppScreenTab.Search),
                     label = stringResource(Res.string.compose_nav_search),
                 ),
             )
@@ -97,7 +97,7 @@ internal fun MainTabsDestination(
                 FloatingNavigationItem(
                     selected = selectedTab == AppScreenTab.Library,
                     onClick = { onTabSelected(AppScreenTab.Library) },
-                    drawable = Res.drawable.sidebar_library,
+                    icon = AppScreenTab.Library.icon(selectedTab == AppScreenTab.Library),
                     label = stringResource(Res.string.compose_nav_library),
                 ),
             )
