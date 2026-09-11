@@ -77,7 +77,10 @@ Everything below is added on top of upstream Nuvio Mobile.
 | Feature | Where | Default |
 |---|---|---|
 | **In-app notification feed** — every episode/premiere alert lands in a running list instead of only firing a system notification; mark items read, remove one, or clear the whole feed. | Bell icon above the Home hero | — |
+| **Swipe to dismiss** — swipe a notification left to remove it, revealing a red background and the same remove icon, instead of tapping a persistent ✕ button. | Notification feed | Always on |
 | **Test entries in the feed** — Send Test Notification also drops a preview card into the feed, so you can see how it looks without waiting for a real release. | Settings → Notifications → **Send Test Notification** | — |
+| **Update-available alerts (iOS)** — since a sideloaded app can't update itself, a card in the feed tells you when a newer release is out and links straight to it. | Notification feed | Always on |
+| **In-app "What's New" changelog** — read the last few releases' notes without leaving the app, from an update-alert card or from Settings. | Settings → **What's New** / tap an update-alert card | — |
 
 ### Player
 
@@ -91,6 +94,7 @@ Everything below is added on top of upstream Nuvio Mobile.
 | **Hardware keyboard shortcuts** — <kbd>Space</kbd> play/pause, <kbd>←</kbd> / <kbd>→</kbd> seek 10 s, <kbd>Esc</kbd> leave the player. Inert while a panel is open or the controls are locked. | — | Always on |
 | **Adjustable subtitle transparency** | Settings → Playback → Subtitle Rendering → **Background Color** | — |
 | **Auto-show subtitles on rewind or mute** — when subtitles are off, they switch on while you rewind or while muted/volume-zero, then hide again once playback catches up or you unmute. Two independent toggles. | Settings → Playback → **Auto-Show Subtitles on Rewind** / **on Mute** | Both on |
+| **Sleep Timer** — pause playback automatically after 1–60 minutes, picked with a scrolling wheel and haptic feedback per minute; shows a live countdown and a badge on the trigger icon while active. | Player screen overlay → moon icon | Off |
 
 ### Live TV
 
@@ -131,6 +135,7 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | Feature | Where | Default |
 |---|---|---|
 | **Library Calendar** — full-screen view of upcoming release dates for ongoing series in the library. | Library screen → **calendar icon** | — |
+| **"Recently added" indicator** — a small dot marks posters saved to the library within the last 3 days; opening the poster clears it early. | Library screen | Always on |
 
 ### Downloads
 
