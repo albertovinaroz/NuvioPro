@@ -207,6 +207,10 @@ internal class PlayerScreenRuntime(
     var showSubtitleModal by mutableStateOf(false)
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfoModal by mutableStateOf(false)
+    var showSleepTimerModal by mutableStateOf(false)
+    /** Epoch millis playback should pause at, or null while no timer is running. Cleared once it
+     * fires or the user cancels it — see notifySleepTimerTick in PlayerScreenRuntimePlaybackActions.kt. */
+    var sleepTimerEndAtMs by mutableStateOf<Long?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)
@@ -256,6 +260,7 @@ internal class PlayerScreenRuntime(
             showSubtitleModal ||
             showVideoSettingsModal ||
             showStreamInfoModal ||
+            showSleepTimerModal ||
             showSourcesPanel ||
             showQualityPanel ||
             showEpisodesPanel ||

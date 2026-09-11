@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Forward10
@@ -101,6 +102,8 @@ internal fun PlayerControlsShell(
     onVideoSettingsClick: (() -> Unit)? = null,
     onPictureInPictureClick: (() -> Unit)? = null,
     onInfoClick: (() -> Unit)? = null,
+    onSleepTimerClick: (() -> Unit)? = null,
+    sleepTimerActive: Boolean = false,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
@@ -170,6 +173,8 @@ internal fun PlayerControlsShell(
                 onVideoSettingsClick = onVideoSettingsClick,
                 onPictureInPictureClick = onPictureInPictureClick,
                 onInfoClick = onInfoClick,
+                onSleepTimerClick = onSleepTimerClick,
+                sleepTimerActive = sleepTimerActive,
                 onOpenInExternalPlayer = onOpenInExternalPlayer,
                 onBack = onBack,
                 modifier = Modifier
@@ -243,6 +248,8 @@ private fun PlayerHeader(
     onVideoSettingsClick: (() -> Unit)?,
     onPictureInPictureClick: (() -> Unit)?,
     onInfoClick: (() -> Unit)?,
+    onSleepTimerClick: (() -> Unit)?,
+    sleepTimerActive: Boolean,
     onOpenInExternalPlayer: (() -> Unit)?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -389,6 +396,27 @@ private fun PlayerHeader(
                             iconSize = metrics.headerIconSize,
                             onClick = onInfoClick,
                         )
+                    }
+                    if (onSleepTimerClick != null) {
+                        Box {
+                            PlayerHeaderIconButton(
+                                icon = Icons.Rounded.Bedtime,
+                                contentDescription = stringResource(Res.string.player_action_sleep_timer),
+                                buttonSize = metrics.headerIconSize + 16.dp,
+                                iconSize = metrics.headerIconSize,
+                                onClick = onSleepTimerClick,
+                            )
+                            if (sleepTimerActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 4.dp)
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.error),
+                                )
+                            }
+                        }
                     }
                     NuvioBackButton(
                         onClick = onBack,

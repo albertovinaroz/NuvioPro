@@ -106,6 +106,12 @@ internal fun PlayerScreenModalHosts(
     showStreamInfoModal: Boolean,
     mediaInfoJson: String,
     onStreamInfoModalDismissed: () -> Unit,
+    showSleepTimerModal: Boolean,
+    sleepTimerActive: Boolean,
+    sleepTimerEndAtMs: Long?,
+    onSleepTimerDurationSelected: (Int) -> Unit,
+    onSleepTimerCancelled: () -> Unit,
+    onSleepTimerModalDismissed: () -> Unit,
 ) {
     if (pendingP2pSwitch != null) {
         P2pConsentDialog(
@@ -260,6 +266,15 @@ internal fun PlayerScreenModalHosts(
         selectedQualityVariant = selectedQualityVariant,
         selectedQualityIsAuto = selectedQualityIsAuto,
         onDismiss = onStreamInfoModalDismissed,
+    )
+
+    SleepTimerModal(
+        visible = showSleepTimerModal,
+        isActive = sleepTimerActive,
+        sleepTimerEndAtMs = sleepTimerEndAtMs,
+        onDurationSelected = onSleepTimerDurationSelected,
+        onCancelTimer = onSleepTimerCancelled,
+        onDismiss = onSleepTimerModalDismissed,
     )
 }
 

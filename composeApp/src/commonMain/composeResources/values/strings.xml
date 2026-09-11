@@ -2123,6 +2123,12 @@
     <!-- PlayerControls a11y -->
     <string name="player_action_submit_intro">Submit Intro</string>
     <string name="player_action_video_settings">Video settings</string>
+    <string name="player_action_sleep_timer">Sleep timer</string>
+    <string name="player_sleep_timer_active_label">Playback will pause in %1$s</string>
+    <string name="player_sleep_timer_cancel">Cancel timer</string>
+    <string name="player_sleep_timer_elapsed_toast">Sleep timer ended — playback paused</string>
+    <string name="player_sleep_timer_minutes_unit">min</string>
+    <string name="player_sleep_timer_start">Start Timer</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">Cloud library is not available for %1$s.</string>
     <!-- Player iOS video settings modal -->

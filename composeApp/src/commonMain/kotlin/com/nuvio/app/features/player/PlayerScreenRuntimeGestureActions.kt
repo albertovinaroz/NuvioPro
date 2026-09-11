@@ -6,9 +6,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.nuvio.app.core.ui.NuvioToastController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -68,6 +70,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
     showSubtitleModal = false
     showVideoSettingsModal = false
     showStreamInfoModal = false
+    showSleepTimerModal = false
     showSourcesPanel = false
     showEpisodesPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()
@@ -167,6 +170,32 @@ internal fun PlayerScreenRuntime.togglePlayback() {
         playerController?.play()
     }
     controlsVisible = true
+}
+
+internal fun PlayerScreenRuntime.startSleepTimer(durationMs: Long) {
+    sleepTimerEndAtMs = com.nuvio.app.features.watchprogress.WatchProgressClock.nowEpochMs() + durationMs
+    showSleepTimerModal = false
+}
+
+internal fun PlayerScreenRuntime.cancelSleepTimer() {
+    sleepTimerEndAtMs = null
+    showSleepTimerModal = false
+}
+
+/** Ticks once a second while a timer is running, pausing playback the moment it elapses — called
+ * from a LaunchedEffect in RenderPlayerRuntimeUi keyed on sleepTimerEndAtMs. */
+internal suspend fun PlayerScreenRuntime.runSleepTimerUntilElapsed() {
+    while (true) {
+        val endAt = sleepTimerEndAtMs ?: return
+        val remainingMs = endAt - com.nuvio.app.features.watchprogress.WatchProgressClock.nowEpochMs()
+        if (remainingMs <= 0L) {
+            if (playbackSnapshot.isPlaying) togglePlayback()
+            sleepTimerEndAtMs = null
+            NuvioToastController.show(getString(Res.string.player_sleep_timer_elapsed_toast))
+            return
+        }
+        delay(minOf(remainingMs, 1_000L))
+    }
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {

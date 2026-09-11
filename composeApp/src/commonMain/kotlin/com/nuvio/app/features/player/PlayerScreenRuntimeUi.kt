@@ -187,6 +187,9 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             runCatching { keyboardFocusRequester.requestFocus() }
         }
     }
+    LaunchedEffect(sleepTimerEndAtMs) {
+        runSleepTimerUntilElapsed()
+    }
 
     Box(
         modifier = Modifier
@@ -392,6 +395,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 )
                 showStreamInfoModal = true
             },
+            onSleepTimerClick = { showSleepTimerModal = true },
+            sleepTimerActive = sleepTimerEndAtMs != null,
             onVideoSettingsClick = if (isIos) {
                 {
                     showVideoSettingsModal = true
@@ -810,5 +815,11 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         showStreamInfoModal = showStreamInfoModal,
         mediaInfoJson = playbackSnapshot.mediaInfoJson,
         onStreamInfoModalDismissed = { showStreamInfoModal = false },
+        showSleepTimerModal = showSleepTimerModal,
+        sleepTimerActive = sleepTimerEndAtMs != null,
+        sleepTimerEndAtMs = sleepTimerEndAtMs,
+        onSleepTimerDurationSelected = { minutes -> startSleepTimer(minutes * 60_000L) },
+        onSleepTimerCancelled = { cancelSleepTimer() },
+        onSleepTimerModalDismissed = { showSleepTimerModal = false },
     )
 }
