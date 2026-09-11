@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.15-b3",
+          "buildVersion": "140",
+          "date": "2026-09-11T06:47:58Z",
+          "localizedDescription": "# Nuvio Pro 0.4.15-b3\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n- feat(updater): add a passive update-available alert for the sideload channel @albertovinaroz\n- feat(library): pin title and filter row while scrolling @albertovinaroz\n- feat(notifications): persist removed alerts and add an icon for update cards @albertovinaroz\n- fix(nav): keep the home downloads shortcut on the Home tab instead of jumping into Settings @albertovinaroz\n- feat(home): tune notifications bar spacing and scroll fade @albertovinaroz\n\n> **Tip:** since iOS has no way for a sideloaded app to update itself, Nuvio Pro now tells you when a newer version ships — an \"Update available\" card shows up in the notification feed (the bell above the Home hero) linking straight to the release, so you know to go grab it from AltStore/SideStore.\n\n> **Note for iOS users:** Since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.15-b3/nuvio-0.4.15-b3-pro-release.ipa",
+          "size": 68038780,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.15-b2",
           "buildVersion": "139",
           "date": "2026-09-10T12:02:56Z",
