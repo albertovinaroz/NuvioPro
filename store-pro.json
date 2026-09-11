@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.16-b1",
+          "buildVersion": "141",
+          "date": "2026-09-11T13:53:31Z",
+          "localizedDescription": "# Nuvio Pro 0.4.16-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n- revert(mpvkit): restore published submodule revision @tapframe\n- fix(home): settle hero carousel when returning @tapframe\n- fix(release): target the workflow branch @tapframe\n- fix(settings): require Trakt progress for continue watching window @tapframe\n- perf(ui): replace compottie spinner with native drawing @tapframe\n- feat(navigation): refine tablet bar and transition defaults @tapframe\n- feat(navigation): add reactive bottom bar glow @tapframe\n- feat(details): refine poster transition and add toggle @tapframe\n- fix(navigation): refine poster transition and detail reveal @tapframe\n- feat(navigation): add shared blur transition @tapframe\n- feat(posters): lift original cards in zoom overlay @tapframe\n- feat(navigation): update bottom tab animation @tapframe\n- perf(android): add root navigation baseline profile @tapframe\n- fix(settings): defer search indexing until needed @tapframe\n- Merged English and Dutch strings.xml and translated all remaining English text into Dutch. (#1911) @scheperr\n- i18n(el): complete and tidy up Greek translations (#1910) @nosvasedis\n- i18n(vi): full Vietnamese localization refresh for Mobile (#1883) @blueocean2308\n\n### Pro\n- feat(player): add a sleep timer with a wheel picker @albertovinaroz\n- feat(updater): add an in-app \"What's New\" changelog screen @albertovinaroz\n- feat(notifications): replace the remove button with swipe-to-dismiss @albertovinaroz\n- feat(library): show a \"recently added\" dot on newly saved posters @albertovinaroz\n\n> **Note for iOS users:** the poster lift/zoom transition and detail-screen reveal from this merge are Android-only for now (NuvioMedia hasn't enabled them on iOS yet) — the tab bar's new jelly-style animation and the hero carousel fix do apply here.\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.16-b1/nuvio-0.4.16-b1-pro-release.ipa",
+          "size": 66319109,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.15-b3",
           "buildVersion": "140",
           "date": "2026-09-11T06:47:58Z",
