@@ -244,6 +244,10 @@ internal fun HomeHeroSection(
         AppFeaturePolicy.heroTrailerPlaybackSupported &&
         AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
 
+    LaunchedEffect(pagerState) {
+        pagerState.scrollToPage(pagerState.currentPage)
+    }
+
     LaunchedEffect(autoScrollPage, items.size, effectiveTrailerPlaybackEnabled) {
         // The carousel only advances by itself when trailer playback is off; with it on, the
         // current item's trailer plays and only a swipe should move to the next one.

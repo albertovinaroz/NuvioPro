@@ -110,6 +110,7 @@ internal fun LazyListScope.appearanceSettingsContent(
         var showNavBarStyleSheet by remember { mutableStateOf(false) }
         var showTabBarBehaviorSheet by remember { mutableStateOf(false) }
         var showAppIconPicker by remember { mutableStateOf(false) }
+        val navBarStyleAvailable = !isIos && !isTablet
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_display),
             isTablet = isTablet,
@@ -176,8 +177,9 @@ internal fun LazyListScope.appearanceSettingsContent(
                 )
                 // Relevant wherever the Compose pill is the navigation bar: Android, iPad, and
                 // iPhone before iOS 26. Only an iPhone on iOS 26 hides it, because there the tab
-                // bar is native and governed by the Liquid Glass row above instead.
-                if (!liquidGlassNativeTabBarSupported) {
+                // bar is native and governed by the Liquid Glass row above instead. navBarStyleAvailable
+                // further narrows this to Android phones — matches the sheet's own gating below.
+                if (navBarStyleAvailable && !liquidGlassNativeTabBarSupported) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),
@@ -223,7 +225,7 @@ internal fun LazyListScope.appearanceSettingsContent(
             )
         }
 
-        if (showNavBarStyleSheet) {
+        if (navBarStyleAvailable && showNavBarStyleSheet) {
             NavBarStyleBottomSheet(
                 selectedStyle = selectedNavBarStyle,
                 onStyleSelected = {
