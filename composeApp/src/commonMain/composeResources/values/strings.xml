@@ -2416,6 +2416,12 @@
     <string name="updates_release_missing_title">Release has no tag or name</string>
     <string name="app_update_feed_title">Update available</string>
     <string name="app_update_feed_body">Nuvio Pro %1$s is ready to download on AltStore/SideStore.</string>
+    <string name="whats_new_title">What's New</string>
+    <string name="whats_new_empty_title">No changelog yet</string>
+    <string name="whats_new_empty_description">Nothing has been published on this channel yet.</string>
+    <string name="whats_new_error">Couldn't load the changelog. Check your connection and try again later.</string>
+    <string name="whats_new_view_on_github">View on GitHub</string>
+    <string name="whats_new_settings_description">See what changed in recent releases.</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Airs %1$s</string>
     <string name="cw_airs_today">Airs Today</string>

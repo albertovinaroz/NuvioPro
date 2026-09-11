@@ -131,6 +131,13 @@ internal data class LatestChannelRelease(
     val publishedAt: String?,
 )
 
+internal data class ChannelReleaseNote(
+    val tag: String,
+    val notes: String,
+    val releaseUrl: String?,
+    val publishedAt: String?,
+)
+
 internal object AppUpdaterRepository {
     suspend fun getLatestChannelUpdate(): Result<AppUpdate> = runCatching {
         val release = fetchLatestChannelRelease()
@@ -166,7 +173,23 @@ internal object AppUpdaterRepository {
         )
     }
 
-    private suspend fun fetchLatestChannelRelease(): GitHubReleaseDto {
+    /** Recent channel releases with their notes, newest first — for an in-app "What's New" list
+     * rather than just checking whether an update is available. */
+    suspend fun getRecentChannelReleases(limit: Int): Result<List<ChannelReleaseNote>> = runCatching {
+        fetchChannelReleases().take(limit).map { release ->
+            ChannelReleaseNote(
+                tag = release.tagOrName(),
+                notes = release.body.orEmpty(),
+                releaseUrl = release.htmlUrl,
+                publishedAt = release.publishedAt,
+            )
+        }
+    }
+
+    private suspend fun fetchLatestChannelRelease(): GitHubReleaseDto =
+        fetchChannelReleases().firstOrNull() ?: throw NoChannelReleaseException()
+
+    private suspend fun fetchChannelReleases(): List<GitHubReleaseDto> {
         val response = httpRequestRaw(
             method = "GET",
             url = "$gitHubApiBase/repos/$gitHubOwner/$gitHubRepo/releases?per_page=20",
@@ -181,8 +204,7 @@ internal object AppUpdaterRepository {
         }
 
         val releases = appUpdaterJson.decodeFromString<List<GitHubReleaseDto>>(response.body)
-        return releases.firstOrNull { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
-            ?: throw NoChannelReleaseException()
+        return releases.filter { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
     }
 
     private suspend fun GitHubReleaseDto.tagOrName(): String =

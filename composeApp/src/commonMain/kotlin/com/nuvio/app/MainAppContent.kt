@@ -159,6 +159,7 @@ import com.nuvio.app.features.tracking.buildTrackingMediaReference
 import com.nuvio.app.features.tracking.toggleTrackingLibraryMembership
 import com.nuvio.app.features.updater.AppUpdaterHost
 import com.nuvio.app.features.updater.AppUpdaterPlatform
+import com.nuvio.app.features.updater.WhatsNewScreen
 import com.nuvio.app.features.updater.rememberAppUpdaterController
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingActions
@@ -337,6 +338,7 @@ internal fun MainAppContent(
     val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
     val supportersSettingsTitle = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesSettingsTitle = stringResource(Res.string.compose_settings_page_licenses_attributions)
+    val whatsNewTitle = stringResource(Res.string.whats_new_title)
     val collectionsTitle = stringResource(Res.string.collections_header)
     val newCollectionTitle = stringResource(Res.string.collections_new)
     val detailsFallbackTitle = stringResource(Res.string.meta_section_details_title)
@@ -1532,6 +1534,9 @@ internal fun MainAppContent(
                                 onLicensesAttributionsSettingsClick = {
                                     navController.navigate(LicensesAttributionsSettingsRoute(licensesSettingsTitle))
                                 },
+                                onWhatsNewSettingsClick = {
+                                    navController.navigate(WhatsNewRoute(whatsNewTitle, forceSettingsTab = true))
+                                },
                                 onCheckForUpdatesClick = if (AppFeaturePolicy.inAppUpdaterEnabled) {
                                     {
                                         appUpdaterController.checkForUpdates(
@@ -1671,21 +1676,33 @@ internal fun MainAppContent(
                             onBack = onBack,
                             onItemClick = { feedItem: NotificationFeedItem ->
                                 val linkUrl = feedItem.linkUrl
-                                if (linkUrl != null) {
-                                    uriHandler.openUri(linkUrl)
-                                } else {
-                                    navController.navigate(
-                                        DetailRoute(
-                                            type = feedItem.contentType,
-                                            id = feedItem.contentId,
-                                            title = feedItem.title,
-                                            initialSeasonNumber = feedItem.seasonNumber,
-                                            initialEpisodeNumber = feedItem.episodeNumber,
-                                        ),
-                                    )
+                                when {
+                                    feedItem.contentType == "app_update" -> {
+                                        // Stays on whichever tab the feed itself was opened from
+                                        // (usually Home) — unlike the Settings-menu entry point,
+                                        // which deliberately does force the Settings tab.
+                                        navController.navigate(WhatsNewRoute(forceSettingsTab = false))
+                                    }
+                                    linkUrl != null -> uriHandler.openUri(linkUrl)
+                                    else -> {
+                                        navController.navigate(
+                                            DetailRoute(
+                                                type = feedItem.contentType,
+                                                id = feedItem.contentId,
+                                                title = feedItem.title,
+                                                initialSeasonNumber = feedItem.seasonNumber,
+                                                initialEpisodeNumber = feedItem.episodeNumber,
+                                            ),
+                                        )
+                                    }
                                 }
                             },
                         )
+                    }
+                }
+                entry<WhatsNewRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        WhatsNewScreen(onBack = onBack)
                     }
                 }
                 entry<SettingsPageRoute> { route ->

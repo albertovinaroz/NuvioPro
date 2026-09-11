@@ -78,6 +78,19 @@ data class NotificationFeedRoute(
     override val title: String,
 ) : AppRoute
 
+/** Reached two ways: from Settings' "What's New" row (should push onto the Settings tab, like any
+ * other SettingsDestinationRoute), and from an app-update card in the notification feed (should
+ * stay on whichever tab the feed itself was opened from, usually Home). forceSettingsTab picks
+ * between the two per navigate() call instead of baking one in at the type level. */
+@Serializable
+data class WhatsNewRoute(
+    override val title: String = "",
+    val forceSettingsTab: Boolean = true,
+) : AppRoute {
+    override val preferredTabName: String?
+        get() = if (forceSettingsTab) "Settings" else null
+}
+
 @Serializable
 data class HomescreenSettingsRoute(override val title: String = "") : SettingsDestinationRoute
 
