@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -47,9 +48,13 @@ import nuvio.composeapp.generated.resources.*
  * the bar's look doesn't creep the mute button back up into it. */
 internal val HOME_NOTIFICATIONS_BAR_HEIGHT = 56.dp
 
-/** The bar's own dark scrim only needs to reach just past the icons it holds, not the full mute
- * clearance above. */
-private val HOME_NOTIFICATIONS_BAR_VISIBLE_HEIGHT = 50.dp
+/** How far past the icon row the background gradient extends — much taller than the icon row
+ * itself needs, so the fade has real travel distance and reads as a graduated scrim into the
+ * content below rather than a bar with a hard bottom edge. This has to be the *outer* Box's own
+ * height: a Box clamps a child's height request down to whatever its own incoming constraints
+ * allow, so asking only the inner gradient layer for more height than its parent has silently
+ * does nothing. */
+private val HOME_NOTIFICATIONS_BAR_GRADIENT_HEIGHT = 160.dp
 
 /** Extra nudge below [topInset] for the icon row alone — moves the icons down a bit without
  * touching the bar's own height or the mute button clearance above, which key off [topInset]
@@ -109,13 +114,26 @@ internal fun HomeTopNotificationsBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(topInset + HOME_NOTIFICATIONS_BAR_VISIBLE_HEIGHT),
+            // Tall enough for the gradient below to have real travel distance — a fixed height
+            // here would clamp the inner Box's own .height() request right back down to it,
+            // silently undoing the gradient regardless of how tall it asks to be.
+            .height(topInset + HOME_NOTIFICATIONS_BAR_GRADIENT_HEIGHT),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = animatedBackgroundVisibility }
-                .background(Color.Black.copy(alpha = 0.88f)),
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.94f),
+                            Color.Black.copy(alpha = 0.82f),
+                            Color.Black.copy(alpha = 0.52f),
+                            Color.Black.copy(alpha = 0.2f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
         )
         Row(
             modifier = Modifier
