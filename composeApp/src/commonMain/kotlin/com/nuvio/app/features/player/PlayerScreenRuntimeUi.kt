@@ -438,6 +438,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                                 lang = sub.language,
                             )
                         }
+                    PlayerStreamsRepository.pauseSearchForPlayback()
                     openExternal(
                         ExternalPlayerPlaybackRequest(
                             sourceUrl = activeSourceUrl,
@@ -727,6 +728,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         onSourcesPanelDismissed = {
             showSourcesPanel = false
+            PlayerStreamsRepository.stopSourcesLoading()
             controlsVisible = true
         },
         showLiveChannelsPanel = showLiveChannelsPanel,

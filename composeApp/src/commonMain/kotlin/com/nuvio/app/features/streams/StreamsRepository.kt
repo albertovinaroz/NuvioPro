@@ -49,6 +49,7 @@ object StreamsRepository {
         "$type::$videoId::$season::$episode::$manualSelection"
 
     fun load(type: String, videoId: String, parentMetaId: String? = null, season: Int? = null, episode: Int? = null, manualSelection: Boolean = false) {
+        PluginRepository.setLocalPluginSearchPaused(false)
         load(
             type = type,
             videoId = videoId,
@@ -61,6 +62,7 @@ object StreamsRepository {
     }
 
     fun reload(type: String, videoId: String, parentMetaId: String? = null, season: Int? = null, episode: Int? = null, manualSelection: Boolean = false) {
+        PluginRepository.setLocalPluginSearchPaused(false)
         load(
             type = type,
             videoId = videoId,
@@ -795,6 +797,7 @@ object StreamsRepository {
     }
 
     fun cancelLoading() {
+        PluginRepository.setLocalPluginSearchPaused(true)
         activeJob?.cancel()
         activeJob = null
         _uiState.update { current ->
@@ -818,6 +821,7 @@ object StreamsRepository {
     }
 
     fun clear() {
+        PluginRepository.setLocalPluginSearchPaused(true)
         activeJob?.cancel()
         activeJob = null
         activeRequestKey = null
