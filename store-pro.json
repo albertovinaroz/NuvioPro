@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.17-b1",
+          "buildVersion": "142",
+          "date": "2026-09-12T13:19:13Z",
+          "localizedDescription": "# Nuvio Pro 0.4.17-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- fix(plugins): restore iOS runtime compilation @tapframe\n- fix(plugins): align runtime APIs with upstream execution model @luqmanfadlli\n- fix(player): disable binge group reuse by default @tapframe\n- perf(plugins): pause search during playback and match TV runtime (#1917) @halibiram\n- fix(sync): prevent automatic pulls from restoring deleted data @tapframe\n\n### Pro\n- fix(ui): center screen header title and actions vertically @albertovinaroz\n- fix(ui): match header margins and icon color across Search, Library, and Settings @albertovinaroz\n- feat(home): fade the notifications/downloads bar into a gradient on scroll @albertovinaroz\n- fix(ui): cap poster grid item size for wide/landscape screens @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.17-b1/nuvio-0.4.17-b1-pro-release.ipa",
+          "size": 66330531,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.16-b1",
           "buildVersion": "141",
           "date": "2026-09-11T13:53:31Z",
