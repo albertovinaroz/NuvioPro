@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
+import com.nuvio.app.core.ui.DefaultPosterCardWidthDp
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterRecentlyAddedOverlay
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
@@ -35,15 +36,18 @@ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.watching.application.WatchingState
+import kotlin.math.roundToInt
+
+// Fixed screen-width breakpoints made each column's own width purely a function of how wide the
+// screen happens to be, with no ceiling — fine in portrait, but landscape phones and tablets sit
+// wide enough to fall into a low column count meant for much bigger (tablet-portrait-ish) screens,
+// so every poster in Search's Discover grid and Library's grid view came out far bigger than the
+// same posters ever get in Home's shelves. Targeting Home's own default poster width instead keeps
+// a poster roughly that size everywhere — wider screens simply fit more columns, not bigger ones.
+private const val TargetPosterGridItemWidthDp = DefaultPosterCardWidthDp.toFloat()
 
 internal fun posterGridColumnCountForWidth(screenWidth: Dp): Int =
-    when {
-        screenWidth >= 1400.dp -> 7
-        screenWidth >= 1200.dp -> 6
-        screenWidth >= 1000.dp -> 5
-        screenWidth >= 840.dp -> 4
-        else -> 3
-    }
+    (screenWidth.value / TargetPosterGridItemWidthDp).roundToInt().coerceIn(3, 9)
 
 @Composable
 internal fun PosterGridRow(
