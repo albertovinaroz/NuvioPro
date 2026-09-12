@@ -194,7 +194,7 @@ fun NuvioScreenHeader(
                 .fillMaxWidth()
                 .padding(top = resolvedTopPadding, bottom = NuvioTokens.Space.s4),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
