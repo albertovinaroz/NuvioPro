@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.17",
+          "buildVersion": "122",
+          "date": "2026-09-12T12:54:51Z",
+          "localizedDescription": "# Nuvio Unmodified 0.4.17\n\nUnmodified build of the NuvioMedia source. Not affiliated with or endorsed by NuvioMedia.\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-unmodified.json\n```\n\n### Changelog\n- fix(plugins): restore iOS runtime compilation @tapframe\n- fix(player): disable binge group reuse by default @tapframe\n- perf(plugins): pause search during playback and match TV runtime (#1917) @halibiram\n- fix(sync): prevent automatic pulls from restoring deleted data @tapframe",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.17/nuvio-0.4.17-unmodified-release.ipa",
+          "size": 51024583,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.16",
           "buildVersion": "121",
           "date": "2026-09-11T13:13:13Z",
