@@ -704,14 +704,37 @@ private fun MobileSettingsScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
             autoHidesNativeTabBar = true,
+            // NuvioScreen's own leading contentPadding.top is scrollable space *before* the
+            // stickyHeader — it's gone the moment the header actually pins to the top, so relying
+            // on it there left the title colliding with the status bar once scrolled. The root
+            // page's header now carries its own full statusBarTop clearance instead (below), so
+            // this stops contributing a second one; sub-pages are untouched (still null).
+            topPadding = if (page == SettingsPage.Root) 0.dp else null,
         ) {
             if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
-                    NuvioScreenHeader(
-                        title = stringResource(page.titleRes),
-                        onBack = previousPage?.let { { onNavigateBack() } },
-                    )
+                    // The extra bit of bottom room below the title (root page only) has to live
+                    // *inside* this pinned block, not as a separate item after it — once scrolled,
+                    // a following item just scrolls away behind the header like everything else,
+                    // so it wouldn't keep any gap once you're deeper in the list. Wrapping both in
+                    // one opaquely-backed Column keeps that space pinned along with the title.
+                    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+                        NuvioScreenHeader(
+                            title = stringResource(page.titleRes),
+                            onBack = previousPage?.let { { onNavigateBack() } },
+                            // Self-contained clearance so the title stays clear of the status bar
+                            // whether this is sitting in its initial spot or pinned after a scroll.
+                            topPadding = if (page == SettingsPage.Root) {
+                                WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp
+                            } else {
+                                null
+                            },
+                        )
+                        if (page == SettingsPage.Root) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
                 }
             } else {
                 item { Spacer(modifier = Modifier.height(44.dp)) }

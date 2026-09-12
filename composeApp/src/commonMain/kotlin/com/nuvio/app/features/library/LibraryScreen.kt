@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
@@ -366,6 +368,9 @@ fun LibraryScreen(
                         }
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
+                    // A touch more than the bare status-bar inset — matching Search's header,
+                    // which gets the same small top margin.
+                    topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
                     actions = {
                         if (sourceMode == LibraryViewMode.Saved) {
                             val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
@@ -394,7 +399,7 @@ fun LibraryScreen(
                                         } else {
                                             stringResource(Res.string.library_layout_show_horizontal)
                                         },
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = MaterialTheme.nuvio.colors.textPrimary,
                                     )
                                 }
                             }
@@ -409,13 +414,16 @@ fun LibraryScreen(
                             ) {
                                 LibraryCalendarGlyph(
                                     modifier = Modifier.size(19.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.nuvio.colors.textPrimary,
                                     cutoutColor = MaterialTheme.colorScheme.background,
                                 )
                             }
                         }
                     },
                 )
+                // Same title-to-control gap as Search's header-to-searchbar spacer, so the two
+                // sections read as sharing one layout rhythm.
+                Spacer(modifier = Modifier.height(6.dp))
                 LibrarySourceSwitch(
                     selectedMode = sourceMode,
                     onModeSelected = { mode ->
@@ -423,7 +431,8 @@ fun LibraryScreen(
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                // Matches Search's searchbar-to-content spacer.
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
 
