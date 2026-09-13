@@ -27,27 +27,19 @@
 
 ## Install
 
-This repo publishes two separate iOS channels — pick one:
-
-| Channel | What it is |
-|---|---|
-| **Nuvio Pro** | Upstream Nuvio plus everything in [What Pro adds](#what-pro-adds) below. |
-| **Nuvio Unmodified** | A plain, unmodified build of NuvioMedia's own source — no fork changes, just a ready-to-sideload IPA kept in sync with their releases. |
-
 ### iOS — AltStore / SideStore
-
-Add whichever source(s) you want:
 
 ```
 https://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json
 ```
-```
-https://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-unmodified.json
-```
 
 Or grab an IPA directly from [the latest release](https://github.com/albertovinaroz/NuvioPro/releases/latest) —
-Pro and Unmodified builds are tagged and released separately, named `nuvio-<version>-pro-release.ipa` and
-`nuvio-<version>-unmodified-release.ipa`.
+named `nuvio-<version>-pro-release.ipa`.
+
+> Looking for an unmodified build of NuvioMedia's own source instead of Pro? NuvioMedia now
+> publishes their own AltStore/SideStore source directly — see
+> [upstream's README](https://github.com/NuvioMedia/NuvioMobile#readme) for that URL. This fork no
+> longer maintains a separate "Unmodified" channel of its own.
 
 > This fork is iOS-focused — there's no Android build published here. For Android, use
 > [official Nuvio Mobile](https://github.com/NuvioMedia/NuvioMobile) or
