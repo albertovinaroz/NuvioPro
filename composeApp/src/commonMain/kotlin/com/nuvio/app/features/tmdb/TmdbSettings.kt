@@ -2,6 +2,7 @@ package com.nuvio.app.features.tmdb
 
 data class TmdbSettings(
     val enabled: Boolean = false,
+    val apiKey: String = "",
     val language: String = "en",
     val useTrailers: Boolean = true,
     val useArtwork: Boolean = true,
@@ -16,4 +17,7 @@ data class TmdbSettings(
     val useSeasonPosters: Boolean = true,
     val useMoreLikeThis: Boolean = true,
     val useCollections: Boolean = true,
-)
+) {
+    val hasApiKey: Boolean
+        get() = apiKey.isNotBlank()
+}
