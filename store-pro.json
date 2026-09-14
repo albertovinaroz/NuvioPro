@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.18-b1",
+          "buildVersion": "143",
+          "date": "2026-09-13T10:45:57Z",
+          "localizedDescription": "# Nuvio Pro 0.4.18-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n- fix(profiles): stabilize popup size transitions @tapframe\n- fix(details): apply poster radius to episode list cards @tapframe\n- fix(home): apply poster settings to continue watching cards @tapframe\n- fix(streams): position sources panel below iOS toolbar @tapframe\n- fix(navigation): preserve tab animation on tap release @tapframe\n- fix(profiles): correct avatar grid spacing and selection border @tapframe\n- feat(player): match TV autoplay loading screen @tapframe\n- fix(settings): match custom theme sheet background @tapframe\n- fix(catalog): update items after library removal @tapframe\n- fix(navigation): correct poster zoom positioning in RTL @tapframe\n- fix(settings): update selection indicators @tapframe\n- feat(profiles): redesign compact profile picker @tapframe\n- feat(navigation): add glow controls and live preview @tapframe\n- fix(navigation): keep tablet floating bar compact @tapframe\n- fix(navigation): restore floating bar backdrop tint @tapframe\n- fix(navigation): restore tab indicator after profile long press @tapframe\n- feat(player): add pause overlay toggle @tapframe\n- fix(details): handle null specials poster placeholders @tapframe\n- fix(player): disable playback gestures during initial loading @tapframe\n- fix(android): correct bottom navigation behavior in RTL (#1926) @i7xre\n- i18n(vi): update latest Vietnamese strings (#1923) @blueocean2308\n- Update Czech translation (#1919) @scarzxx\n\nNo new Pro-only features this cycle.\n\n> **Note for iOS users:** the new nav bar glow/style settings from this merge are Android-only for now (NuvioMedia hasn't shipped the iOS side yet).\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.18-b1/nuvio-0.4.18-b1-pro-release.ipa",
+          "size": 66399198,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.17-b1",
           "buildVersion": "142",
           "date": "2026-09-12T13:19:13Z",
