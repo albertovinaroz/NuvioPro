@@ -45,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -78,6 +79,12 @@ import nuvio.composeapp.generated.resources.updates_title_allow_installs
 import nuvio.composeapp.generated.resources.updates_title_available
 import org.jetbrains.compose.resources.stringResource
 
+// How often the passive feed alert re-checks the release feed while the app stays open. iOS
+// suspends the process in the background, so in practice this is "every 5 minutes of foreground
+// time" (plus effectively once more right on resume) rather than a true background timer — see
+// the AppUpdateFeedNotifier doc comment for why that's an acceptable trade-off here.
+private const val AltStoreUpdateCheckIntervalMillis = 5 * 60 * 1000L
+
 @Composable
 fun AppUpdaterHost(
     controller: AppUpdaterController,
@@ -89,7 +96,10 @@ fun AppUpdaterHost(
         // channels that opt into it (see AppFeaturePolicy.altStoreUpdateAlertsEnabled).
         if (AppFeaturePolicy.altStoreUpdateAlertsEnabled) {
             LaunchedEffect(Unit) {
-                AppUpdateFeedNotifier.ensureChecked()
+                while (true) {
+                    AppUpdateFeedNotifier.checkNow()
+                    delay(AltStoreUpdateCheckIntervalMillis)
+                }
             }
         }
         content()

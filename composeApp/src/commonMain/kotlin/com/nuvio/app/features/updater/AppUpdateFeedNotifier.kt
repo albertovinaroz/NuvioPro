@@ -17,14 +17,13 @@ import org.jetbrains.compose.resources.getString
  * installer) — instead of a banner offering a direct install, a newer release drops a card into the
  * notification feed and, where already permitted, fires a real OS notification too, linking out to
  * the GitHub release instead of offering a download this app has no way to actually perform.
+ *
+ * Meant to be called repeatedly (see the polling loop in [AppUpdaterHost]) rather than once per
+ * process — there's no one-shot guard here, since the feed's own id-based de-dup below already
+ * makes repeat calls for the same release a no-op.
  */
 internal object AppUpdateFeedNotifier {
-    private var checkStarted = false
-
-    suspend fun ensureChecked() {
-        if (checkStarted) return
-        checkStarted = true
-
+    suspend fun checkNow() {
         AppUpdaterRepository.getLatestChannelRelease().onSuccess { release ->
             if (!VersionUtils.isRemoteNewer(release.tag, AppVersionConfig.VERSION_NAME)) return@onSuccess
 
