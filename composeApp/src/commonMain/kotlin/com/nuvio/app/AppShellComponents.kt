@@ -309,10 +309,16 @@ internal fun AppLoadingContent(
             emblemScale.snapTo(1f)
             emblemOffsetX.snapTo(startX)
             emblemOffsetY.snapTo(startY)
-            val travelDuration = 550
-            launch { emblemOffsetX.animateTo(0f, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing)) }
-            launch { haloAlpha.animateTo(1f, animationSpec = tween(260, delayMillis = travelDuration - 160, easing = FastOutSlowInEasing)) }
-            emblemOffsetY.animateTo(0f, animationSpec = tween(travelDuration, easing = FastOutSlowInEasing))
+            // A real spring in place of the old flat-eased tween — the same technique already
+            // used for the cold-start bounce below, just tuned gentler (a few px of overshoot
+            // past center rather than a full drop-and-bounce) so the glide reads as carrying its
+            // own momentum instead of following a fixed curve. Lower stiffness than a first pass
+            // at this — that one settled closer to ~330ms, which read as rushed next to the old
+            // 550ms tween; this lands closer to that same pace while keeping the organic overshoot.
+            val travelSpec = spring<Float>(dampingRatio = 0.68f, stiffness = 160f)
+            launch { emblemOffsetX.animateTo(0f, animationSpec = travelSpec) }
+            launch { haloAlpha.animateTo(1f, animationSpec = tween(260, delayMillis = 420, easing = FastOutSlowInEasing)) }
+            emblemOffsetY.animateTo(0f, animationSpec = travelSpec)
             pulseRing()
         } else {
             launch { emblemAlpha.animateTo(1f, animationSpec = tween(220, easing = FastOutSlowInEasing)) }

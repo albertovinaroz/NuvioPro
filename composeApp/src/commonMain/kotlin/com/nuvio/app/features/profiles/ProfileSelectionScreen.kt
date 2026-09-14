@@ -2,12 +2,12 @@ package com.nuvio.app.features.profiles
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,10 +50,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -305,9 +311,14 @@ fun ProfileSelectionScreen(
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 28.dp else 48.dp))
 
+                val managePressScale = remember { Animatable(1f) }
                 Box(
                     modifier = Modifier
-                        .graphicsLayer { alpha = manageAlpha.value }
+                        .graphicsLayer {
+                            alpha = manageAlpha.value
+                            scaleX = managePressScale.value
+                            scaleY = managePressScale.value
+                        }
                         .clip(RoundedCornerShape(24.dp))
                         .background(
                             if (isEditMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
@@ -319,7 +330,28 @@ fun ProfileSelectionScreen(
                             else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(24.dp),
                         )
-                        .clickable(enabled = interactionEnabled) { isEditMode = !isEditMode }
+                        .semantics(mergeDescendants = true) {
+                            role = Role.Button
+                            if (interactionEnabled) {
+                                onClick(label = null) { isEditMode = !isEditMode; true }
+                            } else {
+                                disabled()
+                            }
+                        }
+                        .pointerInput(interactionEnabled) {
+                            if (!interactionEnabled) return@pointerInput
+                            detectTapGestures(
+                                onPress = {
+                                    managePressScale.snapTo(0.95f)
+                                    tryAwaitRelease()
+                                    managePressScale.animateTo(
+                                        1f,
+                                        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                                    )
+                                },
+                                onTap = { isEditMode = !isEditMode },
+                            )
+                        }
                         .padding(horizontal = 24.dp, vertical = 10.dp),
                 ) {
                     Text(
@@ -337,15 +369,41 @@ fun ProfileSelectionScreen(
 
                 if (onSignInWithAccount != null) {
                     Spacer(modifier = Modifier.height(14.dp))
+                    val signInPressScale = remember { Animatable(1f) }
                     Text(
                         text = stringResource(Res.string.settings_account_sign_in_with_account),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
-                            .graphicsLayer { alpha = manageAlpha.value }
+                            .graphicsLayer {
+                                alpha = manageAlpha.value
+                                scaleX = signInPressScale.value
+                                scaleY = signInPressScale.value
+                            }
                             .clip(RoundedCornerShape(24.dp))
-                            .clickable(enabled = interactionEnabled, onClick = onSignInWithAccount)
+                            .semantics(mergeDescendants = true) {
+                                role = Role.Button
+                                if (interactionEnabled) {
+                                    onClick(label = null) { onSignInWithAccount(); true }
+                                } else {
+                                    disabled()
+                                }
+                            }
+                            .pointerInput(interactionEnabled) {
+                                if (!interactionEnabled) return@pointerInput
+                                detectTapGestures(
+                                    onPress = {
+                                        signInPressScale.snapTo(0.95f)
+                                        tryAwaitRelease()
+                                        signInPressScale.animateTo(
+                                            1f,
+                                            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                                        )
+                                    },
+                                    onTap = { onSignInWithAccount() },
+                                )
+                            }
                             .padding(horizontal = 24.dp, vertical = 10.dp),
                     )
                 }
@@ -399,9 +457,13 @@ private fun ProfileAvatarCard(
         launch { animOffset.animateTo(0f, tween(500, easing = FastOutSlowInEasing)) }
     }
 
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale = if (isPressed) 0.95f else 1f
+    // Compose's own clickable() delays showing press state by ~100ms (TapIndicationDelay) to
+    // avoid flashing a ripple mid-scroll — invisible on a quick tap, since release then arrives
+    // before that delay ever fires, so nothing appears to react until onClick itself lands. A raw
+    // detectTapGestures here reacts the instant a finger goes down instead. The scale itself snaps
+    // to pressed with no animation at all — as immediate as a native touch highlight — and only
+    // animates on the way back up, once the finger actually lifts.
+    val pressScaleAnim = remember { Animatable(1f) }
 
     // Kept up to date on every layout pass so the tap handler below can hand back exactly where
     // on screen this avatar sits — that's where AppLoadingContent glides its emblem in from.
@@ -413,17 +475,36 @@ private fun ProfileAvatarCard(
             .width(150.dp)
             .graphicsLayer {
                 alpha = animAlpha.value
-                scaleX = animScale.value * pressScale
-                scaleY = animScale.value * pressScale
+                scaleX = animScale.value * pressScaleAnim.value
+                scaleY = animScale.value * pressScaleAnim.value
                 translationY = animOffset.value
             }
             .clip(RoundedCornerShape(20.dp))
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = { onClick(avatarCenterInWindow) },
-            )
+            // detectTapGestures drives the visuals but, unlike clickable(), doesn't register with
+            // the semantics tree on its own — without this, VoiceOver/TalkBack would no longer see
+            // this card as a tappable element at all.
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (enabled) {
+                    onClick(label = null) { onClick(avatarCenterInWindow); true }
+                } else {
+                    disabled()
+                }
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures(
+                    onPress = {
+                        pressScaleAnim.snapTo(0.95f)
+                        tryAwaitRelease()
+                        pressScaleAnim.animateTo(
+                            1f,
+                            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                        )
+                    },
+                    onTap = { onClick(avatarCenterInWindow) },
+                )
+            }
             .padding(8.dp),
     ) {
         Box(
@@ -561,9 +642,7 @@ private fun AddProfileCard(
         launch { animOffset.animateTo(0f, tween(500, easing = FastOutSlowInEasing)) }
     }
 
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale = if (isPressed) 0.95f else 1f
+    val pressScaleAnim = remember { Animatable(1f) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -571,17 +650,33 @@ private fun AddProfileCard(
             .width(150.dp)
             .graphicsLayer {
                 alpha = animAlpha.value
-                scaleX = animScale.value * pressScale
-                scaleY = animScale.value * pressScale
+                scaleX = animScale.value * pressScaleAnim.value
+                scaleY = animScale.value * pressScaleAnim.value
                 translationY = animOffset.value
             }
             .clip(RoundedCornerShape(20.dp))
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (enabled) {
+                    onClick(label = null) { onClick(); true }
+                } else {
+                    disabled()
+                }
+            }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures(
+                    onPress = {
+                        pressScaleAnim.snapTo(0.95f)
+                        tryAwaitRelease()
+                        pressScaleAnim.animateTo(
+                            1f,
+                            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                        )
+                    },
+                    onTap = { onClick() },
+                )
+            }
             .padding(8.dp),
     ) {
         Box(
