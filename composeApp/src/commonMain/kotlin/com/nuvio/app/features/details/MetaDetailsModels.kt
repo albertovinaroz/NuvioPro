@@ -103,8 +103,7 @@ data class MetaVideo(
     val overview: String? = null,
     val runtime: Int? = null,
     val tmdbRating: Double? = null,
-    /** True when [tmdbRating] actually came from IMDb (via OMDb), not TMDB's own vote average. */
-    val ratingIsImdb: Boolean = false,
+    val imdbRating: Double? = null,
     val rating: Double? = null,
     val streams: List<StreamItem> = emptyList(),
 )
