@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.20-b1",
+          "buildVersion": "145",
+          "date": "2026-09-14T10:24:41Z",
+          "localizedDescription": "### Upstream (NuvioMedia) — 0.4.19\n- feat(search): add recent searches toggle\n- feat(downloads): add support for bundling addon subs while downloading\n- fix(streams): prevent rotation when opening manual selection\n\n### Upstream (NuvioMedia) — 0.4.20\n- feat(streams): add mobile background selection\n- fix(player): center loading title and logo\n- feat(player): dismiss next episode prompt with a right swipe\n- fix(details): match toggle styles and remove duplicate season headings\n- fix(library): sync title logo\n- fix(details): use localized landscape backdrops\n- feat(trailer): add fullscreen playback\n- perf(navigation): reduce tab switch animation stalls\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- feat(details): show IMDb and TMDB episode ratings together\n- fix(livetv): stop category panel clipping in landscape and on tablet\n- fix(navigation): restore navbar and gesture on StreamRoute\n- fix(navigation): let navbar pass through empty-area touches on iOS\n\n### Pro\n- feat(profiles): smoother, more responsive profile selection animations\n- feat(updater): poll for AltStore updates every 5 minutes in foreground",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.20-b1/nuvio-0.4.20-b1-pro-release.ipa",
+          "size": 66523599,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.18-b1",
           "buildVersion": "143",
           "date": "2026-09-13T10:45:57Z",
