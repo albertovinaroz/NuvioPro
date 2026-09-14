@@ -4,6 +4,11 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.downloads_error_finalize_file_failed
@@ -111,7 +116,10 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removePartialFile(destinationFileName: String): Boolean =
         resolveDownloadsBaseDirectory().withAccess { downloadsDirectory ->
-            removePathIfExists("$downloadsDirectory/$destinationFileName.part")
+            val destinationPath = "$downloadsDirectory/$destinationFileName"
+            val localVideoUri = NSURL.fileURLWithPath(destinationPath).absoluteString ?: "file://$destinationPath"
+            DownloadSubtitleStorage(localVideoUri).remove()
+            removePathIfExists("$destinationPath.part")
         }
 
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? =
@@ -189,6 +197,10 @@ private class IosBackgroundDownloadCoordinatorImpl : NSObject(), NSURLSessionDow
     private var session: NSURLSession? = null
     private val activeDownloads = mutableMapOf<String, ActiveDownload>()
     private val tasksByDownloadId = mutableMapOf<String, NSURLSessionDownloadTask>()
+    // Subtitle bundling is best-effort and runs independently of the video transfer itself — unlike
+    // the transfer, it has no need to survive the app being backgrounded/killed, so a plain
+    // coroutine scope (rather than the NSURLSession machinery above) is fine for it.
+    private val subtitlesScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun ensureSessionCreated(): NSURLSession {
         session?.let { return it }
@@ -237,8 +249,33 @@ private class IosBackgroundDownloadCoordinatorImpl : NSObject(), NSURLSessionDow
             tasksByDownloadId[downloadId] = task
             callbacks?.onProgress?.invoke(resumeFromBytes, null)
             task.resume()
+            prepareSubtitles(request)
         } finally {
             if (started) base.scopedUrl?.stopAccessingSecurityScopedResource()
+        }
+    }
+
+    /**
+     * Fetches and stashes addon subtitles alongside the video, independently of the transfer's own
+     * progress — [DownloadSubtitles.prepare] resolves its own destination path via a fresh
+     * [resolveDownloadsBaseDirectory] call so its security-scoped access window doesn't depend on
+     * (or race with) [startOrResume]'s own, which is released as soon as the transfer is enqueued.
+     */
+    private fun prepareSubtitles(request: DownloadPlatformRequest) {
+        subtitlesScope.launch {
+            val base = resolveDownloadsBaseDirectory()
+            val started = base.scopedUrl?.startAccessingSecurityScopedResource() ?: false
+            try {
+                val destinationPath = "${base.path}/${request.destinationFileName}"
+                val localVideoUri = NSURL.fileURLWithPath(destinationPath).absoluteString ?: "file://$destinationPath"
+                DownloadSubtitles.prepare(request.item, localVideoUri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Best-effort: a failed subtitle fetch shouldn't affect the video download itself.
+            } finally {
+                if (started) base.scopedUrl?.stopAccessingSecurityScopedResource()
+            }
         }
     }
 

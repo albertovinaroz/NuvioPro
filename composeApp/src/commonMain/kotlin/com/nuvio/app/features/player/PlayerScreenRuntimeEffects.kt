@@ -107,6 +107,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         episodeStreamsPanelState = EpisodeStreamsPanelState()
         PlayerStreamsRepository.clearEpisodeStreams()
         SubtitleRepository.clear()
+        autoFetchedAddonSubtitlesForKey = null
         WatchProgressRepository.ensureLoaded()
     }
 
@@ -275,6 +276,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         playerController,
         playerControllerSourceUrl,
     ) {
+        if (activeSourceUrl.startsWith("file:") && externalSubtitles.isNotEmpty()) return@LaunchedEffect
         val fetchKey = addonSubtitleFetchKey ?: return@LaunchedEffect
         if (autoFetchedAddonSubtitlesForKey == fetchKey) return@LaunchedEffect
         autoFetchedAddonSubtitlesForKey = fetchKey
