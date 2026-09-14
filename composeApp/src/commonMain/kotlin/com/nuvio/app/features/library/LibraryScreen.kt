@@ -99,6 +99,7 @@ import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.ScreenBox
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
@@ -436,7 +437,7 @@ fun LibraryScreen(
             }
         }
 
-        BoxWithConstraints(modifier = Modifier.weight(1f)) {
+        ScreenBox(modifier = Modifier.weight(1f)) {
             val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
 
             NuvioScreen(
