@@ -80,7 +80,7 @@ object TmdbMetadataService {
         preferCrewCredits: Boolean? = null,
     ): PersonDetail? = withContext(Dispatchers.Default) {
         val settings = TmdbSettingsRepository.snapshot()
-        if (!settings.enabled || !settings.hasApiKey) return@withContext null
+        if (!settings.enabled) return@withContext null
         val language = normalizeTmdbLanguage(settings.language)
         val cacheKey = "$personId:${preferCrewCredits?.toString() ?: "auto"}:$language"
         personCache[cacheKey]?.let { return@withContext it }
@@ -401,7 +401,7 @@ object TmdbMetadataService {
         fallbackName: String? = null,
     ): TmdbEntityBrowseData? = withContext(Dispatchers.Default) {
         val settings = TmdbSettingsRepository.snapshot()
-        if (!settings.enabled || !settings.hasApiKey) return@withContext null
+        if (!settings.enabled) return@withContext null
         val language = normalizeTmdbLanguage(settings.language)
         val normalizedSourceType = normalizeEntitySourceType(sourceType)
         val cacheKey = "${entityKind.routeValue}:$entityId:$normalizedSourceType:$language"
@@ -687,7 +687,7 @@ object TmdbMetadataService {
         fallbackItemId: String,
         settings: TmdbSettings,
     ): MetaDetails {
-        if (!settings.enabled || !settings.hasApiKey) return meta
+        if (!settings.enabled) return meta
 
         val tmdbType = normalizeMetaType(meta.type)
         val tmdbId = TmdbService.ensureTmdbId(meta.id, tmdbType)
@@ -770,8 +770,6 @@ object TmdbMetadataService {
         id: String,
         settings: TmdbSettings,
     ): MetaDetails? {
-        if (!settings.hasApiKey) return null
-
         val tmdbId = id
             .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
             ?.substringAfter(':')
@@ -1245,7 +1243,7 @@ object TmdbMetadataService {
         endpoint: String,
         query: Map<String, String> = emptyMap(),
     ): T? {
-        val apiKey = TmdbSettingsRepository.snapshot().apiKey.trim().takeIf(String::isNotBlank) ?: return null
+        val apiKey = TmdbConfig.API_KEY.takeIf(String::isNotBlank) ?: return null
         val url = buildTmdbUrl(endpoint = endpoint, apiKey = apiKey, query = query)
         return runCatching {
             json.decodeFromString<T>(httpGetText(url))

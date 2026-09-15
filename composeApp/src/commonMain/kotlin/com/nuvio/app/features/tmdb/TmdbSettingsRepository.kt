@@ -14,7 +14,6 @@ object TmdbSettingsRepository {
     private var hasLoaded = false
 
     private var enabled = false
-    private var apiKey = ""
     private var language = "en"
     private var useTrailers = true
     private var useArtwork = true
@@ -46,30 +45,10 @@ object TmdbSettingsRepository {
 
     fun setEnabled(value: Boolean) {
         ensureLoaded()
-        if (value && apiKey.isBlank()) return
         if (enabled == value) return
         enabled = value
         publish()
         TmdbSettingsStorage.saveEnabled(value)
-    }
-
-    fun setApiKey(value: String) {
-        ensureLoaded()
-        val normalized = value.trim()
-        if (apiKey == normalized) return
-        apiKey = normalized
-        if (apiKey.isBlank()) {
-            enabled = false
-            TmdbSettingsStorage.saveEnabled(false)
-        } else if (!enabled) {
-            // Entering a key is a strong enough signal of intent that requiring a second,
-            // separate "Enable TMDB Enrichment" toggle afterward is just friction — this exact
-            // gap caused real user confusion while debugging NuvioMobile-iOS#2.
-            enabled = true
-            TmdbSettingsStorage.saveEnabled(true)
-        }
-        publish()
-        TmdbSettingsStorage.saveApiKey(normalized)
     }
 
     fun setLanguage(value: String) {
@@ -194,8 +173,7 @@ object TmdbSettingsRepository {
         val previousUseReleaseDates = useReleaseDates
         val previousUseEpisodeRatings = useEpisodeRatings
         hasLoaded = true
-        apiKey = TmdbSettingsStorage.loadApiKey()?.trim().orEmpty()
-        enabled = (TmdbSettingsStorage.loadEnabled() ?: false) && apiKey.isNotBlank()
+        enabled = TmdbSettingsStorage.loadEnabled() ?: false
         val storedLanguage = TmdbSettingsStorage.loadLanguage()
         language = if (storedLanguage == null) "en" else normalizeLanguage(storedLanguage)
         useTrailers = TmdbSettingsStorage.loadUseTrailers() ?: true
@@ -223,7 +201,6 @@ object TmdbSettingsRepository {
     private fun publish() {
         _uiState.value = TmdbSettings(
             enabled = enabled,
-            apiKey = apiKey,
             language = language,
             useTrailers = useTrailers,
             useArtwork = useArtwork,
