@@ -52,27 +52,28 @@ object SkipIntroRepository {
         val introDbDeferred = async {
             if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode) else emptyList()
         }
-        val entriesDeferred = async { resolveImdbEntries(imdbId) }
+        // Resolve IMDB -> season-specific MAL/AniList via Simkl full_anime_seasons
+        val simklIdsDeferred = async { SimklIdResolver.resolveIdsForImdbEpisode(imdbId, season, episode) }
+        val simklIds = simklIdsDeferred.await()
+        val malId = simklIds?.mal
+        val anilistId = simklIds?.anilist
+
+        // Remap the TVDB episode number to the anime-entry-local episode number.
+        val animeEpisode = if (simklIds != null) {
+            val mapping = SimklIdResolver.getEpisodeMapping(simklIds.simklId, simklIds.type)
+            mapping.firstOrNull { it.tvdbSeason == season && it.tvdbEpisode == episode }
+                ?.animeEpisode
+                ?: episode
+        } else episode
+
+        val aniSkipDeferred = async {
+            if (malId != null) fetchFromAniSkip(malId, animeEpisode) else emptyList()
+        }
+        val animeSkipDeferred = async {
+            if (anilistId != null) fetchFromAnimeSkip(anilistId, animeEpisode, season = null) else emptyList()
+        }
 
         val introDb = introDbDeferred.await()
-        if (introDb.hasOpeningSegment()) {
-            entriesDeferred.cancel()
-            InAppLogger.info(
-                "Player/SkipIntro",
-                "skip lookup fast result imdb=$imdbId s=$season e=$episode count=${introDb.size} provider=introdb",
-            )
-            cache[cacheKey] = introDb
-            return@coroutineScope introDb
-        }
-
-        val entries = entriesDeferred.await()
-        val animeSkipDeferred = async { fetchAnimeSkipForEntries(entries, season, episode) }
-        val malId = entries.getOrNull(season - 1)?.myanimelist?.toString()
-            ?: entries.firstOrNull()?.myanimelist?.toString()
-        val aniSkipDeferred = async {
-            if (malId != null) fetchFromAniSkip(malId, episode) else emptyList()
-        }
-
         val animeSkip = animeSkipDeferred.await()
         val aniSkip = aniSkipDeferred.await()
         return@coroutineScope mergeByPriority(
@@ -235,10 +236,6 @@ object SkipIntroRepository {
         "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
         "recap" -> "recap"
         else -> null
-    }
-
-    private fun List<SkipInterval>.hasOpeningSegment(): Boolean = any { interval ->
-        segmentCategory(interval.type) == "opening"
     }
 
     private suspend fun <T> withSkipProviderTimeout(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,12 +48,12 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioScreen
-import com.nuvio.app.core.ui.ScreenBox
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
+import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.firstEnabledManifestError
 import com.nuvio.app.features.addons.hasPendingEnabledManifests
@@ -100,8 +102,15 @@ fun SearchScreen(
     val focusRequester = remember { FocusRequester() }
     var isSearchFocused by remember { mutableStateOf(false) }
 
-    LaunchedEffect(searchFocusRequestCount) {
-        if (searchFocusRequestCount > 0) {
+    ScreenActivityEffect(listState) { screenActive ->
+        if (!screenActive) {
+            isSearchFocused = false
+            listState.stopScroll()
+        }
+    }
+
+    ScreenActivityEffect(searchFocusRequestCount) { screenActive ->
+        if (screenActive && searchFocusRequestCount > 0) {
             focusRequester.requestFocus()
         }
     }
@@ -132,7 +141,8 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(scrollToTopRequests) {
+    ScreenActivityEffect(scrollToTopRequests) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         scrollToTopRequests.collect {
             listState.animateScrollToItem(0)
         }
@@ -143,11 +153,13 @@ fun SearchScreen(
     }
     val addonManifestsLoading = addonsUiState.addons.hasPendingEnabledManifests()
 
-    LaunchedEffect(addonRefreshKey, homeCatalogSettingsUiState.hideUnreleasedContent) {
+    ScreenActivityEffect(addonRefreshKey, homeCatalogSettingsUiState.hideUnreleasedContent) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         SearchRepository.refreshDiscover(addonsUiState.addons)
     }
 
-    LaunchedEffect(query, addonRefreshKey, homeCatalogSettingsUiState.hideUnreleasedContent) {
+    ScreenActivityEffect(query, addonRefreshKey, homeCatalogSettingsUiState.hideUnreleasedContent) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         val normalizedQuery = query.trim()
         if (normalizedQuery.isBlank()) {
             lastRequestedQuery = null
@@ -162,8 +174,8 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(listState, query, discoverUiState.canLoadMore, discoverUiState.isLoading) {
-        if (query.isNotBlank()) return@LaunchedEffect
+    ScreenActivityEffect(listState, query, discoverUiState.canLoadMore, discoverUiState.isLoading) { screenActive ->
+        if (!screenActive || query.isNotBlank()) return@ScreenActivityEffect
 
         snapshotFlow { listState.layoutInfo }
             .map { layoutInfo ->
@@ -177,15 +189,17 @@ fun SearchScreen(
             }
     }
 
-    LaunchedEffect(query, lastRequestedQuery, uiState.isLoading, uiState.sections) {
+    ScreenActivityEffect(query, lastRequestedQuery, uiState.isLoading, uiState.sections) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         val normalizedQuery = query.trim()
-        if (normalizedQuery.isBlank()) return@LaunchedEffect
-        if (lastRequestedQuery != normalizedQuery) return@LaunchedEffect
-        if (uiState.isLoading || uiState.sections.isEmpty()) return@LaunchedEffect
+        if (normalizedQuery.isBlank()) return@ScreenActivityEffect
+        if (lastRequestedQuery != normalizedQuery) return@ScreenActivityEffect
+        if (uiState.isLoading || uiState.sections.isEmpty()) return@ScreenActivityEffect
         SearchHistoryRepository.recordSearch(normalizedQuery)
     }
 
-    LaunchedEffect(networkStatusUiState.condition, query, addonRefreshKey) {
+    ScreenActivityEffect(networkStatusUiState.condition, query, addonRefreshKey) { screenActive ->
+        if (!screenActive) return@ScreenActivityEffect
         when (networkStatusUiState.condition) {
             NetworkCondition.NoInternet,
             NetworkCondition.ServersUnreachable,
@@ -194,7 +208,7 @@ fun SearchScreen(
             }
 
             NetworkCondition.Online -> {
-                if (!observedOfflineState) return@LaunchedEffect
+                if (!observedOfflineState) return@ScreenActivityEffect
                 observedOfflineState = false
 
                 val normalizedQuery = query.trim()
@@ -218,7 +232,7 @@ fun SearchScreen(
         }
     }
 
-    ScreenBox(
+    BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
         val discoverColumns = remember(maxWidth) {
