@@ -23,8 +23,13 @@ import org.jetbrains.compose.resources.getString
  * makes repeat calls for the same release a no-op.
  */
 internal object AppUpdateFeedNotifier {
-    suspend fun checkNow() {
-        AppUpdaterRepository.getLatestChannelRelease().onSuccess { release ->
+    /** Returns true when the check was skipped due to GitHub rate-limiting, so the caller's
+     * polling loop can back off instead of retrying at the usual cadence. */
+    suspend fun checkNow(): Boolean {
+        var rateLimited = false
+        AppUpdaterRepository.getLatestChannelRelease().onFailure { error ->
+            rateLimited = error is GitHubRateLimitedException
+        }.onSuccess { release ->
             if (!VersionUtils.isRemoteNewer(release.tag, AppVersionConfig.VERSION_NAME)) return@onSuccess
 
             NotificationFeedRepository.ensureLoaded()
@@ -72,5 +77,6 @@ internal object AppUpdateFeedNotifier {
                 }
             }
         }
+        return rateLimited
     }
 }

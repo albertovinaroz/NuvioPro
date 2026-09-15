@@ -85,6 +85,11 @@ import org.jetbrains.compose.resources.stringResource
 // the AppUpdateFeedNotifier doc comment for why that's an acceptable trade-off here.
 private const val AltStoreUpdateCheckIntervalMillis = 5 * 60 * 1000L
 
+// GitHub's anonymous rate limit window is hourly — on a 403/429, waiting out a full hour before
+// the next attempt guarantees the window has reset, instead of retrying every 5 minutes and
+// keeping this IP rate-limited for longer than it needs to be.
+private const val AltStoreUpdateCheckBackoffMillis = 60 * 60 * 1000L
+
 @Composable
 fun AppUpdaterHost(
     controller: AppUpdaterController,
@@ -97,8 +102,8 @@ fun AppUpdaterHost(
         if (AppFeaturePolicy.altStoreUpdateAlertsEnabled) {
             LaunchedEffect(Unit) {
                 while (true) {
-                    AppUpdateFeedNotifier.checkNow()
-                    delay(AltStoreUpdateCheckIntervalMillis)
+                    val rateLimited = AppUpdateFeedNotifier.checkNow()
+                    delay(if (rateLimited) AltStoreUpdateCheckBackoffMillis else AltStoreUpdateCheckIntervalMillis)
                 }
             }
         }

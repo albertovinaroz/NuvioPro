@@ -82,6 +82,13 @@ private class NoChannelReleaseException : IllegalStateException(
     runBlocking { getString(Res.string.updates_no_channel_release) },
 )
 
+/** Thrown instead of the generic status-code error so callers can back off instead of retrying
+ * at the usual cadence — retrying an already-rate-limited IP on the normal schedule just extends
+ * how long it stays limited. */
+internal class GitHubRateLimitedException(status: Int) : IllegalStateException(
+    "GitHub API rate limited (status $status)",
+)
+
 internal object VersionUtils {
     fun normalize(raw: String?): String {
         if (raw.isNullOrBlank()) return ""
@@ -199,6 +206,9 @@ internal object AppUpdaterRepository {
             ),
             body = "",
         )
+        if (response.status == 403 || response.status == 429) {
+            throw GitHubRateLimitedException(response.status)
+        }
         if (response.status !in 200..299) {
             error(getString(Res.string.updates_github_api_error, response.status))
         }
