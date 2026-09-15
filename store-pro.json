@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.21-b1",
+          "buildVersion": "146",
+          "date": "2026-09-15T14:09:41Z",
+          "localizedDescription": "# Nuvio Pro 0.4.21-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n- fix(home): match continue watching badge colors to tv @tapframe\n- 73005d9 perf(navigation): reduce root tab switch stalls @tapframe\n- Add TVDB anime ID preference to avoid per-season IMDB splits (#1952) @skoruppa\n- f6d172a Revert \"perf(navigation): reduce tab switch animation stalls\" @tapframe\n- 33edb55 fix(player): keep android landscape lock during exit @tapframe\n- 6761eba fix(profiles): add active profile toast and back button @tapframe\n- 5195105 fix(profiles): prevent selecting the active profile @tapframe\n- 998a9bf fix(player): hide addons with no streams @tapframe\n- fix(player): start playback without waiting for addon subtitles (#1949) @halibiram\n- 7a0e80b fix(trailer): open ios playback in fullscreen @tapframe\n- Fix anime skip mapping, subtitle language detection, watched badges and Polish translations (#1943) @skoruppa\n- fix(tmdb): use bundled API key @tapframe\n\n### Pro\n- fix(updater): back off for an hour after GitHub rate-limits the AltStore check @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.21-b1/nuvio-0.4.21-b1-pro-release.ipa",
+          "size": 66554127,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.20-b1",
           "buildVersion": "145",
           "date": "2026-09-14T10:24:41Z",
