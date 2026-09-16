@@ -76,13 +76,12 @@ internal actual object DownloadsPlatformDownloader {
     // removal just needs to follow whichever kind of URI that turned out to be.
     actual fun removeFile(localFileUri: String?): Boolean {
         if (localFileUri.isNullOrBlank()) return false
-        val context = appContext ?: return false
-        val uri = Uri.parse(localFileUri)
-        return if (uri.scheme == "content") {
-            runCatching { DocumentFile.fromSingleUri(context, uri)?.delete() == true }.getOrDefault(false)
-        } else {
-            localFileUri.toLocalFileOrNull()?.let { runCatching { it.delete() }.getOrDefault(false) } ?: false
+        if (AndroidDownloadExport.isContentUri(localFileUri)) {
+            DownloadSubtitleStorage(localFileUri).remove()
+            return AndroidDownloadExport.delete(localFileUri)
         }
+        val file = localFileUri.toLocalFileOrNull() ?: return false
+        return runCatching { file.delete() }.getOrDefault(false)
     }
 
     actual fun removePartialFile(destinationFileName: String): Boolean {
@@ -92,11 +91,15 @@ internal actual object DownloadsPlatformDownloader {
     }
 
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
-        val context = appContext ?: return null
-        if (!localFileUri.isNullOrBlank()) {
-            resolveExistingUri(context, localFileUri)?.let { return it }
+        if (localFileUri != null && AndroidDownloadExport.isContentUri(localFileUri)) {
+            if (appContext != null && AndroidDownloadExport.exists(localFileUri)) return localFileUri
         }
+        localFileUri
+            ?.toLocalFileOrNull()
+            ?.takeIf { it.exists() }
+            ?.let { return it.toURI().toString() }
 
+        val context = appContext ?: return null
         val fileName = destinationFileName.trim().takeIf { it.isNotBlank() }
             ?: localFileUri?.let { Uri.parse(it).lastPathSegment }
             ?: return null
@@ -116,32 +119,23 @@ internal actual object DownloadsPlatformDownloader {
             ?.toString()
     }
 
-    private fun resolveExistingUri(context: Context, uriString: String): String? {
-        val uri = Uri.parse(uriString)
-        return if (uri.scheme == "content") {
-            DocumentFile.fromSingleUri(context, uri)?.takeIf { it.exists() }?.uri?.toString()
-        } else {
-            uriString.toLocalFileOrNull()?.takeIf { it.exists() }?.toURI()?.toString()
-        }
-    }
-
     actual fun openDownloadsDirectory(): Boolean {
         val context = appContext ?: return false
-        DownloadsSettingsRepository.ensureLoaded()
-        val customLocationUriString = DownloadsSettingsRepository.downloadLocationUri.value
-
-        val uri = if (customLocationUriString != null) {
-            Uri.parse(customLocationUriString)
-        } else {
-            val downloadsDir = File(context.filesDir, "downloads").apply { mkdirs() }
-            runCatching {
-                FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    downloadsDir,
-                )
-            }.getOrNull() ?: return false
+        val treeUri = DownloadsSettingsRepository.run {
+            ensureLoaded()
+            downloadLocationUri.value
         }
+        val customUri = treeUri
+            ?.takeIf { AndroidDownloadExport.writableFolder(it) != null }
+            ?.let(AndroidDownloadExport::treeDocumentUri)
+        val downloadsDir = File(context.filesDir, "downloads").apply { mkdirs() }
+        val uri = customUri ?: runCatching {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                downloadsDir,
+            )
+        }.getOrNull() ?: return false
 
         val intents = listOf(
             Intent(Intent.ACTION_VIEW).apply {

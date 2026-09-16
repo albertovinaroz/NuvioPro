@@ -258,9 +258,9 @@ internal fun HomeHeroSection(
         }
     }
 
-    // The carousel only advances by itself when trailer playback is off; with it on, the
-    // current item's trailer plays and only a swipe should move to the next one.
     ScreenActivityEffect(autoScrollPage, items.size, effectiveTrailerPlaybackEnabled) { active ->
+        // The carousel only advances by itself when the screen is active and trailer playback is
+        // off; with it on, the current item's trailer plays and only a swipe should move on.
         if (!active || items.size <= 1 || effectiveTrailerPlaybackEnabled) return@ScreenActivityEffect
         delay(HERO_AUTO_SCROLL_INTERVAL_MS)
         while (pagerState.isScrollInProgress) {

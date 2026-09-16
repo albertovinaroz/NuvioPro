@@ -622,6 +622,8 @@ private fun ExoPlayerSurface(
                                 "ExoPlayer/Android",
                                 "Source error recovered by MIME probe mime=$probedMime url=${InAppLogger.redactUrl(sourceUrl)}",
                             )
+                            // buildUpon keeps the existing subtitle configurations, so the fork no
+                            // longer rebuilds them (and no longer probes each subtitle URL).
                             resolvedMediaItem = resolvedMediaItem.buildUpon()
                                 .setMimeType(probedMime)
                                 .build()

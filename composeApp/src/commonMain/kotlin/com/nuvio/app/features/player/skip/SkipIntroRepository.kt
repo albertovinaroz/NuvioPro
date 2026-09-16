@@ -52,8 +52,22 @@ object SkipIntroRepository {
         val introDbDeferred = async {
             if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode) else emptyList()
         }
-        // Resolve IMDB -> season-specific MAL/AniList via Simkl full_anime_seasons
+        // Resolve IMDB -> season-specific MAL/AniList via Simkl full_anime_seasons.
+        // Kept as a deferred so it runs alongside IntroDB: the fork returns early when IntroDB
+        // already has an opening, and cancels this lookup instead of waiting for it.
         val simklIdsDeferred = async { SimklIdResolver.resolveIdsForImdbEpisode(imdbId, season, episode) }
+
+        val introDb = introDbDeferred.await()
+        if (introDb.hasOpeningSegment()) {
+            simklIdsDeferred.cancel()
+            InAppLogger.info(
+                "Player/SkipIntro",
+                "skip lookup fast result imdb=$imdbId s=$season e=$episode count=${introDb.size} provider=introdb",
+            )
+            cache[cacheKey] = introDb
+            return@coroutineScope introDb
+        }
+
         val simklIds = simklIdsDeferred.await()
         val malId = simklIds?.mal
         val anilistId = simklIds?.anilist
@@ -73,7 +87,6 @@ object SkipIntroRepository {
             if (anilistId != null) fetchFromAnimeSkip(anilistId, animeEpisode, season = null) else emptyList()
         }
 
-        val introDb = introDbDeferred.await()
         val animeSkip = animeSkipDeferred.await()
         val aniSkip = aniSkipDeferred.await()
         return@coroutineScope mergeByPriority(
@@ -236,6 +249,10 @@ object SkipIntroRepository {
         "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
         "recap" -> "recap"
         else -> null
+    }
+
+    private fun List<SkipInterval>.hasOpeningSegment(): Boolean = any { interval ->
+        segmentCategory(interval.type) == "opening"
     }
 
     private suspend fun <T> withSkipProviderTimeout(
