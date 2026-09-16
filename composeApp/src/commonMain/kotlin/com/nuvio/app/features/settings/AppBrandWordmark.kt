@@ -8,8 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.material3.MaterialTheme
-import com.nuvio.app.core.ui.appTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -24,8 +22,10 @@ internal fun AppBrandWordmark(
         AppIconRepository.ensureLoaded()
         AppIconRepository.state
     }.collectAsStateWithLifecycle()
-    val resource: DrawableResource = icon?.wordmarkResource
-        ?: MaterialTheme.appTheme.wordmarkResource(state.selected)
+    // Always the selected App Icon's own wordmark — the color theme picked under Appearance is a
+    // separate setting and shouldn't change which one shows here (it used to, by matching a few
+    // theme colors to a same-colored wordmark regardless of the chosen icon).
+    val resource: DrawableResource = (icon ?: state.selected).wordmarkResource
 
     // Different color themes (e.g. per-profile Supporter+ tints) are separate baked PNGs, not a
     // single asset with a tintable color — swapping the painter outright is an abrupt hard cut
