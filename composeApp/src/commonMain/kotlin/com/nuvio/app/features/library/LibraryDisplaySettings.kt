@@ -148,6 +148,8 @@ internal fun buildLibraryVerticalProjection(
     selectedSectionKey: String?,
     selectedType: String?,
     sortOption: LibrarySortOption,
+    minRating: Int = 0,
+    ratingFor: (LibraryItem) -> Int = { 0 },
 ): LibraryVerticalProjection {
     val availableSections = if (sourceMode.isRemoteTrackingSource) sections else emptyList()
     val selectedSection = if (sourceMode.isRemoteTrackingSource) {
@@ -178,7 +180,8 @@ internal fun buildLibraryVerticalProjection(
         ?.normalizedLibraryType()
         ?.takeIf { it in availableTypes }
     val filteredEntries = deduplicatedEntries.values.filter { entry ->
-        effectiveType == null || (entry.item.mediaCategory ?: entry.item.type).normalizedLibraryType() == effectiveType
+        (effectiveType == null || (entry.item.mediaCategory ?: entry.item.type).normalizedLibraryType() == effectiveType) &&
+            (minRating <= 0 || ratingFor(entry.item) >= minRating)
     }
     val entryByKey = filteredEntries.associateBy { entry -> libraryDisplayItemKey(entry.item) }
     val sortedEntries = sortLibraryItems(

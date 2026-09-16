@@ -15,6 +15,7 @@ import com.nuvio.app.features.home.HomeRepository
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.library.LibraryDisplaySettingsRepository
+import com.nuvio.app.features.library.LibraryRatingsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerSettingsRepository
@@ -64,6 +65,7 @@ internal object LocalAccountDataCleaner {
         MetaScreenSettingsRepository.clearLocalState()
         LibraryRepository.clearLocalState()
         LibraryDisplaySettingsRepository.clearLocalState()
+        LibraryRatingsRepository.clearLocalState()
         ContinueWatchingPreferencesRepository.clearLocalState()
         EpisodeReleaseNotificationsRepository.clearLocalState()
         CollectionMobileSettingsRepository.clearLocalState()

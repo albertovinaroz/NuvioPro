@@ -652,6 +652,7 @@
     <string name="detail_comments_spoiler_hidden_sheet">This comment contains spoilers and has been hidden.</string>
     <string name="detail_comments_title">Comments</string>
     <string name="detail_play_random_episode">Play random episode</string>
+    <string name="detail_rating_star">%1$d star</string>
     <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_trailer_category_count">%1$s (%2$d)</string>
     <string name="detail_trailers_title">Trailers</string>
@@ -2044,8 +2045,15 @@
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_filter_all_types">All types</string>
     <string name="library_filter_list">Select list</string>
+    <string name="library_filter_rating">Filter by rating</string>
     <string name="library_filter_sort">Sort library</string>
     <string name="library_filter_type">Select type</string>
+    <string name="library_rating_any">Any rating</string>
+    <string name="library_rating_min_stars">%1$d+ ★</string>
+    <string name="library_rated_open">Open rated titles</string>
+    <string name="library_rated_title">Rated</string>
+    <string name="library_rated_empty_title">No ratings yet</string>
+    <string name="library_rated_empty_message">Rate a movie or show from its details page and it will show up here.</string>
     <string name="library_layout_show_horizontal">Show horizontal shelves</string>
     <string name="library_layout_show_vertical">Show vertical grid</string>
     <string name="library_load_failed">Couldn't load library</string>

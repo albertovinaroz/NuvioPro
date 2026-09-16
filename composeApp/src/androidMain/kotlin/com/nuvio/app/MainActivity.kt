@@ -28,6 +28,7 @@ import com.nuvio.app.features.downloads.DownloadsStorage
 import com.nuvio.app.features.library.LibraryDisplaySettingsStorage
 import com.nuvio.app.features.membership.MemberAssetStorage
 import com.nuvio.app.features.library.LibraryStorage
+import com.nuvio.app.features.library.LibraryRatingsStorage
 import com.nuvio.app.features.livetv.LiveTvStorage
 import com.nuvio.app.features.details.MetaScreenSettingsStorage
 import com.nuvio.app.features.details.OmdbEpisodeRatingsStorage
@@ -130,6 +131,7 @@ open class MainActivity : AppCompatActivity() {
         SimklAuthStorage.initialize(applicationContext)
         SimklSyncStorage.initialize(applicationContext)
         LibraryDisplaySettingsStorage.initialize(applicationContext)
+        LibraryRatingsStorage.initialize(applicationContext)
         ContinueWatchingPreferencesStorage.initialize(applicationContext)
         ResumePromptStorage.initialize(applicationContext)
         ContinueWatchingEnrichmentStorage.initialize(applicationContext)

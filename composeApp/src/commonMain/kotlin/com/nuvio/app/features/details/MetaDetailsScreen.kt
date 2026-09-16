@@ -94,6 +94,7 @@ import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.details.components.DetailActionButtons
+import com.nuvio.app.features.details.components.DetailRatingStars
 import com.nuvio.app.features.details.components.DetailSecondaryAction
 import com.nuvio.app.features.details.components.CommentDetailSheet
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
@@ -110,6 +111,7 @@ import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
 import com.nuvio.app.features.details.components.SeasonWatchedActionSheet
 import com.nuvio.app.features.details.components.TrailerPlayerPopup
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.library.LibraryRatingsRepository
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.PendingTrackingMembershipRemoval
 import com.nuvio.app.features.library.TrackingMembershipRemovalConfirmationHost
@@ -204,6 +206,10 @@ fun MetaDetailsScreen(
         WatchedRepository.uiState
     }.collectAsStateWithLifecycle()
     val fullyWatchedSeriesKeys by WatchedRepository.fullyWatchedSeriesKeys.collectAsStateWithLifecycle()
+    val libraryRatingsUiState by remember {
+        LibraryRatingsRepository.ensureLoaded()
+        LibraryRatingsRepository.uiState
+    }.collectAsStateWithLifecycle()
     val watchProgressUiState by remember {
         WatchProgressRepository.ensureLoaded()
         WatchProgressRepository.uiState
@@ -530,6 +536,12 @@ fun MetaDetailsScreen(
                         }
                         Unit
                     }
+                }
+                val myRating = remember(libraryRatingsUiState, meta.id, meta.type) {
+                    LibraryRatingsRepository.ratingFor(meta.id, meta.type)
+                }
+                val onRatingSelected = remember(metaPreview) {
+                    { rating: Int -> LibraryRatingsRepository.setRating(metaPreview, rating) }
                 }
                 LaunchedEffect(meta.id, meta.type, watchProgressUiState.hasLoadedRemoteProgress) {
                     if (meta.type.lowercase() in setOf("series", "show", "tv", "tvshow")) {
@@ -1092,12 +1104,14 @@ fun MetaDetailsScreen(
                                     isPrimaryPlayEnabled = isPrimaryPlayEnabled,
                                     isSaved = isSaved,
                                     isWatched = isWatched,
+                                    myRating = myRating,
                                     onPrimaryPlayClick = onPrimaryPlayClick,
                                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                                     onRandomEpisodeClick = onRandomEpisodeClick,
                                     onSaveClick = toggleSaved,
                                     onSaveLongClick = openLibraryListPicker,
                                     onWatchedClick = toggleWatched,
+                                    onRatingSelected = onRatingSelected,
                                     showManualPlayOption = showManualPlayOption,
                                     preferredEpisodeSeasonNumber = initialSeasonNumber ?: seriesAction?.seasonNumber,
                                     preferredEpisodeNumber = initialEpisodeNumber ?: seriesAction?.episodeNumber,
@@ -1788,12 +1802,14 @@ private fun LazyListScope.configuredMetaSectionItems(
     isPrimaryPlayEnabled: Boolean,
     isSaved: Boolean,
     isWatched: Boolean,
+    myRating: Int,
     onPrimaryPlayClick: () -> Unit,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
+    onRatingSelected: (Int) -> Unit,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -1867,12 +1883,14 @@ private fun LazyListScope.configuredMetaSectionItems(
                     isPrimaryPlayEnabled = isPrimaryPlayEnabled,
                     isSaved = isSaved,
                     isWatched = isWatched,
+                    myRating = myRating,
                     onPrimaryPlayClick = onPrimaryPlayClick,
                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                     onRandomEpisodeClick = onRandomEpisodeClick,
                     onSaveClick = onSaveClick,
                     onSaveLongClick = onSaveLongClick,
                     onWatchedClick = onWatchedClick,
+                    onRatingSelected = onRatingSelected,
                     showManualPlayOption = showManualPlayOption,
                     preferredEpisodeSeasonNumber = preferredEpisodeSeasonNumber,
                     preferredEpisodeNumber = preferredEpisodeNumber,
@@ -2019,12 +2037,14 @@ private fun ConfiguredMetaSections(
     isPrimaryPlayEnabled: Boolean,
     isSaved: Boolean,
     isWatched: Boolean,
+    myRating: Int,
     onPrimaryPlayClick: () -> Unit,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
+    onRatingSelected: (Int) -> Unit,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -2080,51 +2100,58 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
-                DetailActionButtons(
-                    playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
-                    playEnabled = isPrimaryPlayEnabled,
-                    secondaryActions = buildList {
-                        add(DetailSecondaryAction(
-                            label = if (isWatched) {
-                                stringResource(Res.string.hero_mark_unwatched)
-                            } else {
-                                stringResource(Res.string.hero_mark_watched)
-                            },
-                            icon = if (isWatched) {
-                                Icons.Default.Visibility
-                            } else {
-                                Icons.Default.VisibilityOff
-                            },
-                            isActive = isWatched,
-                            onClick = onWatchedClick,
-                        ))
-                        add(DetailSecondaryAction(
-                            label = if (isSaved) {
-                                stringResource(Res.string.hero_remove_from_library)
-                            } else {
-                                stringResource(Res.string.hero_add_to_library)
-                            },
-                            icon = if (isSaved) {
-                                Icons.Default.Check
-                            } else {
-                                Icons.Default.Add
-                            },
-                            isActive = isSaved,
-                            onClick = onSaveClick,
-                            onLongClick = onSaveLongClick,
-                        ))
-                        onRandomEpisodeClick?.let { playRandomEpisode ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    DetailActionButtons(
+                        playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
+                        playEnabled = isPrimaryPlayEnabled,
+                        secondaryActions = buildList {
                             add(DetailSecondaryAction(
-                                label = stringResource(Res.string.detail_play_random_episode),
-                                icon = Icons.Default.Shuffle,
-                                onClick = playRandomEpisode,
+                                label = if (isWatched) {
+                                    stringResource(Res.string.hero_mark_unwatched)
+                                } else {
+                                    stringResource(Res.string.hero_mark_watched)
+                                },
+                                icon = if (isWatched) {
+                                    Icons.Default.Visibility
+                                } else {
+                                    Icons.Default.VisibilityOff
+                                },
+                                isActive = isWatched,
+                                onClick = onWatchedClick,
                             ))
-                        }
-                    },
-                    isTablet = isTablet,
-                    onPlayClick = onPrimaryPlayClick,
-                    onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
-                )
+                            add(DetailSecondaryAction(
+                                label = if (isSaved) {
+                                    stringResource(Res.string.hero_remove_from_library)
+                                } else {
+                                    stringResource(Res.string.hero_add_to_library)
+                                },
+                                icon = if (isSaved) {
+                                    Icons.Default.Check
+                                } else {
+                                    Icons.Default.Add
+                                },
+                                isActive = isSaved,
+                                onClick = onSaveClick,
+                                onLongClick = onSaveLongClick,
+                            ))
+                            onRandomEpisodeClick?.let { playRandomEpisode ->
+                                add(DetailSecondaryAction(
+                                    label = stringResource(Res.string.detail_play_random_episode),
+                                    icon = Icons.Default.Shuffle,
+                                    onClick = playRandomEpisode,
+                                ))
+                            }
+                        },
+                        isTablet = isTablet,
+                        onPlayClick = onPrimaryPlayClick,
+                        onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    DetailRatingStars(
+                        rating = myRating,
+                        onRatingSelected = onRatingSelected,
+                    )
+                }
             }
             MetaScreenSectionKey.OVERVIEW -> {
                 DetailMetaInfo(

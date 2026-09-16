@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.ViewAgenda
 import com.nuvio.app.core.ui.DisintegratingContainer
 import androidx.compose.material3.Icon
@@ -183,6 +184,7 @@ fun LibraryScreen(
         runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
     }
     var showReleaseCalendar by rememberSaveable { mutableStateOf(false) }
+    var showRatedItems by rememberSaveable { mutableStateOf(false) }
     val releaseCalendarCacheState by LibraryReleaseCalendarCache.state.collectAsStateWithLifecycle()
     val releaseCalendarCacheKey = remember(uiState.items) {
         LibraryReleaseCalendarCache.cacheKeyFor(uiState.items)
@@ -206,6 +208,14 @@ fun LibraryScreen(
     var selectedCloudItemKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedLibrarySectionKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedLibraryType by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedMinRating by rememberSaveable { mutableStateOf(0) }
+    val libraryRatingsUiState by remember {
+        LibraryRatingsRepository.ensureLoaded()
+        LibraryRatingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val ratingFor = remember(libraryRatingsUiState) {
+        { item: LibraryItem -> LibraryRatingsRepository.ratingFor(item.id, item.type) }
+    }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     ScreenActivityEffect(listState) { screenActive ->
@@ -216,10 +226,17 @@ fun LibraryScreen(
         selected = displaySettings.sortOption,
         sourceMode = uiState.sourceMode,
     )
-    val sortedSections = remember(uiState.sections, displaySettings, uiState.sourceMode, sourceMode) {
+    val sortedSections = remember(uiState.sections, displaySettings, uiState.sourceMode, sourceMode, selectedMinRating, libraryRatingsUiState) {
         if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+            val ratingFiltered = if (selectedMinRating <= 0) {
+                uiState.sections
+            } else {
+                uiState.sections
+                    .map { section -> section.copy(items = section.items.filter { ratingFor(it) >= selectedMinRating }) }
+                    .filter { section -> section.items.isNotEmpty() }
+            }
             sortLibrarySections(
-                sections = uiState.sections,
+                sections = ratingFiltered,
                 selected = displaySettings.sortOption,
                 sourceMode = uiState.sourceMode,
             )
@@ -232,6 +249,8 @@ fun LibraryScreen(
         uiState.sourceMode,
         selectedLibrarySectionKey,
         selectedLibraryType,
+        selectedMinRating,
+        libraryRatingsUiState,
         displaySettings,
         sourceMode,
     ) {
@@ -242,6 +261,8 @@ fun LibraryScreen(
                 selectedSectionKey = selectedLibrarySectionKey,
                 selectedType = selectedLibraryType,
                 sortOption = displaySettings.sortOption,
+                minRating = selectedMinRating,
+                ratingFor = ratingFor,
             )
         } else {
             LibraryVerticalProjection(
@@ -441,6 +462,20 @@ fun LibraryScreen(
                                 )
                             }
                         }
+                        val openRatedLabel = stringResource(Res.string.library_rated_open)
+                        IconButton(
+                            onClick = { showRatedItems = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .semantics { contentDescription = openRatedLabel },
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(19.dp),
+                                tint = MaterialTheme.nuvio.colors.textPrimary,
+                            )
+                        }
                     },
                 )
                 // Same title-to-control gap as Search's header-to-searchbar spacer, so the two
@@ -577,12 +612,14 @@ fun LibraryScreen(
                                     sourceMode = uiState.sourceMode,
                                     sortOption = effectiveSortOption,
                                     verticalProjection = verticalProjection,
+                                    minRating = selectedMinRating,
                                     onSectionSelected = { sectionKey ->
                                         selectedLibrarySectionKey = sectionKey
                                         selectedLibraryType = null
                                     },
                                     onTypeSelected = { type -> selectedLibraryType = type },
                                     onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
+                                    onMinRatingSelected = { rating -> selectedMinRating = rating },
                                     modifier = libraryContentTransitionModifier()
                                         .padding(horizontal = 16.dp)
                                         .padding(top = 8.dp, bottom = 14.dp),
@@ -629,6 +666,17 @@ fun LibraryScreen(
                 coroutineScope.launch {
                     LibraryReleaseCalendarCache.ensureMonth(uiState.items, month.key)
                 }
+            },
+        )
+    }
+
+    if (showRatedItems) {
+        LibraryRatedPanel(
+            entries = libraryRatingsUiState.entries.values.toList(),
+            onDismiss = { showRatedItems = false },
+            onPosterClick = { entry ->
+                showRatedItems = false
+                wrappedOnPosterClick?.invoke(entry.toLibraryItem())
             },
         )
     }

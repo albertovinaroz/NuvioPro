@@ -21,8 +21,11 @@ import com.nuvio.app.features.home.components.PosterGridSkeletonRow
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.library_filter_all_types
 import nuvio.composeapp.generated.resources.library_filter_list
+import nuvio.composeapp.generated.resources.library_filter_rating
 import nuvio.composeapp.generated.resources.library_filter_sort
 import nuvio.composeapp.generated.resources.library_filter_type
+import nuvio.composeapp.generated.resources.library_rating_any
+import nuvio.composeapp.generated.resources.library_rating_min_stars
 import nuvio.composeapp.generated.resources.library_sort_added_asc
 import nuvio.composeapp.generated.resources.library_sort_added_desc
 import nuvio.composeapp.generated.resources.library_sort_title_asc
@@ -36,13 +39,16 @@ internal fun LibrarySavedControls(
     sourceMode: LibrarySourceMode,
     sortOption: LibrarySortOption,
     verticalProjection: LibraryVerticalProjection,
+    minRating: Int,
     onSectionSelected: (String) -> Unit,
     onTypeSelected: (String?) -> Unit,
     onSortSelected: (LibrarySortOption) -> Unit,
+    onMinRatingSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sortOptions = availableLibrarySortOptions(sourceMode)
     val allTypesLabel = stringResource(Res.string.library_filter_all_types)
+    val anyRatingLabel = stringResource(Res.string.library_rating_any)
 
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
@@ -97,6 +103,20 @@ internal fun LibrarySavedControls(
                     .firstOrNull { it.name == option.key }
                     ?.let(onSortSelected)
             },
+        )
+
+        val ratingOptions = buildList {
+            add(NuvioDropdownOption(key = "0", label = anyRatingLabel))
+            for (stars in LibraryRatingMax downTo 1) {
+                add(NuvioDropdownOption(key = stars.toString(), label = stringResource(Res.string.library_rating_min_stars, stars)))
+            }
+        }
+        NuvioDropdownChip(
+            title = stringResource(Res.string.library_filter_rating),
+            label = if (minRating <= 0) anyRatingLabel else stringResource(Res.string.library_rating_min_stars, minRating),
+            selectedKey = minRating.toString(),
+            options = ratingOptions,
+            onSelected = { option -> onMinRatingSelected(option.key.toIntOrNull() ?: 0) },
         )
     }
 }
