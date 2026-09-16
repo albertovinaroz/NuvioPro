@@ -128,6 +128,7 @@ fun SettingsScreen(
     requestedPageName: String? = null,
     onRequestedPageConsumed: () -> Unit = {},
     rootActionsEnabled: Boolean = true,
+    isSelectedTab: Boolean = true,
     onNavigatePage: ((pageName: String, title: String) -> Unit)? = null,
     onExternalBack: (() -> Unit)? = null,
     showInternalHeader: Boolean = true,
