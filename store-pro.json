@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.22-b1",
+          "buildVersion": "148",
+          "date": "2026-09-16T16:17:19Z",
+          "localizedDescription": "# Nuvio Pro 0.4.22-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n- feat(tmdb): add personal API key override with credential sync @tapframe\n- feat(details): parse addon episode runtimes @tapframe\n- fix: use addon imdb_id as fallback for non-IMDB content enrichment @skoruppa\n- fix(settings): keep page content visible during navigation @tapframe\n- feat(ratings): add rotten tomatoes status icons @tapframe\n- fix(simkl): make anime id preference apply only to content with anime ids @skoruppa\n- i18n(vi): update latest Vietnamese strings @blueocean2308\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- fix(streams): pin individual providers instead of whole source groups @LuqmanFadlli\n- fix(downloads): write Android downloads to the custom download location @LuqmanFadlli\n- feat(streams): add pinned stream sources @LuqmanFadlli\n\n### Pro\n- feat(library): rate movies and shows and filter Library by rating @albertovinaroz\n- fix(settings): make the wordmark follow the selected App Icon, not the color theme @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.22-b1/nuvio-0.4.22-b1-pro-release.ipa",
+          "size": 66774000,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.21-b1",
           "buildVersion": "146",
           "date": "2026-09-15T14:09:41Z",
