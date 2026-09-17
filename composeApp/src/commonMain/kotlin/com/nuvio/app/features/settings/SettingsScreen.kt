@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -721,8 +722,11 @@ private fun MobileSettingsScreen(
             // stickyHeader — it's gone the moment the header actually pins to the top, so relying
             // on it there left the title colliding with the status bar once scrolled. The root
             // page's header now carries its own full statusBarTop clearance instead (below), so
-            // this stops contributing a second one; sub-pages are untouched (still null).
-            topPadding = if (page == SettingsPage.Root) 0.dp else null,
+            // this stops contributing a second one; other sub-pages are untouched (still null).
+            // Profile also opts out: on iOS the visible title/back chrome is native (Compose's own
+            // NuvioScreenHeader renders almost nothing there), so this padding was pure dead space
+            // pushing the cinematic hero photo down for no reason.
+            topPadding = if (page == SettingsPage.Root || page == SettingsPage.Profile) 0.dp else null,
         ) {
             if (showInternalHeader) {
                 stickyHeader {
@@ -732,7 +736,14 @@ private fun MobileSettingsScreen(
                     // a following item just scrolls away behind the header like everything else,
                     // so it wouldn't keep any gap once you're deeper in the list. Wrapping both in
                     // one opaquely-backed Column keeps that space pinned along with the title.
-                    Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+                    // Profile's header floats transparently over its cinematic hero photo,
+                    // instead of the opaque bar every other settings page uses.
+                    val headerBackground = if (page == SettingsPage.Profile) {
+                        Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.background
+                    }
+                    Column(modifier = Modifier.background(headerBackground)) {
                         NuvioScreenHeader(
                             title = stringResource(page.titleRes),
                             onBack = previousPage?.let { { onNavigateBack() } },

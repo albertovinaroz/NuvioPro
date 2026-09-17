@@ -6,18 +6,27 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -27,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -56,7 +66,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -214,45 +226,43 @@ private fun ProfileInsightsBody(
     LaunchedEffect(activeProfileIndex) {
         selectedInsightCollection = null
     }
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
-    ) {
-        if (onSwitchProfile != null || onEditProfile != null) {
-            ProfileManagementActions(
-                isTablet = isTablet,
-                onSwitchProfile = onSwitchProfile,
-                onEditProfile = onEditProfile,
-            )
-        }
+    val isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean = { kind ->
+        insightCollections[kind]?.items?.isNotEmpty() == true
+    }
+    val onCollectionClick: (ProfileInsightCollectionKind) -> Unit = { kind ->
+        selectedInsightCollection = insightCollections[kind]
+            ?.takeIf { collection -> collection.items.isNotEmpty() }
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
         ProfileInsightsHero(
             profile = activeProfile,
             avatarItem = avatarItem,
             profileName = profileName,
+            isTablet = isTablet,
             stats = stats,
-            isTablet = isTablet,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
         )
-        SettingsSection(
-            title = stringResource(Res.string.profile_insights_section_overview),
-            isTablet = isTablet,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = if (isTablet) 18.dp else 14.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
         ) {
-            ProfileInsightsStatsGrid(
-                stats = stats,
+            if (onSwitchProfile != null || onEditProfile != null) {
+                ProfileManagementActions(
+                    isTablet = isTablet,
+                    onSwitchProfile = onSwitchProfile,
+                    onEditProfile = onEditProfile,
+                )
+            }
+            ProfileWatchTimeRow(stats = stats)
+            SettingsSection(
+                title = stringResource(Res.string.profile_insights_section_taste),
                 isTablet = isTablet,
-                isCollectionAvailable = { kind ->
-                    insightCollections[kind]?.items?.isNotEmpty() == true
-                },
-                onCollectionClick = { kind ->
-                    selectedInsightCollection = insightCollections[kind]
-                        ?.takeIf { collection -> collection.items.isNotEmpty() }
-                },
-            )
-        }
-        SettingsSection(
-            title = stringResource(Res.string.profile_insights_section_taste),
-            isTablet = isTablet,
-        ) {
-            ProfileTasteCard(stats = stats)
+            ) {
+                ProfileTasteCard(stats = stats)
+            }
         }
     }
 
@@ -321,38 +331,74 @@ private fun ProfileInsightsHero(
     profile: NuvioProfile?,
     avatarItem: AvatarCatalogItem?,
     profileName: String,
-    stats: ProfileInsightsStats,
     isTablet: Boolean,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+) {
+    // The bled, edge-to-edge treatment below is tuned specifically for the phone/portrait path:
+    // it deliberately reaches past the Settings scaffold's padding to the true screen edges and
+    // past the top to sit behind iOS's native (not Compose-drawn) navigation title. Regular width
+    // (iPad, or an iPhone rotated to landscape) uses a completely different presentation — a
+    // Settings list + detail pane split, with a real Compose-drawn TabletPageHeader above this and
+    // no bleed-worthy screen edge to reach at all — so it gets a plain, bounded card instead.
+    if (isTablet) {
+        ProfileInsightsHeroBounded(
+            profile = profile,
+            avatarItem = avatarItem,
+            profileName = profileName,
+            stats = stats,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
+        )
+    } else {
+        ProfileInsightsHeroCinematic(
+            profile = profile,
+            avatarItem = avatarItem,
+            profileName = profileName,
+            stats = stats,
+            isCollectionAvailable = isCollectionAvailable,
+            onCollectionClick = onCollectionClick,
+        )
+    }
+}
+
+@Composable
+private fun ProfileInsightsHeroBounded(
+    profile: NuvioProfile?,
+    avatarItem: AvatarCatalogItem?,
+    profileName: String,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
     val avatarImageUrl = remember(profile, avatarItem) {
         profile?.let { profileAvatarImageUrl(it, avatarItem) }
     }
-    val shape = RoundedCornerShape(if (isTablet) 34.dp else 28.dp)
+    val shape = RoundedCornerShape(34.dp)
 
+    // A fixed height instead of an aspectRatio: avatar + title + pill row need a predictable
+    // amount of room regardless of how wide/narrow the detail pane is, and 21:9 was too short for
+    // that content on a landscape phone specifically — it overflowed the card's own bounds and
+    // visually overlapped the Switch/Edit profile buttons below it.
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .height(320.dp)
             .clip(shape)
             .border(1.dp, Color.White.copy(alpha = 0.12f), shape),
     ) {
         if (profile != null) {
-            ProfileBackgroundBackdrop(
-                profile = profile,
-                modifier = Modifier.matchParentSize(),
-            )
+            ProfileBackgroundBackdrop(profile = profile, modifier = Modifier.matchParentSize())
         } else {
             Box(
                 modifier = Modifier
                     .matchParentSize()
                     .background(
                         Brush.linearGradient(
-                            listOf(
-                                Color(0xFF0E1727),
-                                accent.copy(alpha = 0.42f),
-                                tokens.colors.surface,
-                            ),
+                            listOf(Color(0xFF0E1727), accent.copy(alpha = 0.42f), tokens.colors.surface),
                         ),
                     ),
             )
@@ -361,90 +407,170 @@ private fun ProfileInsightsHero(
             modifier = Modifier
                 .matchParentSize()
                 .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            accent.copy(alpha = 0.34f),
-                            Color.Transparent,
-                        ),
-                        radius = 760f,
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color.Black.copy(alpha = 0.04f),
-                            Color.Black.copy(alpha = 0.56f),
-                        ),
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.20f), Color.Black.copy(alpha = 0.88f)),
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY,
                     ),
                 ),
         )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(if (isTablet) 24.dp else 18.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .align(Alignment.BottomStart)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            ProfileHeroAvatar(
+                profileName = profileName,
+                avatarImageUrl = avatarImageUrl,
+                avatarColor = accent,
+                avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
+                isTablet = true,
+            )
+            Text(
+                text = stringResource(Res.string.profile_insights_title, profileName),
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            ProfileMetricPillRow(
+                stats = stats,
+                isCollectionAvailable = isCollectionAvailable,
+                onCollectionClick = onCollectionClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileInsightsHeroCinematic(
+    profile: NuvioProfile?,
+    avatarItem: AvatarCatalogItem?,
+    profileName: String,
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
+    val avatarImageUrl = remember(profile, avatarItem) {
+        profile?.let { profileAvatarImageUrl(it, avatarItem) }
+    }
+
+    // The outer Box's size is fixed purely by fillMaxWidth+aspectRatio, using the page's normal
+    // (un-bled) width — that's what gets reported to the list, so it doesn't push everything below
+    // down just because the photo inside renders bigger. The inner BoxWithConstraints reads that
+    // same width/height to size a *separate*, oversized+offset photo layer that bleeds past the
+    // shared Settings scaffold's horizontal padding to the true screen edges, and past its top to
+    // reach behind the status bar / native title (Box doesn't clip overflowing children, so this
+    // is purely a drawing-position trick — it never touches the reported layout size above).
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+    ) {
+        BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+            val leftInset = tokens.spacing.screenHorizontal + 40.dp
+            val rightInset = tokens.spacing.screenHorizontal + 160.dp
+            val bleedWidth = maxWidth + leftInset + rightInset
+            val topExtension = 56.dp
+            val extendedHeight = maxHeight + topExtension
+
+            Box(
+                modifier = Modifier
+                    .requiredWidth(bleedWidth)
+                    .requiredHeight(extendedHeight)
+                    .offset(x = -leftInset, y = -topExtension),
+            ) {
+                if (profile != null) {
+                    ProfileBackgroundBackdrop(
+                        profile = profile,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF0E1727),
+                                        accent.copy(alpha = 0.42f),
+                                        tokens.colors.surface,
+                                    ),
+                                ),
+                            ),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.20f),
+                                    Color.Black.copy(alpha = 0.88f),
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY,
+                            ),
+                        ),
+                )
+            }
+
+            // Normal (un-bled) width, so it stays where the rest of the page's content sits —
+            // reserves room below for the pill row via bottomPadding rather than sharing a Column
+            // with it, since that pill row needs a completely different (bled) width.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 18.dp)
+                    .padding(bottom = 140.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 ProfileHeroAvatar(
                     profileName = profileName,
                     avatarImageUrl = avatarImageUrl,
                     avatarColor = accent,
                     avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
-                    isTablet = isTablet,
+                    isTablet = false,
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.profile_insights_title, profileName),
-                        style = if (isTablet) {
-                            MaterialTheme.typography.headlineMedium
-                        } else {
-                            MaterialTheme.typography.headlineSmall
-                        },
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(Res.string.profile_insights_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.74f),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                ProfileHeroMetric(
-                    value = stats.continueCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_continue),
-                    modifier = Modifier.weight(1f),
-                )
-                ProfileHeroMetric(
-                    value = stats.libraryCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_library),
-                    modifier = Modifier.weight(1f),
-                )
-                ProfileHeroMetric(
-                    value = stats.upcomingCount.toString(),
-                    label = stringResource(Res.string.profile_insights_stat_upcoming),
-                    modifier = Modifier.weight(1f),
+                Text(
+                    text = stringResource(Res.string.profile_insights_title, profileName),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
+
+            // Deliberately NOT bled like the photo above: that was fragile (offset+requiredWidth+
+            // horizontalScroll interactions kept mispositioning the first pill on iOS in ways that
+            // were hard to fully pin down) and the payoff — pills scrolling flush to the photo's
+            // true edge — wasn't worth repeat regressions. Plain row, same 18dp inset as everything
+            // else on the page, aligned with the avatar/title directly above it.
+            ProfileMetricPillRow(
+                stats = stats,
+                isCollectionAvailable = isCollectionAvailable,
+                onCollectionClick = onCollectionClick,
+                // No end padding: the row's own scroll clipping already cuts the last pill
+                // mid-way when they don't all fit, which is exactly the "there's more, scroll"
+                // affordance — reserving matching space on the right would just hide that peek.
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 18.dp)
+                    .padding(bottom = 18.dp),
+            )
         }
     }
 }
@@ -494,21 +620,103 @@ private fun ProfileHeroAvatar(
 }
 
 @Composable
-private fun ProfileHeroMetric(
-    value: String,
-    label: String,
+private fun ProfileMetricPillRow(
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+) {
+    val pills = listOf(
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.PlayArrow,
+            value = stats.continueCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_continue),
+            collectionKind = ProfileInsightCollectionKind.Continue,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.CollectionsBookmark,
+            value = stats.libraryCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_library),
+            collectionKind = ProfileInsightCollectionKind.Library,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.CalendarMonth,
+            value = stats.upcomingCount.toString(),
+            label = stringResource(Res.string.profile_insights_hero_upcoming),
+            collectionKind = ProfileInsightCollectionKind.Upcoming,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Favorite,
+            value = stats.completedCount.toString(),
+            label = stringResource(Res.string.profile_insights_stat_completed),
+            collectionKind = ProfileInsightCollectionKind.Completed,
+        ),
+        ProfileMetricPillSpec(
+            icon = Icons.Rounded.Sync,
+            value = stats.ongoingSeriesCount.toString(),
+            label = stringResource(Res.string.profile_insights_stat_ongoing),
+            collectionKind = ProfileInsightCollectionKind.Ongoing,
+        ),
+    )
+
+    // A plain scrollable Row instead of LazyRow: with contentPadding this wide (it reaches past
+    // the true screen edge to match the bled photo behind it), LazyRow was starting at a nonzero
+    // initial scroll offset on iOS, clipping the first pill until the user nudged it — a Row's
+    // scroll position is simply 0 at rest, with no such quirk.
+    // The start/end insets are real Spacer children, not an outer .padding() — padding applied
+    // after .horizontalScroll() resizes the viewport, it doesn't add space inside the scrollable
+    // content, so it was leaving the first pill flush against (and clipped by) the true edge.
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Spacer(modifier = Modifier.width(contentPadding.calculateStartPadding(LayoutDirection.Ltr)))
+        pills.forEach { pill ->
+            ProfileMetricPill(
+                spec = pill,
+                onClick = pill.collectionKind
+                    .takeIf(isCollectionAvailable)
+                    ?.let { kind -> { onCollectionClick(kind) } },
+            )
+        }
+        Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
+    }
+}
+
+private data class ProfileMetricPillSpec(
+    val icon: ImageVector,
+    val value: String,
+    val label: String,
+    val collectionKind: ProfileInsightCollectionKind,
+)
+
+@Composable
+private fun ProfileMetricPill(
+    spec: ProfileMetricPillSpec,
+    onClick: (() -> Unit)?,
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
+            .width(96.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.10f))
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+            .background(Color.White.copy(alpha = 0.14f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(18.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        Icon(
+            imageVector = spec.icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = Color.White,
+        )
         Text(
-            text = value,
+            text = spec.value,
             autoSize = TextAutoSize.StepBased(
                 minFontSize = 14.sp,
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
@@ -519,15 +727,9 @@ private fun ProfileHeroMetric(
             maxLines = 1,
         )
         Text(
-            text = label,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 8.sp,
-                maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-            ),
+            text = spec.label,
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 8.sp,
-            letterSpacing = 0.sp,
-            color = Color.White.copy(alpha = 0.70f),
+            color = Color.White.copy(alpha = 0.72f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -535,162 +737,55 @@ private fun ProfileHeroMetric(
 }
 
 @Composable
-private fun ProfileInsightsStatsGrid(
-    stats: ProfileInsightsStats,
-    isTablet: Boolean,
-    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
-    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
-) {
-    val tiles = listOf(
-        ProfileInsightTile(
-            icon = Icons.Rounded.PlayArrow,
-            value = stats.continueCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_continue),
-            caption = stringResource(Res.string.profile_insights_stat_continue_caption),
-            collectionKind = ProfileInsightCollectionKind.Continue,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.CollectionsBookmark,
-            value = stats.upcomingCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_upcoming),
-            caption = stringResource(Res.string.profile_insights_stat_upcoming_caption),
-            collectionKind = ProfileInsightCollectionKind.Upcoming,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.Favorite,
-            value = stats.completedCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_completed),
-            caption = stringResource(Res.string.profile_insights_stat_completed_caption),
-            collectionKind = ProfileInsightCollectionKind.Completed,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.Sync,
-            value = stats.ongoingSeriesCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_ongoing),
-            caption = stringResource(Res.string.profile_insights_stat_ongoing_caption),
-            collectionKind = ProfileInsightCollectionKind.Ongoing,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.CollectionsBookmark,
-            value = stats.libraryCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_library),
-            caption = stringResource(Res.string.profile_insights_stat_library_caption),
-            collectionKind = ProfileInsightCollectionKind.Library,
-        ),
-        ProfileInsightTile(
-            icon = Icons.Rounded.AutoAwesome,
-            value = profileInsightDurationLabel(stats.trackedDurationMs),
-            label = stringResource(Res.string.profile_insights_stat_time),
-            caption = stringResource(Res.string.profile_insights_stat_time_caption),
-        ),
-    )
-    val columns = if (isTablet) 3 else 2
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        tiles.chunked(columns).forEach { rowTiles ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                rowTiles.forEach { tile ->
-                    ProfileInsightStatCard(
-                        tile = tile,
-                        onClick = tile.collectionKind
-                            ?.takeIf(isCollectionAvailable)
-                            ?.let { kind -> { onCollectionClick(kind) } },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat(columns - rowTiles.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileInsightStatCard(
-    tile: ProfileInsightTile,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
+private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
     val tokens = MaterialTheme.nuvio
     Surface(
-        modifier = modifier
-            .height(136.dp)
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                },
-            ),
+        modifier = Modifier.fillMaxWidth(),
         color = tokens.colors.surface,
-        shape = RoundedCornerShape(22.dp),
+        shape = tokens.shapes.card,
         border = BorderStroke(1.dp, tokens.colors.borderSubtle),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                modifier = Modifier.size(40.dp),
+                color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
+                shape = RoundedCornerShape(12.dp),
             ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = tokens.colors.accent,
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tile.value,
-                    modifier = Modifier.weight(1f, fill = false),
-                    autoSize = TextAutoSize.StepBased(
-                        minFontSize = 14.sp,
-                        maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
+                    text = stringResource(Res.string.profile_insights_stat_time),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = stringResource(Res.string.profile_insights_stat_time_caption),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tokens.colors.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Surface(
-                    modifier = Modifier.size(34.dp),
-                    color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = tile.icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = tokens.colors.accent,
-                        )
-                    }
-                }
             }
             Text(
-                text = tile.label,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 10.sp,
-                    maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
+                text = profileInsightDurationLabel(stats.trackedDurationMs),
+                style = MaterialTheme.typography.titleMedium,
                 color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = tile.caption,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 8.sp,
-                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                letterSpacing = 0.sp,
-                color = tokens.colors.textMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
@@ -1966,14 +2061,6 @@ private data class ProfileInsightsStats(
     val dnaChips: List<ProfileTasteDnaChip>,
 )
 
-
-private data class ProfileInsightTile(
-    val icon: ImageVector,
-    val value: String,
-    val label: String,
-    val caption: String,
-    val collectionKind: ProfileInsightCollectionKind? = null,
-)
 
 private enum class ProfileInsightCollectionKind {
     Continue,
