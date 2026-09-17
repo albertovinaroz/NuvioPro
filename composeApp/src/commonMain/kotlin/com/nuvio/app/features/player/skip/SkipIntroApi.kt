@@ -15,6 +15,19 @@ internal object SkipIntroApi {
 
     // --- IntroDb ---
 
+    suspend fun getIntroDbMovieSegments(imdbId: String): IntroDbSegmentsResponse? {
+        val baseUrl = IntroDbConfig.URL.trimEnd('/')
+        if (baseUrl.isBlank()) return null
+        return try {
+            val text = httpGetText(introDbMovieSegmentsUrl(baseUrl, imdbId))
+            json.decodeFromString<IntroDbSegmentsResponse>(text)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun getIntroDbSegments(
         imdbId: String,
         season: Int,
@@ -208,3 +221,6 @@ internal object SkipIntroApi {
         }
     }
 }
+
+internal fun introDbMovieSegmentsUrl(baseUrl: String, imdbId: String): String =
+    "${baseUrl.trimEnd('/')}/segments?imdb_id=$imdbId&is_movie=true"

@@ -999,8 +999,7 @@ private fun LibraryChip(
             .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) colorScheme.primaryContainer else MaterialTheme.nuvio.colors.surface,
-        border = if (selected) BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.45f)) else null,
+        color = if (selected) colorScheme.primary else colorScheme.surfaceVariant,
     ) {
         Row(
             modifier = if (expanded) {
@@ -1016,7 +1015,7 @@ private fun LibraryChip(
             if (loading) {
                 NuvioLoadingIndicator(
                     modifier = Modifier.size(12.dp),
-                    color = colorScheme.primary,
+                    color = if (selected) colorScheme.onPrimary else colorScheme.primary,
                 )
             }
             Text(
@@ -1024,7 +1023,7 @@ private fun LibraryChip(
                 style = MaterialTheme.typography.labelMedium,
                 color = when {
                     error -> colorScheme.error
-                    selected -> colorScheme.onPrimaryContainer
+                    selected -> colorScheme.onPrimary
                     else -> colorScheme.onSurfaceVariant
                 },
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,

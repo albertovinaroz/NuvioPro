@@ -706,7 +706,7 @@ private fun AddProfileCard(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .border(
                         2.dp,
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
