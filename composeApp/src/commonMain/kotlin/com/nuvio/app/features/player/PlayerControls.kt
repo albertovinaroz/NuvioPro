@@ -733,11 +733,10 @@ internal fun PlayerSeekBar(
                         onScrubChange(targetPositionMs)
                         onScrubFinished(targetPositionMs)
                     },
-                )
-                .semantics { contentDescription = seekDescription },
+                ),
         ) {
             Slider(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().semantics { contentDescription = seekDescription },
                 value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
                 onValueChange = { value -> onScrubChange(value.toLong()) },
                 onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
