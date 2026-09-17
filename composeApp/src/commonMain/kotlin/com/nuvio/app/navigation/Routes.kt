@@ -78,6 +78,13 @@ data class NotificationFeedRoute(
     override val title: String,
 ) : AppRoute
 
+/** Reached from Library's Rated icon; stays on the Library tab like NotificationFeedRoute stays
+ * on whichever tab it was opened from. */
+@Serializable
+data class LibraryRatedRoute(
+    override val title: String,
+) : AppRoute
+
 /** Reached two ways: from Settings' "What's New" row (should push onto the Settings tab, like any
  * other SettingsDestinationRoute), and from an app-update card in the notification feed (should
  * stay on whichever tab the feed itself was opened from, usually Home). forceSettingsTab picks

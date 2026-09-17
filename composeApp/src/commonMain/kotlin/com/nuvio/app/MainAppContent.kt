@@ -115,6 +115,7 @@ import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.library.LibrarySourceMode
+import com.nuvio.app.features.library.LibraryRatedScreen
 import com.nuvio.app.features.library.PendingTrackingMembershipRemoval
 import com.nuvio.app.features.library.TrackingMembershipRemovalConfirmationHost
 import com.nuvio.app.features.library.executeTrackingMembershipOperation
@@ -367,6 +368,7 @@ internal fun MainAppContent(
     val debridSettingsTitle = stringResource(Res.string.compose_settings_page_debrid)
     val notificationsFeedTitle = stringResource(Res.string.notifications_feed_title)
     val downloadsSettingsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
+    val libraryRatedTitle = stringResource(Res.string.library_rated_title)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
     val accountSettingsTitle = stringResource(Res.string.compose_settings_page_account)
@@ -1529,6 +1531,9 @@ internal fun MainAppContent(
                                         DownloadsSettingsRoute(downloadsSettingsTitle, forceSettingsTab = false),
                                     )
                                 },
+                                onLibraryRatedClick = {
+                                    navController.navigate(LibraryRatedRoute(title = libraryRatedTitle))
+                                },
                                 onCloudFilePlay = { item, file ->
                                     coroutineScope.launch {
                                         val resumeItem = WatchProgressRepository
@@ -1768,6 +1773,19 @@ internal fun MainAppContent(
                                         )
                                     }
                                 }
+                            },
+                        )
+                    }
+                }
+
+                entry<LibraryRatedRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        LibraryRatedScreen(
+                            onBack = onBack,
+                            onPosterClick = { ratedEntry ->
+                                val item = ratedEntry.toLibraryItem()
+                                LibraryRepository.markPosterOpened(item)
+                                openLibraryItem(item)
                             },
                         )
                     }

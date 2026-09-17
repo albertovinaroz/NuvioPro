@@ -158,6 +158,7 @@ internal data class AppTabActions(
     val onInitialHomeContentRendered: () -> Unit = {},
     val onNotificationsClick: (() -> Unit)? = null,
     val onDownloadsClick: (() -> Unit)? = null,
+    val onLibraryRatedClick: (() -> Unit)? = null,
 )
 
 @Composable
@@ -217,6 +218,7 @@ internal fun AppTabHost(
                     onCloudFilePlay = actions.onCloudFilePlay,
                     onConnectCloudClick = actions.onConnectCloudClick,
                     disintegrationRequest = state.libraryDisintegrationRequest,
+                    onRatedClick = actions.onLibraryRatedClick,
                 )
             }
 

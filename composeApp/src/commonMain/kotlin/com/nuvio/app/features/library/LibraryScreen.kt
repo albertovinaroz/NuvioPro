@@ -150,6 +150,7 @@ fun LibraryScreen(
     onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     onConnectCloudClick: (() -> Unit)? = null,
     disintegrationRequest: DisintegrationRequest<String>? = null,
+    onRatedClick: (() -> Unit)? = null,
 ) {
     val uiState by remember {
         LibraryRepository.ensureLoaded()
@@ -185,7 +186,6 @@ fun LibraryScreen(
         runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
     }
     var showReleaseCalendar by rememberSaveable { mutableStateOf(false) }
-    var showRatedItems by rememberSaveable { mutableStateOf(false) }
     val releaseCalendarCacheState by LibraryReleaseCalendarCache.state.collectAsStateWithLifecycle()
     val releaseCalendarCacheKey = remember(uiState.items) {
         LibraryReleaseCalendarCache.cacheKeyFor(uiState.items)
@@ -465,7 +465,7 @@ fun LibraryScreen(
                         }
                         val openRatedLabel = stringResource(Res.string.library_rated_open)
                         IconButton(
-                            onClick = { showRatedItems = true },
+                            onClick = { onRatedClick?.invoke() },
                             modifier = Modifier
                                 .size(40.dp)
                                 .semantics { contentDescription = openRatedLabel },
@@ -667,17 +667,6 @@ fun LibraryScreen(
                 coroutineScope.launch {
                     LibraryReleaseCalendarCache.ensureMonth(uiState.items, month.key)
                 }
-            },
-        )
-    }
-
-    if (showRatedItems) {
-        LibraryRatedPanel(
-            entries = libraryRatingsUiState.entries.values.toList(),
-            onDismiss = { showRatedItems = false },
-            onPosterClick = { entry ->
-                showRatedItems = false
-                wrappedOnPosterClick?.invoke(entry.toLibraryItem())
             },
         )
     }
