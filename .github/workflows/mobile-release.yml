@@ -157,10 +157,41 @@ jobs:
           path: release-notes.md
           if-no-files-found: error
 
+  test:
+    name: Run unit tests
+    if: inputs.mode != 'dry-run'
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run Android host tests
+        run: ./gradlew :composeApp:testAndroidHostTest --stacktrace
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-host-test-results
+          path: composeApp/build/reports/tests/testAndroidHostTest
+          if-no-files-found: warn
+
   android:
     name: Build Android APKs
     if: inputs.mode != 'dry-run' && (inputs.target == 'all' || inputs.target == 'android-only')
-    needs: prepare
+    needs:
+      - prepare
+      - test
     runs-on: ubuntu-latest
     env:
       RELEASE_VERSION: ${{ needs.prepare.outputs.tag }}
@@ -217,7 +248,9 @@ jobs:
   ios:
     name: Build iOS IPA
     if: inputs.mode != 'dry-run' && (inputs.target == 'all' || inputs.target == 'ios-only')
-    needs: prepare
+    needs:
+      - prepare
+      - test
     runs-on: macos-26
     timeout-minutes: 120
     env:
@@ -277,11 +310,18 @@ jobs:
           trap 'kill "${monitor_pid}" 2>/dev/null || true' EXIT
           ./scripts/build-ios-ipa.sh "${{ needs.prepare.outputs.version }}"
 
+      - name: Rename IPA for the Pro AltStore channel
+        run: |
+          cd build/ios-ipa
+          for f in *-full-release.ipa; do
+            mv "$f" "${f/-full-release.ipa/-pro-release.ipa}"
+          done
+
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v7
         with:
           name: nuvio-${{ needs.prepare.outputs.version }}-ios-full-release
-          path: build/ios-ipa/*-full-release.ipa
+          path: build/ios-ipa/*-pro-release.ipa
           if-no-files-found: error
 
   release:

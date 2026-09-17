@@ -167,7 +167,7 @@ while IFS="$separator" read -r commit short_hash subject author_name author_emai
 
     display_subject="$(printf '%s' "$subject" | sed -E 's/[[:space:]]+$//; s/\.$//')"
     username="$(resolve_username "$commit" "$author_name" "$author_email")"
-    printf -- '- %s %s @%s  \n' "$short_hash" "$display_subject" "$username"
+    printf -- '- %s @%s  \n' "$display_subject" "$username"
 done < <(
     git log "${from_ref}..${to_ref}" --no-merges \
         --format="%H${separator}%h${separator}%s${separator}%an${separator}%ae"
