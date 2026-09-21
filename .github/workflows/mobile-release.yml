@@ -162,6 +162,8 @@ jobs:
     if: inputs.mode != 'dry-run'
     needs: prepare
     runs-on: ubuntu-latest
+    env:
+      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
     steps:
       - name: Check out source
         uses: actions/checkout@v6
@@ -174,6 +176,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Configure runtime properties
+        run: |
+          printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
 
       - name: Run Android host tests
         run: ./gradlew :composeApp:testAndroidHostTest --stacktrace
