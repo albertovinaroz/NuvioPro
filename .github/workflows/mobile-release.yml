@@ -334,7 +334,12 @@ jobs:
 
   release:
     name: Create ${{ inputs.mode }} release
-    if: inputs.mode == 'draft' || inputs.mode == 'publish'
+    if: |
+      always() &&
+      (inputs.mode == 'draft' || inputs.mode == 'publish') &&
+      needs.prepare.result == 'success' &&
+      (needs.android.result == 'success' || needs.android.result == 'skipped') &&
+      (needs.ios.result == 'success' || needs.ios.result == 'skipped')
     needs:
       - prepare
       - android
