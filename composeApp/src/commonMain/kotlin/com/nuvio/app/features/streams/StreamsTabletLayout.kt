@@ -206,7 +206,7 @@ internal fun TabletStreamsLayout(
                             )
                         }
 
-                        ProviderFilterRow(
+                        PinnableProviderFilterRow(
                             groups = uiState.groups,
                             selectedFilter = uiState.selectedFilter,
                             onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },

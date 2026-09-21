@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
@@ -61,9 +62,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -71,8 +72,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.nuvio.app.core.build.AppFeaturePolicy
@@ -537,7 +536,7 @@ private fun MobileStreamsLayout(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         )
                     }
-                    ProviderFilterRow(
+                    PinnableProviderFilterRow(
                         groups = uiState.groups,
                         selectedFilter = uiState.selectedFilter,
                         onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },
@@ -779,50 +778,40 @@ private fun EpisodeHeroBlock(
 }
 
 // ---------------------------------------------------------------------------
-// Provider Filter Row
+// Provider Filter Row (pin-aware wrapper around the shared ProviderFilterRow)
 // ---------------------------------------------------------------------------
 
+/**
+ * Adds Pro's pin-a-source behavior on top of the shared [ProviderFilterRow] (also used by the
+ * player's side panels) via its `filterChip` slot, rather than forking the row itself.
+ */
 @Composable
-internal fun ProviderFilterRow(
+internal fun PinnableProviderFilterRow(
     groups: List<AddonStreamGroup>,
     selectedFilter: String?,
     onFilterSelected: (String?) -> Unit,
-    onRefresh: () -> Unit,
+    onRefresh: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val addonGroups = groups.filter { it.streams.isNotEmpty() || it.isLoading }
     val pinnedSourceIds by rememberPinnedStreamSourceIds()
     var pinSheetTarget by remember { mutableStateOf<PinTarget?>(null) }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FilterChip(
-            icon = Icons.Rounded.Refresh,
-            contentDescription = stringResource(Res.string.streams_refresh),
-            isSelected = false,
-            onClick = onRefresh,
-        )
-        // "All" chip
-        FilterChip(
-            label = stringResource(Res.string.collections_tab_all),
-            isSelected = selectedFilter == null,
-            onClick = { onFilterSelected(null) },
-        )
-        addonGroups.forEach { group ->
+    ProviderFilterRow(
+        groups = groups,
+        selectedFilter = selectedFilter,
+        onFilterSelected = onFilterSelected,
+        onRefresh = onRefresh,
+        modifier = modifier,
+        filterChip = { group, isSelected, onClick ->
             FilterChip(
-                label = group.addonName,
-                isSelected = selectedFilter == group.addonId,
-                isPinned = group.soleSourcePin()?.key in pinnedSourceIds,
-                onClick = { onFilterSelected(group.addonId) },
-                onLongClick = { pinSheetTarget = group.soleSourcePin() },
+                label = group?.addonName ?: stringResource(Res.string.collections_tab_all),
+                isSelected = isSelected,
+                isPinned = group?.soleSourcePin()?.key in pinnedSourceIds,
+                onClick = onClick,
+                onLongClick = group?.let { target -> { pinSheetTarget = target.soleSourcePin() } },
             )
-        }
-    }
+        },
+    )
 
     StreamSourcePinSheet(
         target = pinSheetTarget,
