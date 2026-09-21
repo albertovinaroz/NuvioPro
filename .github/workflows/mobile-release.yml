@@ -180,7 +180,8 @@ jobs:
       - name: Configure runtime properties
         run: |
           printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
-          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE|NUVIO_IOS_DISTRIBUTION)[[:space:]]*=/d' local.properties
+          printf '\nNUVIO_IOS_DISTRIBUTION=appstore\n' >> local.properties
 
       - name: Run Android host tests
         run: ./gradlew :composeApp:testAndroidHostTest --stacktrace
