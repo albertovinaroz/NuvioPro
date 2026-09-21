@@ -20,7 +20,6 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,8 +45,6 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.settings.DownloadsSettingsScreen
-import com.nuvio.app.features.settings.SettingsGroup
-import com.nuvio.app.features.settings.SettingsSwitchRow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -168,29 +165,6 @@ fun DownloadsScreen(
     }
 }
 
-@Composable
-private fun AllowMobileDataDownloadsRow() {
-    val allowMobileData by remember {
-        DownloadsSettingsRepository.ensureLoaded()
-        DownloadsSettingsRepository.allowMobileDataDownloads
-    }.collectAsStateWithLifecycle()
-
-    // Reuses the same card + switch row used by every other settings toggle in the app (Meta
-    // screen, Homescreen, etc.) instead of a one-off Surface, so the color matches.
-    SettingsGroup(
-        isTablet = false,
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        SettingsSwitchRow(
-            title = stringResource(Res.string.downloads_allow_mobile_data_title),
-            description = stringResource(Res.string.downloads_allow_mobile_data_description),
-            checked = allowMobileData,
-            isTablet = false,
-            onCheckedChange = DownloadsSettingsRepository::setAllowMobileDataDownloads,
-        )
-    }
-}
-
 private fun LazyListScope.downloadsRootContent(
     uiState: DownloadsUiState,
     onOpenDownload: (DownloadItem) -> Unit,
@@ -208,17 +182,6 @@ private fun LazyListScope.downloadsRootContent(
             }
         }
         .sortedBy { (item, _) -> item.title.lowercase() }
-
-    item {
-        AllowMobileDataDownloadsRow()
-    }
-
-    item {
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-            color = MaterialTheme.nuvio.colors.borderSubtle,
-        )
-    }
 
     if (activeItems.isNotEmpty()) {
         item {
