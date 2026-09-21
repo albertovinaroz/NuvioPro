@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.4.23-b1",
+          "buildVersion": "150",
+          "date": "2026-09-18T11:32:10Z",
+          "localizedDescription": "# Nuvio Pro 0.4.23-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n- fix(ui): use filled chips and consistent surface colors @tapframe\n- fix(simkl): retain posters when marking items watched @tapframe\n- fix(home): restore wide continue watching sizing @tapframe\n- feat(playback): support IntroDB movie segments and external forwarding @Laskco\n\n### Upstream (NuvioMedia, via luqmanfadlli's fork)\n- fix(android): start download transfer without waiting for subtitles @luqmanfadlli\n- fix(ios): resume paused downloads from where they left off @luqmanfadlli\n- fix(ios): run plugins on large-stack threads to prevent QuickJS stack overflow @luqmanfadlli\n- fix(ios): stop isa-swizzling UINavigationBar for empty-area passthrough @luqmanfadlli\n- fix(ios): import kotlinx.coroutines.Runnable in plugin dispatcher @luqmanfadlli\n- fix(ios): bundle Latin subtitle font and license @mucahitpe\n- fix(ios): stabilize subtitle font resolver @mucahitpe\n\n### Pro\n- feat(settings): redesign the Profile page hero @albertovinaroz\n- feat(library): show Rated titles as a full screen instead of a dialog @albertovinaroz\n- fix: resolve pre-existing bugs surfaced by re-running the full test suite @albertovinaroz\n- feat(profile): move edit/switch/save actions to circular header buttons @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.4.23-b1/nuvio-0.4.23-b1-pro-release.ipa",
+          "size": 67136705,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.22-b1",
           "buildVersion": "148",
           "date": "2026-09-16T16:17:19Z",
