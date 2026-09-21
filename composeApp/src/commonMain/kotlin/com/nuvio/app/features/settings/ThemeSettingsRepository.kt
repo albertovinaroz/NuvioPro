@@ -79,7 +79,7 @@ object ThemeSettingsRepository {
         _dynamicArtworkBackgroundEnabled.value = false
         _showCatalogAccentEnabled.value = false
         NativeTabBridge.publishAccentColor(
-            hexColor = AppTheme.WHITE.nativeTabAccentHex(),
+            hexColor = ThemeColors.getColorPalette(AppTheme.WHITE).nativeAccentHex,
             gradientHexColors = ThemeColors.getColorPalette(AppTheme.WHITE).nativeAccentGradientHex(),
         )
         NativeTabBridge.publishTabBarBehavior(NuvioTabBarBehavior.Default)

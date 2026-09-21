@@ -46,6 +46,8 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.settings.DownloadsSettingsScreen
+import com.nuvio.app.features.settings.SettingsGroup
+import com.nuvio.app.features.settings.SettingsSwitchRow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 

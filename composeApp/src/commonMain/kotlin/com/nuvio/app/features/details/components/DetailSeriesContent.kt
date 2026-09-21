@@ -261,7 +261,8 @@ fun DetailSeriesContent(
                                     fallbackImage = meta.background ?: meta.poster,
                                     progressEntry = progressByVideoId[episodeVideoId],
                                     tmdbRating = episode.tmdbRating,
-                                    imdbRating = episode.imdbRating,
+                                    imdbRating = (episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.imdbRating)
+                                        ?: episode.rating,
                                     isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                                         WatchingState.isEpisodeWatched(
                                             watchedKeys = watchedKeys,
@@ -361,8 +362,9 @@ internal fun DetailSeriesListEpisode(
             video = episode,
             fallbackImage = meta.background ?: meta.poster,
             progressEntry = progressByVideoId[episodeVideoId],
-            tmdbRating = episode.tmdbRating ?: episode.rating,
-            imdbRating = episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.imdbRating,
+            tmdbRating = episode.tmdbRating,
+            imdbRating = (episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.imdbRating)
+                ?: episode.rating,
             isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                 WatchingState.isEpisodeWatched(
                     watchedKeys = watchedKeys,
@@ -785,7 +787,8 @@ private fun EpisodeHorizontalRow(
                 fallbackImage = fallbackImage,
                 progressEntry = progressByVideoId[episodeVideoId],
                 tmdbRating = episode.tmdbRating,
-                imdbRating = episode.imdbRating,
+                imdbRating = (episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.imdbRating)
+                    ?: episode.rating,
                 isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                     WatchingState.isEpisodeWatched(
                         watchedKeys = watchedKeys,
