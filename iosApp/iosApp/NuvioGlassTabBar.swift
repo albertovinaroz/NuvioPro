@@ -164,7 +164,7 @@ struct NuvioGlassTabBar: View {
         .background {
             if selected && isExpanded {
                 Capsule()
-                    .fill(Color(uiColor: iconStore.accentColor).opacity(0.12))
+                    .fill(iconStore.accentStyle(opacity: 0.12))
             }
         }
 
@@ -212,7 +212,7 @@ struct NuvioGlassTabBar: View {
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .foregroundStyle(
-                selected ? AnyShapeStyle(Color(uiColor: iconStore.accentColor)) : AnyShapeStyle(Color.white)
+                selected ? iconStore.accentStyle() : AnyShapeStyle(Color.white)
             )
             .legibleOverGlass(enabled: !selected)
     }
@@ -231,7 +231,7 @@ struct NuvioGlassTabBar: View {
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(Color(uiColor: iconStore.accentColor))
+                    .foregroundStyle(iconStore.accentStyle())
             } else {
                 image
                     .renderingMode(.template)

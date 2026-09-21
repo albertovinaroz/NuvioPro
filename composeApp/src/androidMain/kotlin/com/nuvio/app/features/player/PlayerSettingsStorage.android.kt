@@ -19,6 +19,9 @@ import kotlinx.serialization.json.put
 
 actual object PlayerSettingsStorage {
     private const val preferencesName = "nuvio_player_settings"
+    private const val pendingExternalPlaybackKey = "pending_external_playback"
+    private const val playbackBrightnessKey = "playback_brightness"
+    private const val useLegacyPlayerLayoutKey = "use_legacy_player_layout"
     private const val showLoadingOverlayKey = "show_loading_overlay"
     private const val showPlayerLoadingStatusKey = "show_player_loading_status"
     private const val pauseOverlayEnabledKey = "pause_overlay_enabled"
@@ -177,6 +180,22 @@ actual object PlayerSettingsStorage {
         preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
     }
 
+    actual fun loadPendingExternalPlayback(): String? = preferences?.getString(pendingExternalPlaybackKey, null)
+
+    actual fun savePendingExternalPlayback(value: String?) {
+        preferences?.edit()?.putString(pendingExternalPlaybackKey, value)?.apply()
+    }
+
+    actual fun loadPlaybackBrightness(): Float? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(playbackBrightnessKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getFloat(key, 0f) else null
+        }
+
+    actual fun savePlaybackBrightness(level: Float) {
+        preferences?.edit()?.putFloat(ProfileScopedKey.of(playbackBrightnessKey), level)?.apply()
+    }
+
     actual fun loadShowLoadingOverlay(): Boolean? =
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(showLoadingOverlayKey)
@@ -218,6 +237,23 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(pauseOverlayEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadUseLegacyPlayerLayout(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(useLegacyPlayerLayoutKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveUseLegacyPlayerLayout(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(useLegacyPlayerLayoutKey), enabled)
             ?.apply()
     }
 

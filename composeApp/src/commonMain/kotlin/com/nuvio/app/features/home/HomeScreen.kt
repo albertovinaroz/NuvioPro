@@ -1001,6 +1001,7 @@ fun HomeScreen(
                                     trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
                                         animateCollectionGifs,
                                     trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
+                                    trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
                                     onItemClick = onPosterClick,
                                     onActiveArtworkChange = onActiveHeroArtworkChange,
                                 )

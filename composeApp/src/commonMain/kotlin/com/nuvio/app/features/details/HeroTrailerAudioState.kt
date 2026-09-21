@@ -10,28 +10,52 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+enum class HeroTrailerSurface {
+    Home,
+    Details,
+}
+
 /**
  * Whichever hero (Home's carousel or a Details screen's hero) currently has a trailer
  * ready-and-playing marks itself [visible] here, and clears it again the moment its own trailer
- * stops being shown. Home and a Details screen are never on-screen together, so this always
+ * stops being shown. Home and a Details screen are never on-screen together, so [visible] always
  * reflects the one hero mute control that could plausibly be visible right now, never two
  * competing ones — see [HeroTrailerMuteController] for how the native (iOS) mute button consumes
- * this instead of Compose's own.
+ * this instead of Compose's own. Mute state itself is tracked per [HeroTrailerSurface] rather than
+ * globally, so a "start with sound" preference set for one surface doesn't leak into the other.
  */
 object HeroTrailerAudioState {
-    private val _muted = MutableStateFlow(true)
-    val muted: StateFlow<Boolean> = _muted.asStateFlow()
+    private val states = HeroTrailerSurface.entries.associateWith { MutableStateFlow(true) }
 
     private val _visible = MutableStateFlow(false)
     val visible: StateFlow<Boolean> = _visible.asStateFlow()
 
-    fun toggleMuted() {
-        _muted.value = !_muted.value
+    private val _visibleSurface = MutableStateFlow<HeroTrailerSurface?>(null)
+    val visibleSurface: StateFlow<HeroTrailerSurface?> = _visibleSurface.asStateFlow()
+
+    fun muted(surface: HeroTrailerSurface): StateFlow<Boolean> = state(surface).asStateFlow()
+
+    fun toggleMuted(surface: HeroTrailerSurface) {
+        val state = state(surface)
+        state.value = !state.value
     }
 
-    fun setVisible(visible: Boolean) {
-        _visible.value = visible
+    fun applyStartMuted(surface: HeroTrailerSurface, muted: Boolean) {
+        state(surface).value = muted
     }
+
+    fun setVisible(visible: Boolean, surface: HeroTrailerSurface) {
+        _visible.value = visible
+        _visibleSurface.value = if (visible) surface else null
+    }
+
+    /** For [HeroTrailerMuteController]: toggles whichever surface is currently visible — a no-op if none is. */
+    internal fun toggleVisibleSurfaceMuted() {
+        _visibleSurface.value?.let(::toggleMuted)
+    }
+
+    private fun state(surface: HeroTrailerSurface): MutableStateFlow<Boolean> =
+        states.getValue(surface)
 }
 
 /**
@@ -48,7 +72,17 @@ class HeroTrailerMuteController {
     fun observeState(callback: (visible: Boolean, muted: Boolean) -> Unit) {
         observationJob?.cancel()
         observationJob = scope.launch {
-            combine(HeroTrailerAudioState.visible, HeroTrailerAudioState.muted) { visible, muted ->
+            combine(
+                HeroTrailerAudioState.visible,
+                HeroTrailerAudioState.visibleSurface,
+                HeroTrailerAudioState.muted(HeroTrailerSurface.Home),
+                HeroTrailerAudioState.muted(HeroTrailerSurface.Details),
+            ) { visible, surface, homeMuted, detailsMuted ->
+                val muted = when (surface) {
+                    HeroTrailerSurface.Home -> homeMuted
+                    HeroTrailerSurface.Details -> detailsMuted
+                    null -> true
+                }
                 visible to muted
             }.collect { (visible, muted) -> callback(visible, muted) }
         }
@@ -60,6 +94,6 @@ class HeroTrailerMuteController {
     }
 
     fun toggleMuted() {
-        HeroTrailerAudioState.toggleMuted()
+        HeroTrailerAudioState.toggleVisibleSurfaceMuted()
     }
 }

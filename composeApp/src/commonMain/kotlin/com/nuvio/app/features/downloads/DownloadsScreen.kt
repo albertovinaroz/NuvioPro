@@ -26,7 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,8 +46,6 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.settings.DownloadsSettingsScreen
-import com.nuvio.app.features.settings.SettingsGroup
-import com.nuvio.app.features.settings.SettingsSwitchRow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -117,6 +114,7 @@ fun DownloadsScreen(
                         Icon(
                             imageVector = Icons.Rounded.Folder,
                             contentDescription = stringResource(Res.string.downloads_open_directory),
+                            tint = tokens.colors.textPrimary,
                         )
                     }
                     if (selectedShowId == null) {
@@ -219,7 +217,6 @@ private fun LazyListScope.downloadsRootContent(
             color = MaterialTheme.nuvio.colors.borderSubtle,
         )
     }
-
 
     if (activeItems.isNotEmpty()) {
         item {

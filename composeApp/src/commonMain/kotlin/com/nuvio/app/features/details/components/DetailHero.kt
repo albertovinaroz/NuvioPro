@@ -55,6 +55,7 @@ import com.nuvio.app.core.ui.HeroGlassIconButton
 import com.nuvio.app.core.ui.heroStretchHeight
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.HeroTrailerAudioState
+import com.nuvio.app.features.details.HeroTrailerSurface
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import dev.chrisbanes.haze.HazeState
@@ -124,10 +125,10 @@ fun DetailHero(
         // (see HeroTrailerMuteButton in ContentView.swift) — this is what tells it a trailer is
         // showing here at all, and to hand its taps to onHeroTrailerMuteToggle.
         LaunchedEffect(trailerMuteVisible) {
-            HeroTrailerAudioState.setVisible(trailerMuteVisible)
+            HeroTrailerAudioState.setVisible(trailerMuteVisible, HeroTrailerSurface.Details)
         }
         DisposableEffect(Unit) {
-            onDispose { HeroTrailerAudioState.setVisible(false) }
+            onDispose { HeroTrailerAudioState.setVisible(false, HeroTrailerSurface.Details) }
         }
 
         Box(

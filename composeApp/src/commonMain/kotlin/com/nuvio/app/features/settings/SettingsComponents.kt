@@ -52,7 +52,10 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.NuvioActionLabel
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioSectionLabel
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import nuvio.composeapp.generated.resources.Res
@@ -202,6 +205,11 @@ internal fun SettingsSidebarItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
+                    modifier = if (selected) {
+                        Modifier.gradientMask(MaterialTheme.themePalette.accentBrush())
+                    } else {
+                        Modifier
+                    },
                     tint = if (selected) primary else contentColor,
                 )
             }
@@ -320,20 +328,26 @@ internal fun SettingsNavigationRow(
                     modifier = Modifier.size(iconSize),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (iconPainter != null) {
-                        androidx.compose.foundation.Image(
-                            painter = iconPainter,
-                            contentDescription = null,
-                            modifier = Modifier.size(iconSize),
-                            contentScale = ContentScale.Fit,
-                        )
-                    } else if (icon != null) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(iconSize),
-                            tint = resolvedIconTint,
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (iconPainter != null) {
+                            androidx.compose.foundation.Image(
+                                painter = iconPainter,
+                                contentDescription = null,
+                                modifier = Modifier.size(if (isTablet) 28.dp else 24.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else if (icon != null) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
+                                tint = resolvedIconTint,
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.width(if (isTablet) 18.dp else 16.dp))

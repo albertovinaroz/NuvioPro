@@ -36,18 +36,32 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.icons.rounded.Download
 import com.nuvio.app.core.ui.AppIconResource
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.appIconPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
+import nuvio.composeapp.generated.resources.details_download_action
 import nuvio.composeapp.generated.resources.details_actions_menu_label
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 data class DetailSecondaryAction(
     val label: String,
     val icon: ImageVector,
+    val drawable: DrawableResource? = null,
     val isActive: Boolean = false,
     val onClick: () -> Unit = {},
     val onLongClick: (() -> Unit)? = null,
@@ -64,6 +78,9 @@ fun DetailActionButtons(
     isTablet: Boolean = false,
     onPlayClick: () -> Unit = {},
     onPlayLongClick: (() -> Unit)? = null,
+    onDownloadClick: (() -> Unit)? = null,
+    iconActionRow: Boolean = false,
+    iconActions: List<DetailSecondaryAction> = emptyList(),
 ) {
     val playPainter = appIconPainter(AppIconResource.PlayerPlay)
     val buttonHeight = if (isTablet) 56.dp else 52.dp
@@ -78,12 +95,55 @@ fun DetailActionButtons(
     )
     val hasSecondaryActions = secondaryActions.isNotEmpty()
 
-    Box(
+    Column(
         modifier = modifier
             .widthIn(max = if (isTablet) 520.dp else 420.dp)
-            .fillMaxWidth()
-            .height(buttonHeight),
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (iconActionRow) {
+            PlayButton(
+                playLabel = playLabel,
+                playEnabled = playEnabled,
+                playPainter = playPainter,
+                playShape = playShape,
+                buttonHeight = buttonHeight,
+                isTablet = isTablet,
+                onPlayClick = onPlayClick,
+                onPlayLongClick = onPlayLongClick,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (iconActions.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        space = if (isTablet) 20.dp else 16.dp,
+                        alignment = Alignment.CenterHorizontally,
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    iconActions.forEach { action ->
+                        DetailIconAction(
+                            label = action.label,
+                            icon = action.icon,
+                            drawable = action.drawable,
+                            active = action.isActive,
+                            progress = 1f,
+                            size = iconButtonSize,
+                            onClick = action.onClick,
+                            onLongClick = action.onLongClick,
+                        )
+                    }
+                }
+            }
+            return@Column
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(buttonHeight),
+        ) {
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -91,53 +151,17 @@ fun DetailActionButtons(
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(buttonHeight),
-                shape = playShape,
-                color = if (playEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (playEnabled) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            enabled = playEnabled,
-                            onClick = {
-                                onPlayClick()
-                            },
-                            onLongClick = onPlayLongClick,
-                            role = Role.Button,
-                        )
-                        .height(buttonHeight),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = playPainter,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = playLabel,
-                        style = if (isTablet) {
-                            MaterialTheme.typography.titleMedium
-                        } else {
-                            MaterialTheme.typography.titleSmall
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        // Without a weight, this Text measures at its own preferred width instead
-                        // of what's actually left after the icon — harmless with two secondary
-                        // actions, but with three the button gets narrow enough that the label
-                        // spills past the pill instead of eliding. fill = false keeps it centered
-                        // (matching the Row's own Arrangement.Center) when it isn't cramped.
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                }
-            }
+            PlayButton(
+                playLabel = playLabel,
+                playEnabled = playEnabled,
+                playPainter = playPainter,
+                playShape = playShape,
+                buttonHeight = buttonHeight,
+                isTablet = isTablet,
+                onPlayClick = onPlayClick,
+                onPlayLongClick = onPlayLongClick,
+                modifier = Modifier.weight(1f),
+            )
 
             if (hasSecondaryActions) {
                 Spacer(modifier = Modifier.width(12.dp))
@@ -155,6 +179,7 @@ fun DetailActionButtons(
                             DetailIconAction(
                                 label = action.label,
                                 icon = action.icon,
+                                drawable = action.drawable,
                                 active = action.isActive,
                                 progress = menuProgress,
                                 size = iconButtonSize,
@@ -186,7 +211,7 @@ fun DetailActionButtons(
                     color = if (actionsExpanded) {
                         MaterialTheme.colorScheme.onBackground
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
                     },
                     contentColor = if (actionsExpanded) {
                         MaterialTheme.colorScheme.background
@@ -217,6 +242,44 @@ fun DetailActionButtons(
             }
         }
     }
+
+        if (onDownloadClick != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(buttonHeight),
+                shape = playShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(role = Role.Button, onClick = onDownloadClick)
+                        .height(buttonHeight),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(Res.string.details_download_action),
+                        style = if (isTablet) {
+                            MaterialTheme.typography.titleMedium
+                        } else {
+                            MaterialTheme.typography.titleSmall
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -229,6 +292,7 @@ internal fun DetailIconAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp,
+    drawable: DrawableResource? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
     Surface(
@@ -260,11 +324,87 @@ internal fun DetailIconAction(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(21.dp),
-            )
+            if (drawable != null) {
+                Icon(
+                    painter = painterResource(drawable),
+                    contentDescription = label,
+                    modifier = Modifier.size(21.dp),
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
         }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlayButton(
+    playLabel: String,
+    playEnabled: Boolean,
+    playPainter: Painter,
+    playShape: Shape,
+    buttonHeight: Dp,
+    isTablet: Boolean,
+    onPlayClick: () -> Unit,
+    onPlayLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+        Surface(
+            modifier = modifier
+                .height(buttonHeight)
+                .then(
+                    if (playEnabled) {
+                        Modifier
+                            .clip(playShape)
+                            .background(MaterialTheme.themePalette.accentBrush())
+                    } else {
+                        Modifier
+                    },
+                ),
+            shape = playShape,
+            color = if (playEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (playEnabled) {
+                MaterialTheme.nuvio.colors.onAccent
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        enabled = playEnabled,
+                        onClick = {
+                            onPlayClick()
+                        },
+                        onLongClick = onPlayLongClick,
+                        role = Role.Button,
+                    )
+                    .height(buttonHeight),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = playPainter,
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = playLabel,
+                    style = if (isTablet) {
+                        MaterialTheme.typography.titleMedium
+                    } else {
+                        MaterialTheme.typography.titleSmall
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
 }

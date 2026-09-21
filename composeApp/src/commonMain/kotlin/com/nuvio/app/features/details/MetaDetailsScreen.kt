@@ -31,7 +31,9 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DoneAll
@@ -93,6 +95,7 @@ import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import com.nuvio.app.features.downloads.DownloadsSettingsRepository
 import com.nuvio.app.features.details.components.DetailActionButtons
 import com.nuvio.app.features.details.components.DetailRatingStars
 import com.nuvio.app.features.details.components.DetailSecondaryAction
@@ -112,6 +115,7 @@ import com.nuvio.app.features.details.components.SeasonWatchedActionSheet
 import com.nuvio.app.features.details.components.TrailerPlayerPopup
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryRatingsRepository
+import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.PendingTrackingMembershipRemoval
 import com.nuvio.app.features.library.TrackingMembershipRemovalConfirmationHost
@@ -169,6 +173,9 @@ fun MetaDetailsScreen(
     onBack: () -> Unit,
     onPlay: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onPlayManually: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
+    onDownload: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
+    onPlayExternally: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
+    onPlayFromStart: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)? = null,
     onOpenMeta: ((MetaPreview) -> Unit)? = null,
     onOpenMoreLikeThis: ((MetaDetails) -> Unit)? = null,
     onCastClick: ((MetaPerson, String?) -> Unit)? = null,
@@ -184,6 +191,10 @@ fun MetaDetailsScreen(
     val metaScreenSettingsUiState by remember {
         MetaScreenSettingsRepository.ensureLoaded()
         MetaScreenSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val mdbListSettings by remember {
+        MdbListSettingsRepository.ensureLoaded()
+        MdbListSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
     val traktAuthUiState by remember {
         TraktAuthRepository.ensureLoaded()
@@ -638,7 +649,17 @@ fun MetaDetailsScreen(
                 var heroTrailerPlaybackSource by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf<TrailerPlaybackSource?>(null) }
                 var heroTrailerReady by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
                 var heroTrailerFinished by remember(meta.id, heroTrailerCandidate?.id) { mutableStateOf(false) }
-                val heroTrailerMuted by HeroTrailerAudioState.muted.collectAsStateWithLifecycle()
+                val heroTrailerMuted by HeroTrailerAudioState
+                    .muted(HeroTrailerSurface.Details)
+                    .collectAsStateWithLifecycle()
+                val heroTrailerStartUnmuted = metaScreenSettingsUiState.heroTrailerStartUnmuted
+
+                LaunchedEffect(heroTrailerStartUnmuted) {
+                    HeroTrailerAudioState.applyStartMuted(
+                        HeroTrailerSurface.Details,
+                        !heroTrailerStartUnmuted,
+                    )
+                }
                 val heroTrailerStartDelaySeconds = metaScreenSettingsUiState.heroTrailerStartDelaySeconds
                 LaunchedEffect(
                     heroTrailerPlaybackEnabled,
@@ -782,6 +803,108 @@ fun MetaDetailsScreen(
                             )
                         }
                     }
+                }
+                fun runPlayAction(
+                    handler: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)?,
+                    resumePositionMs: Long?,
+                ) {
+                    handler ?: return
+                    stopHeroTrailerForNavigation()
+                    if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
+                        handler(
+                            meta.type,
+                            seriesStreamVideoId ?: seriesAction.videoId,
+                            meta.id,
+                            meta.type,
+                            meta.name,
+                            meta.logo,
+                            meta.poster,
+                            meta.background,
+                            seriesAction.seasonNumber,
+                            seriesAction.episodeNumber,
+                            seriesAction.episodeTitle,
+                            seriesAction.episodeThumbnail,
+                            seriesPauseDescription,
+                            resumePositionMs,
+                        )
+                    } else {
+                        handler(
+                            meta.type,
+                            meta.id,
+                            meta.id,
+                            meta.type,
+                            meta.name,
+                            meta.logo,
+                            meta.poster,
+                            meta.background,
+                            null,
+                            null,
+                            null,
+                            null,
+                            meta.description,
+                            resumePositionMs,
+                        )
+                    }
+                }
+
+                val activeResumePositionMs = if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
+                    seriesAction.resumePositionMs
+                } else {
+                    movieProgress?.lastPositionMs
+                }
+                val onPlayFromStartClick: (() -> Unit)? = onPlayFromStart
+                    ?.takeIf { (activeResumePositionMs ?: 0L) > 0L }
+                    ?.let { handler -> { runPlayAction(handler, 0L) } }
+                val onPlayExternallyClick: (() -> Unit)? = onPlayExternally
+                    ?.let { handler -> { runPlayAction(handler, activeResumePositionMs) } }
+
+                val showDownloadButton by remember {
+                    DownloadsSettingsRepository.ensureLoaded()
+                    DownloadsSettingsRepository.showDownloadButton
+                }.collectAsStateWithLifecycle()
+                val downloadHandler = onDownload
+                val onDownloadClick: (() -> Unit)? = if (showDownloadButton && downloadHandler != null) {
+                    {
+                        stopHeroTrailerForNavigation()
+                        // Same target as Play, but the stream list opens in download mode.
+                        if ((meta.type == "series" || hasEpisodes) && seriesAction != null) {
+                            downloadHandler(
+                                meta.type,
+                                seriesStreamVideoId ?: seriesAction.videoId,
+                                meta.id,
+                                meta.type,
+                                meta.name,
+                                meta.logo,
+                                meta.poster,
+                                meta.background,
+                                seriesAction.seasonNumber,
+                                seriesAction.episodeNumber,
+                                seriesAction.episodeTitle,
+                                seriesAction.episodeThumbnail,
+                                seriesPauseDescription,
+                                null,
+                            )
+                        } else {
+                            downloadHandler(
+                                meta.type,
+                                meta.id,
+                                meta.id,
+                                meta.type,
+                                meta.name,
+                                meta.logo,
+                                meta.poster,
+                                meta.background,
+                                null,
+                                null,
+                                null,
+                                null,
+                                meta.description,
+                                null,
+                            )
+                        }
+                    }
+                } else {
+                    null
                 }
                 val manualPlayHandler = onPlayManually
                 val showManualPlayOption = manualPlayHandler != null && StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState)
@@ -1076,7 +1199,7 @@ fun MetaDetailsScreen(
                                             dominantBackdropImageBitmap = imageBitmap
                                         },
                                         onHeroTrailerMuteToggle = {
-                                            HeroTrailerAudioState.toggleMuted()
+                                            HeroTrailerAudioState.toggleMuted(HeroTrailerSurface.Details)
                                         },
                                         onHeroTrailerReady = {
                                             if (!heroTrailerFinished) {
@@ -1096,6 +1219,7 @@ fun MetaDetailsScreen(
 
                                 configuredMetaSectionItems(
                                     settings = metaScreenSettingsUiState,
+                                    isMdbListActive = mdbListSettings.enabled && mdbListSettings.hasApiKey,
                                     meta = meta,
                                     isTablet = isTablet,
                                     contentHorizontalPadding = contentHorizontalPadding,
@@ -1106,6 +1230,9 @@ fun MetaDetailsScreen(
                                     isWatched = isWatched,
                                     myRating = myRating,
                                     onPrimaryPlayClick = onPrimaryPlayClick,
+                                    onDownloadClick = onDownloadClick,
+                                    onPlayFromStartClick = onPlayFromStartClick,
+                                    onPlayExternallyClick = onPlayExternallyClick,
                                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                                     onRandomEpisodeClick = onRandomEpisodeClick,
                                     onSaveClick = toggleSaved,
@@ -1177,7 +1304,7 @@ fun MetaDetailsScreen(
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                 )
-    
+
                                 item(key = "detail-bottom-spacer") {
                                     Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(32.dp)))
                                 }
@@ -1794,6 +1921,7 @@ private fun MetaDetails.toMetaPreview(): MetaPreview =
 
 private fun LazyListScope.configuredMetaSectionItems(
     settings: MetaScreenSettingsUiState,
+    isMdbListActive: Boolean,
     meta: MetaDetails,
     isTablet: Boolean,
     contentHorizontalPadding: Dp,
@@ -1804,6 +1932,9 @@ private fun LazyListScope.configuredMetaSectionItems(
     isWatched: Boolean,
     myRating: Int,
     onPrimaryPlayClick: () -> Unit,
+    onDownloadClick: (() -> Unit)?,
+    onPlayFromStartClick: (() -> Unit)?,
+    onPlayExternallyClick: (() -> Unit)?,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
@@ -1876,6 +2007,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                         items = sectionItems,
                         tabLayout = forceTabLayout,
                     ),
+                    isMdbListActive = isMdbListActive,
                     meta = meta,
                     isTablet = isTablet,
                     horizontalScrollPadding = contentHorizontalPadding,
@@ -1885,6 +2017,9 @@ private fun LazyListScope.configuredMetaSectionItems(
                     isWatched = isWatched,
                     myRating = myRating,
                     onPrimaryPlayClick = onPrimaryPlayClick,
+                    onDownloadClick = onDownloadClick,
+                    onPlayFromStartClick = onPlayFromStartClick,
+                    onPlayExternallyClick = onPlayExternallyClick,
                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
                     onRandomEpisodeClick = onRandomEpisodeClick,
                     onSaveClick = onSaveClick,
@@ -2030,6 +2165,7 @@ private fun metaSectionHasContent(
 @OptIn(ExperimentalSharedTransitionApi::class)
 private fun ConfiguredMetaSections(
     settings: MetaScreenSettingsUiState,
+    isMdbListActive: Boolean,
     meta: MetaDetails,
     isTablet: Boolean,
     horizontalScrollPadding: Dp,
@@ -2039,6 +2175,9 @@ private fun ConfiguredMetaSections(
     isWatched: Boolean,
     myRating: Int,
     onPrimaryPlayClick: () -> Unit,
+    onDownloadClick: (() -> Unit)?,
+    onPlayFromStartClick: (() -> Unit)?,
+    onPlayExternallyClick: (() -> Unit)?,
     onPrimaryPlayLongClick: (() -> Unit)?,
     onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
@@ -2100,10 +2239,64 @@ private fun ConfiguredMetaSections(
     fun RenderSection(key: MetaScreenSectionKey, showHeader: Boolean = true) {
         when (key) {
             MetaScreenSectionKey.ACTIONS -> {
+                val iconActions = buildList {
+                    onDownloadClick?.let { download ->
+                        add(DetailSecondaryAction(
+                            label = stringResource(Res.string.details_download_action),
+                            icon = Icons.Rounded.Download,
+                            onClick = download,
+                        ))
+                    }
+                    onPlayFromStartClick?.let { playFromStart ->
+                        add(DetailSecondaryAction(
+                            label = stringResource(Res.string.details_action_start_from_beginning),
+                            icon = Icons.Rounded.Replay,
+                            onClick = playFromStart,
+                        ))
+                    }
+                    onRandomEpisodeClick?.let { playRandomEpisode ->
+                        add(DetailSecondaryAction(
+                            label = stringResource(Res.string.detail_play_random_episode),
+                            icon = Icons.Default.Shuffle,
+                            onClick = playRandomEpisode,
+                        ))
+                    }
+                    onPlayExternallyClick?.let { playExternally ->
+                        add(DetailSecondaryAction(
+                            label = stringResource(Res.string.streams_open_external_player),
+                            icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                            onClick = playExternally,
+                        ))
+                    }
+                    add(DetailSecondaryAction(
+                        label = if (isWatched) {
+                            stringResource(Res.string.hero_mark_unwatched)
+                        } else {
+                            stringResource(Res.string.hero_mark_watched)
+                        },
+                        icon = if (isWatched) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        isActive = isWatched,
+                        onClick = onWatchedClick,
+                    ))
+                    add(DetailSecondaryAction(
+                        label = if (isSaved) {
+                            stringResource(Res.string.hero_remove_from_library)
+                        } else {
+                            stringResource(Res.string.hero_add_to_library)
+                        },
+                        icon = Icons.Default.Add,
+                        drawable = Res.drawable.sidebar_library.takeIf { isSaved },
+                        isActive = isSaved,
+                        onClick = onSaveClick,
+                        onLongClick = onSaveLongClick,
+                    ))
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     DetailActionButtons(
                         playLabel = if (isPrimaryPlayEnabled) playButtonLabel else stringResource(Res.string.playback_unavailable),
                         playEnabled = isPrimaryPlayEnabled,
+                        iconActionRow = settings.iconActionRow,
+                        iconActions = iconActions,
                         secondaryActions = buildList {
                             add(DetailSecondaryAction(
                                 label = if (isWatched) {
@@ -2125,11 +2318,8 @@ private fun ConfiguredMetaSections(
                                 } else {
                                     stringResource(Res.string.hero_add_to_library)
                                 },
-                                icon = if (isSaved) {
-                                    Icons.Default.Check
-                                } else {
-                                    Icons.Default.Add
-                                },
+                                icon = Icons.Default.Add,
+                                drawable = Res.drawable.sidebar_library.takeIf { isSaved },
                                 isActive = isSaved,
                                 onClick = onSaveClick,
                                 onLongClick = onSaveLongClick,
@@ -2144,6 +2334,7 @@ private fun ConfiguredMetaSections(
                         },
                         isTablet = isTablet,
                         onPlayClick = onPrimaryPlayClick,
+                        onDownloadClick = onDownloadClick.takeIf { !settings.iconActionRow },
                         onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -2156,6 +2347,8 @@ private fun ConfiguredMetaSections(
             MetaScreenSectionKey.OVERVIEW -> {
                 DetailMetaInfo(
                     meta = meta,
+                    showOverallRatings = settings.showOverallRatings,
+                    isMdbListActive = isMdbListActive,
                     horizontalScrollPadding = horizontalScrollPadding,
                 )
             }
@@ -2211,6 +2404,8 @@ private fun ConfiguredMetaSections(
                         episodeCardStyle = settings.episodeCardStyle,
                         progressByVideoId = progressByVideoId,
                         watchedKeys = watchedKeys,
+                        episodeRatings = emptyMap(),
+                        episodeRatingsVisibility = settings.episodeRatingsVisibility,
                         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                         onEpisodeClick = onEpisodeClick,
                         onEpisodeLongPress = onEpisodeLongPress,

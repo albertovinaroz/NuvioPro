@@ -439,6 +439,7 @@
     <string name="compose_player_font_size">Font Size</string>
     <string name="compose_player_font_size_value">%1$dsp</string>
     <string name="compose_player_lock_controls">Lock player controls</string>
+    <string name="compose_player_picture_in_picture">Picture in Picture</string>
     <string name="compose_player_playback_info">Playback Info</string>
     <string name="compose_player_loading_lines">Loading subtitle lines...</string>
     <string name="compose_player_languages">Languages</string>
@@ -798,6 +799,8 @@
     <string name="settings_homescreen_show_hero_description">Display hero carousel at top of home.</string>
     <string name="settings_homescreen_hero_trailer_playback">Hero Trailer Playback</string>
     <string name="settings_homescreen_hero_trailer_playback_description">Autoplay trailers in the hero carousel. When on, the carousel only advances when you swipe.</string>
+    <string name="settings_hero_trailer_start_unmuted">Start with sound</string>
+    <string name="settings_hero_trailer_start_unmuted_description">Play the trailer unmuted. You can still mute it with the speaker button.</string>
     <string name="settings_hero_trailer_start_delay">Trailer Start Delay</string>
     <string name="settings_hero_trailer_start_delay_description">Wait this long after the hero appears before the trailer starts.</string>
     <string name="settings_hero_trailer_start_delay_instant">Instant</string>
@@ -1021,7 +1024,12 @@
     <string name="settings_stream_size_badges_description">Show file size badges in stream results and player source panels.</string>
     <string name="settings_stream_addon_logo_title">Addon logo</string>
     <string name="settings_stream_addon_logo_description">Show addon logo and name next to stream sources.</string>
+    <string name="settings_stream_search_title">Search bar</string>
+    <string name="settings_stream_search_description">Show a filter field above the stream list to search by language, quality, codec or release group.</string>
     <string name="settings_stream_display_section">DISPLAY</string>
+    <string name="streams_search_placeholder">Filter streams</string>
+    <string name="streams_search_clear">Clear filter</string>
+    <string name="streams_search_no_results">No streams match your filter.</string>
     <string name="streams_pin_source">Pin to top</string>
     <string name="streams_unpin_source">Unpin from top</string>
     <string name="streams_pinned_source">Pinned source</string>
@@ -1086,6 +1094,9 @@
     <string name="settings_meta_comments_description">Reviews from Trakt</string>
     <string name="settings_meta_details">Details</string>
     <string name="settings_meta_details_description">Runtime, status, release, language, and related info.</string>
+    <string name="settings_meta_icon_action_row">Icon action row</string>
+    <string name="settings_meta_icon_action_row_description">Show the actions as icons under the play button instead of behind a menu.</string>
+    <string name="details_action_start_from_beginning">Start from beginning</string>
     <string name="settings_meta_hero_trailer_playback">Hero Trailer Playback</string>
     <string name="settings_meta_hero_trailer_playback_description">Play trailer previews in the metadata hero when a trailer is available.</string>
     <string name="settings_meta_episode_cards">Episode Cards</string>
@@ -1659,6 +1670,7 @@
     <string name="catalog_empty_message">This catalog did not return any items.</string>
     <string name="catalog_empty_title">No titles found</string>
     <string name="catalog_load_failed_title">Couldn’t load this catalog</string>
+    <string name="details_download_action">Download</string>
     <string name="details_actions_menu_label">More actions</string>
     <string name="details_check_connection">Check your Wi-Fi or mobile data connection and try again.</string>
     <string name="details_director">Director</string>
@@ -2037,6 +2049,8 @@
     <string name="downloads_enqueue_unsupported_format">Unsupported stream format for downloads</string>
     <string name="downloads_enqueue_requires_wifi">Connect to Wi-Fi to download, or allow mobile data in Downloads settings</string>
     <string name="downloads_allow_mobile_data_title">Allow mobile data</string>
+    <string name="downloads_show_download_button_title">Show download button</string>
+    <string name="downloads_show_download_button_description">Adds a download button under Play on a title's details page.</string>
     <string name="downloads_allow_mobile_data_description">By default, downloads only start on Wi-Fi. Enable this to also allow them on mobile data.</string>
     <string name="downloads_error_empty_body">Empty response body</string>
     <string name="downloads_error_finalize_failed">Failed to finalize download file</string>
@@ -2560,4 +2574,23 @@
     <string name="settings_playback_auto_skip_movie_credits_description">Skip movie credits, keeping post-credits scenes.</string>
     <string name="player_skip_movie_credits">Skip Credits</string>
     <string name="player_skip_to_post_credits">Skip to Post-Credits</string>
+    <string name="layout_overall_ratings">Overall Ratings</string>
+    <string name="layout_overall_ratings_sub_on">Standard and TMDB ratings are shown.</string>
+    <string name="layout_overall_ratings_sub_off">Standard and TMDB ratings are Hidden. MDBList provider settings take priority on detail pages.</string>
+    <string name="layout_episode_ratings">Episode Ratings</string>
+    <string name="layout_episode_ratings_sub">Choose which episode ratings are visible.</string>
+    <string name="layout_ratings_show">Show</string>
+    <string name="layout_ratings_hide">Hide</string>
+    <string name="layout_ratings_hide_unwatched">Hide Unwatched</string>
+    <string name="settings_playback_legacy_layout">Legacy layout</string>
+    <string name="settings_playback_legacy_layout_description">Use the original player controls.</string>
+    <string name="compose_player_via">Via %1$s</string>
+    <string name="compose_player_episode_code">S%1$d E%2$d</string>
+    <string name="compose_player_more_actions">More controls</string>
+    <string name="compose_player_fewer_actions">Fewer controls</string>
+    <string name="compose_player_speed">Playback speed</string>
+    <string name="compose_player_show_elapsed_time">Show elapsed time</string>
+    <string name="compose_player_show_remaining_time">Show remaining time</string>
+    <string name="compose_player_brightness">Brightness</string>
+    <string name="compose_player_volume">Volume</string>
 </resources>

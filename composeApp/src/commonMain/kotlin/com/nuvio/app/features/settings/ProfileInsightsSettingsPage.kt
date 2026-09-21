@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,7 +46,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -64,6 +64,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -78,7 +79,10 @@ import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaDetails
@@ -322,6 +326,7 @@ private fun ProfileManagementActions(
                 Icon(
                     imageVector = Icons.Rounded.Edit,
                     contentDescription = null,
+                    modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                     tint = tokens.colors.accent,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1067,14 +1072,20 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    modifier = Modifier.size(52.dp),
-                    color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            brush = MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed),
+                            shape = RoundedCornerShape(18.dp),
+                        ),
+                    color = Color.Transparent,
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Rounded.AutoAwesome,
                             contentDescription = null,
+                            modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                             tint = tokens.colors.accent,
                         )
                     }
@@ -1160,15 +1171,20 @@ private fun ProfileTasteSegmentRow(segment: ProfileTasteSegment) {
                 maxLines = 1,
             )
         }
-        LinearProgressIndicator(
-            progress = { segment.share.coerceIn(0f, 1f) },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(5.dp)
-                .clip(RoundedCornerShape(999.dp)),
-            color = tokens.colors.accent,
-            trackColor = tokens.colors.borderSubtle,
-        )
+                .clip(RoundedCornerShape(999.dp))
+                .background(tokens.colors.borderSubtle),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(segment.share.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .background(MaterialTheme.themePalette.accentBrush()),
+            )
+        }
     }
 }
 
@@ -1202,29 +1218,19 @@ private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
                 .background(tokens.colors.borderSubtle),
         ) {
             val movieLeaning = stats.movieShare >= 0.5f
+            val accentBrush = MaterialTheme.themePalette.accentBrush()
+            val mutedBrush = SolidColor(tokens.colors.textMuted.copy(alpha = 0.42f))
             Box(
                 modifier = Modifier
                     .weight(stats.movieShare.coerceIn(0.05f, 0.95f))
                     .fillMaxSize()
-                    .background(
-                        if (movieLeaning) {
-                            tokens.colors.accent
-                        } else {
-                            tokens.colors.textMuted.copy(alpha = 0.42f)
-                        },
-                    ),
+                    .background(if (movieLeaning) accentBrush else mutedBrush),
             )
             Box(
                 modifier = Modifier
                     .weight((1f - stats.movieShare).coerceIn(0.05f, 0.95f))
                     .fillMaxSize()
-                    .background(
-                        if (movieLeaning) {
-                            tokens.colors.textMuted.copy(alpha = 0.42f)
-                        } else {
-                            tokens.colors.accent
-                        },
-                    ),
+                    .background(if (movieLeaning) mutedBrush else accentBrush),
             )
         }
         Row(
@@ -1254,8 +1260,8 @@ private fun ProfileTasteDnaChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(tokens.colors.accent.copy(alpha = tokens.opacity.pressed))
-            .border(1.dp, tokens.colors.accent.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
+            .background(MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed))
+            .border(1.dp, MaterialTheme.themePalette.accentBrush(alpha = 0.22f), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1263,7 +1269,9 @@ private fun ProfileTasteDnaChip(
         Icon(
             imageVector = Icons.Rounded.AutoAwesome,
             contentDescription = null,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier
+                .size(14.dp)
+                .gradientMask(MaterialTheme.themePalette.accentBrush()),
             tint = tokens.colors.accent,
         )
         Text(

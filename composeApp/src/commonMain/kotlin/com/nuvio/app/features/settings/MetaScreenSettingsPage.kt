@@ -74,10 +74,14 @@ import nuvio.composeapp.generated.resources.settings_meta_comments_description
 import nuvio.composeapp.generated.resources.settings_meta_details
 import nuvio.composeapp.generated.resources.settings_meta_details_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted
+import nuvio.composeapp.generated.resources.settings_hero_trailer_start_unmuted_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_description
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_instant
 import nuvio.composeapp.generated.resources.settings_hero_trailer_start_delay_value
 import nuvio.composeapp.generated.resources.settings_meta_hero_trailer_playback
+import nuvio.composeapp.generated.resources.settings_meta_icon_action_row
+import nuvio.composeapp.generated.resources.settings_meta_icon_action_row_description
 import nuvio.composeapp.generated.resources.settings_meta_hero_trailer_playback_description
 import nuvio.composeapp.generated.resources.settings_meta_episode_cards
 import nuvio.composeapp.generated.resources.settings_meta_episode_cards_description
@@ -147,6 +151,14 @@ internal fun LazyListScope.metaScreenSettingsContent(
                         onCheckedChange = MetaScreenSettingsRepository::setPosterTransitionEnabled,
                     )
                 }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_meta_icon_action_row),
+                    description = stringResource(Res.string.settings_meta_icon_action_row_description),
+                    checked = uiState.iconActionRow,
+                    isTablet = isTablet,
+                    onCheckedChange = { MetaScreenSettingsRepository.setIconActionRow(it) },
+                )
                 if (showHeroTrailerPlaybackSetting) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsSwitchRow(
@@ -157,6 +169,14 @@ internal fun LazyListScope.metaScreenSettingsContent(
                         onCheckedChange = { MetaScreenSettingsRepository.setHeroTrailerPlayback(it) },
                     )
                     if (uiState.heroTrailerPlayback) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsSwitchRow(
+                            title = stringResource(Res.string.settings_hero_trailer_start_unmuted),
+                            description = stringResource(Res.string.settings_hero_trailer_start_unmuted_description),
+                            checked = uiState.heroTrailerStartUnmuted,
+                            isTablet = isTablet,
+                            onCheckedChange = { MetaScreenSettingsRepository.setHeroTrailerStartUnmuted(it) },
+                        )
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsSliderRow(
                             title = stringResource(Res.string.settings_hero_trailer_start_delay),
@@ -186,6 +206,8 @@ internal fun LazyListScope.metaScreenSettingsContent(
                     isTablet = isTablet,
                     onCheckedChange = { MetaScreenSettingsRepository.setTabLayout(it) },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                RatingsSettings(isTablet = isTablet, uiState = uiState)
                 SettingsGroupDivider(isTablet = isTablet)
                 MetaEpisodeCardStyleSelector(
                     isTablet = isTablet,
@@ -673,7 +695,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(128.dp)
                         .height(80.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
                 ) {
                     Box(
                         modifier = Modifier
@@ -709,7 +731,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(132.dp)
                         .height(78.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)),
                 ) {
                     Box(
                         modifier = Modifier
