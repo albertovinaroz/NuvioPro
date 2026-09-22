@@ -601,6 +601,22 @@ private fun BoxScope.RenderPlaybackOverlays(
             nextEpisodeAutoPlaySourceName = null
             nextEpisodeAutoPlayCountdown = null
         },
+        movieRecommendations = if (isMoviePlayback && args.onOpenMetaDetails != null) {
+            playerMeta?.moreLikeThis.orEmpty()
+                .filterNot { it.id == parentMetaId }
+                .take(MOVIE_RECOMMENDATION_LIMIT)
+        } else {
+            emptyList()
+        },
+        showMovieRecommendationCard = showMovieRecommendationCard,
+        onOpenMovieRecommendation = { preview ->
+            flushWatchProgress()
+            args.onOpenMetaDetails?.invoke(preview)
+        },
+        onDismissMovieRecommendations = {
+            movieRecommendationSnoozedUntilMs = playbackSnapshot.positionMs + MOVIE_RECOMMENDATION_SNOOZE_MS
+            showMovieRecommendationCard = false
+        },
         errorMessage = errorMessage,
             onDismissError = {
                 flushWatchProgress()
@@ -852,3 +868,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSleepTimerModalDismissed = { showSleepTimerModal = false },
     )
 }
+
+private const val MOVIE_RECOMMENDATION_LIMIT = 10
+
+private const val MOVIE_RECOMMENDATION_SNOOZE_MS = 60_000L

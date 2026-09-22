@@ -22,12 +22,14 @@ data class LibraryItem(
     val addonBaseUrl: String? = null,
     val listKeys: Set<String> = emptySet(),
     val traktRank: Int? = null,
+    val listRanks: Map<String, Int> = emptyMap(),
     val imdbId: String? = null,
     val tmdbId: Int? = null,
     val traktId: Int? = null,
     /** Original media category from the tracking provider (e.g. "anime").
      *  Used for UI filtering while [type] stays as "movie"/"series" for meta addon compatibility. */
     val mediaCategory: String? = null,
+    val rawPosterUrl: String? = null,
     override val trackingProviderId: String? = null,
     override val trackingProviderItemId: String? = null,
     override val trackingSourceUrl: String? = null,
@@ -58,6 +60,7 @@ enum class LibrarySourceMode {
     LOCAL,
     TRAKT,
     SIMKL,
+    MDBLIST,
 }
 
 data class LibraryUiState(
@@ -116,4 +119,5 @@ fun LibraryItem.toMetaPreview(): MetaPreview =
         releaseInfo = releaseInfo,
         imdbRating = imdbRating,
         genres = genres,
+        rawPosterUrl = rawPosterUrl,
     )

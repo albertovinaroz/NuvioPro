@@ -622,6 +622,11 @@ internal fun settingsSearchEntries(
                 stringResource(Res.string.settings_playback_swipe_to_seek),
                 stringResource(Res.string.settings_playback_swipe_to_seek_description),
             ),
+            PlaybackSearchRow(
+                "movie-recommendations",
+                stringResource(Res.string.settings_playback_movie_recommendations),
+                stringResource(Res.string.settings_playback_movie_recommendations_description),
+            ),
             PlaybackSearchRow("hold-speed", stringResource(Res.string.settings_playback_hold_speed)),
         ),
     )
@@ -991,6 +996,16 @@ internal fun settingsSearchEntries(
         key = "simkl-authentication",
         title = stringResource(Res.string.tracking_source_simkl),
         description = stringResource(Res.string.settings_simkl_sign_in_description),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_services),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "mdblist-authentication",
+        title = stringResource(Res.string.tracking_source_mdblist),
+        description = stringResource(Res.string.settings_mdblist_sign_in_description),
         pageLabel = trackingPage,
         section = stringResource(Res.string.settings_tracking_services),
         category = accountCategory,

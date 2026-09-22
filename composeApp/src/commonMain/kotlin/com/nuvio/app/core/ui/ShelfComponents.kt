@@ -128,6 +128,7 @@ fun NuvioPosterCard(
     title: String,
     imageUrl: String?,
     modifier: Modifier = Modifier,
+    fallbackImageUrl: String? = null,
     shape: NuvioPosterShape = NuvioPosterShape.Poster,
     detailLine: String? = null,
     showTitleBelow: Boolean = true,
@@ -171,8 +172,22 @@ fun NuvioPosterCard(
             contentAlignment = Alignment.Center,
         ) {
             if (imageUrl != null) {
+                val platformContext = coil3.compose.LocalPlatformContext.current
+                val hasFallback = !fallbackImageUrl.isNullOrBlank() && fallbackImageUrl != imageUrl
+                val imageModel = remember(imageUrl, fallbackImageUrl, platformContext) {
+                    if (hasFallback) {
+                        coil3.request.ImageRequest.Builder(platformContext)
+                            .data(imageUrl)
+                            .memoryCacheKeyExtras(
+                                mapOf(com.nuvio.app.core.poster.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to fallbackImageUrl!!)
+                            )
+                            .build()
+                    } else {
+                        imageUrl
+                    }
+                }
                 AsyncImage(
-                    model = imageUrl,
+                    model = imageModel,
                     contentDescription = title,
                     modifier = Modifier.matchParentSize(),
                     contentScale = ContentScale.Crop,

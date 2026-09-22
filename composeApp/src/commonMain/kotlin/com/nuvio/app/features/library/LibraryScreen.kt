@@ -130,6 +130,9 @@ import com.nuvio.app.features.watching.application.WatchingState
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -409,6 +412,7 @@ fun LibraryScreen(
                             LibrarySourceMode.LOCAL -> stringResource(Res.string.library_title)
                             LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
                             LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
+                            LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
                         }
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -417,6 +421,7 @@ fun LibraryScreen(
                     topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
                     actions = {
                         if (sourceMode == LibraryViewMode.Saved) {
+                            LibraryListManagementButton()
                             val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
                                 LibraryLayoutMode.VERTICAL
                             } else {
@@ -566,6 +571,7 @@ fun LibraryScreen(
                                         LibrarySourceMode.LOCAL -> stringResource(Res.string.library_load_failed)
                                         LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_load_failed)
                                         LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_load_failed)
+                                        LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_load_failed)
                                     },
                                     message = uiState.errorMessage.orEmpty(),
                                     actionLabel = stringResource(Res.string.action_retry),
@@ -583,11 +589,13 @@ fun LibraryScreen(
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_title)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_title)
+                                    LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_title)
                                 },
                                 message = when (uiState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_message)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_message)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_message)
+                                    LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_message)
                                 },
                             )
                         }
@@ -2357,11 +2365,26 @@ private object LibraryReleaseCalendarCache {
         val cacheKey = cacheKeyFor(items)
         if ((_state.value.cacheKey == cacheKey && _state.value.isReady) || activeCacheKey == cacheKey) return
 
+        val persisted = LibraryReleaseSchedulePersistence.load(items)
+        if (persisted != null && persisted.cacheKey == cacheKey && persisted.savedOnIsoDate == CurrentDateProvider.todayIsoDate()) {
+            _state.value = LibraryReleaseCalendarCacheState(
+                cacheKey = cacheKey,
+                events = persisted.events,
+                isReady = true,
+                loadedMonthKeys = persisted.loadedMonthKeys,
+            )
+            return
+        }
+
         activeCacheKey = cacheKey
         val fallbackEvents = buildLibraryReleaseCalendarFallbackEvents(items)
+        val previousEpisodeEvents = (persisted?.events ?: _state.value.events)
+            .filter { event -> event.key.startsWith("episode:") }
         _state.value = LibraryReleaseCalendarCacheState(
             cacheKey = cacheKey,
-            events = fallbackEvents,
+            events = (previousEpisodeEvents + fallbackEvents)
+                .distinctBy { it.key }
+                .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.sortTitle.lowercase() }),
             isWarming = true,
         )
 
@@ -2377,6 +2400,7 @@ private object LibraryReleaseCalendarCache {
                     isReady = true,
                     loadedMonthKeys = libraryCalendarWarmMonthKeys(),
                 )
+                LibraryReleaseSchedulePersistence.save(_state.value)
             }
         } finally {
             if (activeCacheKey == cacheKey && _state.value.isWarming) {
@@ -2404,6 +2428,7 @@ private object LibraryReleaseCalendarCache {
                     isWarming = false,
                     loadedMonthKeys = _state.value.loadedMonthKeys + monthKey,
                 )
+                LibraryReleaseSchedulePersistence.save(_state.value)
             }
         } finally {
             if (activeCacheKey == cacheKey) {
@@ -2703,4 +2728,154 @@ private class LibraryDisintegrationHolder {
 
         return result
     }
+}
+
+/** An episode from the Library release calendar, exposed for other screens (Profile Insight). */
+internal data class LibraryUpcomingEpisode(
+    val key: String,
+    val item: LibraryItem,
+    val dateIso: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+)
+
+internal suspend fun warmLibraryReleaseSchedule(items: List<LibraryItem>) {
+    if (items.isNotEmpty()) LibraryReleaseCalendarCache.warm(items)
+}
+
+/**
+ * Episodes of saved series airing from today through the next [days] days (today included),
+ * read from the same release-calendar cache the Library calendar shows, so both always agree.
+ */
+internal fun libraryUpcomingEpisodesFlow(days: Int = 7): Flow<List<LibraryUpcomingEpisode>> =
+    LibraryReleaseCalendarCache.state.map { state -> state.events.upcomingEpisodes(days) }
+
+private fun List<LibraryCalendarEvent>.upcomingEpisodes(days: Int): List<LibraryUpcomingEpisode> {
+    val today = parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: return emptyList()
+    val windowIsoDates = (0 until days).map { offset -> libraryCalendarDatePlusDays(today, offset).iso }.toSet()
+    return asSequence()
+        .filter { event -> event.key.startsWith("episode:") && event.date.iso in windowIsoDates }
+        .distinctBy { it.key }
+        .sortedWith(compareBy<LibraryCalendarEvent> { it.date.iso }.thenBy { it.sortTitle.lowercase() })
+        .map { event ->
+            LibraryUpcomingEpisode(
+                key = event.key,
+                item = event.item,
+                dateIso = event.date.iso,
+                subtitle = event.subtitle,
+                imageUrl = event.imageUrl,
+                seasonNumber = event.seasonNumber,
+                episodeNumber = event.episodeNumber,
+            )
+        }
+        .toList()
+}
+
+@Serializable
+private data class StoredLibraryCalendarEvent(
+    val key: String,
+    val dateIso: String,
+    val rawReleaseInfo: String,
+    val itemType: String,
+    val itemId: String,
+    val title: String,
+    val subtitle: String? = null,
+    val imageUrl: String? = null,
+    val sortTitle: String,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
+)
+
+@Serializable
+private data class StoredLibraryReleaseSchedule(
+    val cacheKey: String,
+    val savedOnIsoDate: String,
+    val loadedMonthKeys: Set<String> = emptySet(),
+    val events: List<StoredLibraryCalendarEvent> = emptyList(),
+)
+
+private class RestoredLibraryReleaseSchedule(
+    val cacheKey: String,
+    val savedOnIsoDate: String,
+    val loadedMonthKeys: Set<String>,
+    val events: List<LibraryCalendarEvent>,
+)
+
+private object LibraryReleaseSchedulePersistence {
+    private val json = Json { ignoreUnknownKeys = true }
+
+    fun save(state: LibraryReleaseCalendarCacheState) {
+        val cacheKey = state.cacheKey ?: return
+        runCatching {
+            val payload = StoredLibraryReleaseSchedule(
+                cacheKey = cacheKey,
+                savedOnIsoDate = CurrentDateProvider.todayIsoDate(),
+                loadedMonthKeys = state.loadedMonthKeys,
+                events = state.events.map { event ->
+                    StoredLibraryCalendarEvent(
+                        key = event.key,
+                        dateIso = event.date.iso,
+                        rawReleaseInfo = event.rawReleaseInfo,
+                        itemType = event.item.type,
+                        itemId = event.item.id,
+                        title = event.title,
+                        subtitle = event.subtitle,
+                        imageUrl = event.imageUrl,
+                        sortTitle = event.sortTitle,
+                        seasonNumber = event.seasonNumber,
+                        episodeNumber = event.episodeNumber,
+                    )
+                },
+            )
+            LibraryReleaseScheduleStorage.savePayload(json.encodeToString(StoredLibraryReleaseSchedule.serializer(), payload))
+        }
+    }
+
+    fun load(items: List<LibraryItem>): RestoredLibraryReleaseSchedule? {
+        val raw = LibraryReleaseScheduleStorage.loadPayload() ?: return null
+        val stored = runCatching {
+            json.decodeFromString(StoredLibraryReleaseSchedule.serializer(), raw)
+        }.getOrNull() ?: return null
+        val itemsByKey = items.associateBy { item -> "${item.type.lowercase()}:${item.id}" }
+        val events = stored.events.mapNotNull { event ->
+            val item = itemsByKey["${event.itemType.lowercase()}:${event.itemId}"] ?: return@mapNotNull null
+            val date = parseLibraryCalendarDate(event.dateIso) ?: return@mapNotNull null
+            LibraryCalendarEvent(
+                key = event.key,
+                date = date,
+                rawReleaseInfo = event.rawReleaseInfo,
+                item = item,
+                title = event.title,
+                subtitle = event.subtitle,
+                imageUrl = event.imageUrl,
+                sortTitle = event.sortTitle,
+                seasonNumber = event.seasonNumber,
+                episodeNumber = event.episodeNumber,
+            )
+        }
+        return RestoredLibraryReleaseSchedule(
+            cacheKey = stored.cacheKey,
+            savedOnIsoDate = stored.savedOnIsoDate,
+            loadedMonthKeys = stored.loadedMonthKeys,
+            events = events,
+        )
+    }
+}
+
+private fun libraryCalendarDatePlusDays(date: LibraryCalendarDate, days: Int): LibraryCalendarDate {
+    var year = date.year
+    var month = date.month
+    var day = date.day + days
+    while (day > daysInLibraryCalendarMonth(year, month)) {
+        day -= daysInLibraryCalendarMonth(year, month)
+        if (month == 12) {
+            month = 1
+            year += 1
+        } else {
+            month += 1
+        }
+    }
+    return LibraryCalendarDate(year, month, day)
 }

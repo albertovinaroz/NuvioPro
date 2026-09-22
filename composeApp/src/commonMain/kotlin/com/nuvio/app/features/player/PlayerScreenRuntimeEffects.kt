@@ -301,19 +301,20 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         playbackSnapshot.isLoading,
         preferredAudioSelectionApplied,
         preferredSubtitleSelectionApplied,
+        trackPreferenceRestoreApplied,
         addonSubtitles,
         isLoadingAddonSubtitles,
     ) {
         if (playerController == null || playbackSnapshot.isLoading) {
             return@LaunchedEffect
         }
-        if (preferredAudioSelectionApplied && preferredSubtitleSelectionApplied) {
+        if (trackPreferenceRestoreApplied && preferredAudioSelectionApplied && preferredSubtitleSelectionApplied) {
             return@LaunchedEffect
         }
 
         repeat(10) {
             refreshTracks()
-            if (preferredAudioSelectionApplied && preferredSubtitleSelectionApplied) {
+            if (trackPreferenceRestoreApplied && preferredAudioSelectionApplied && preferredSubtitleSelectionApplied) {
                 return@LaunchedEffect
             }
             delay(300)
@@ -706,6 +707,32 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
                 playNextEpisode()
             }
         }
+    }
+
+    LaunchedEffect(
+        playbackSnapshot.positionMs,
+        playbackSnapshot.durationMs,
+        playbackSnapshot.isEnded,
+        skipIntervals,
+        playerMeta?.moreLikeThis,
+        movieRecommendationSnoozedUntilMs,
+        playerSettingsUiState.movieRecommendationsEnabled,
+    ) {
+        if (!isMoviePlayback || !playerSettingsUiState.movieRecommendationsEnabled || playerMeta?.moreLikeThis.isNullOrEmpty()) {
+            showMovieRecommendationCard = false
+            return@LaunchedEffect
+        }
+        val inCreditsWindow = PlayerNextEpisodeRules.shouldShowMovieRecommendations(
+            positionMs = playbackSnapshot.positionMs,
+            durationMs = playbackSnapshot.durationMs,
+            skipIntervals = skipIntervals,
+        )
+        val snoozedUntil = movieRecommendationSnoozedUntilMs
+        if (snoozedUntil != null && !inCreditsWindow && !playbackSnapshot.isEnded) {
+            movieRecommendationSnoozedUntilMs = null
+        }
+        val snoozed = snoozedUntil != null && playbackSnapshot.positionMs < snoozedUntil
+        showMovieRecommendationCard = playbackSnapshot.isEnded || (inCreditsWindow && !snoozed)
     }
 }
 

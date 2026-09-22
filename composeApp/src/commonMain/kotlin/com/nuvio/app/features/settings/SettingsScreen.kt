@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
 import androidx.compose.foundation.LocalOverscrollFactory
@@ -725,6 +726,7 @@ private fun MobileSettingsScreen(
         // top-of-list drag, revealing the photo's real edge. Every other settings page keeps the
         // platform bounce; only Profile opts out to avoid exposing that seam.
         val overscrollFactory = if (page == SettingsPage.Profile) null else LocalOverscrollFactory.current
+        val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
         CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
@@ -740,7 +742,8 @@ private fun MobileSettingsScreen(
             // pushing the cinematic hero photo down for no reason.
             topPadding = if (page == SettingsPage.Root || page == SettingsPage.Profile) 0.dp else null,
         ) {
-            if (showInternalHeader) {
+            if (profileDrawsOwnChrome) {
+            } else if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
                     // The extra bit of bottom room below the title (root page only) has to live
@@ -833,6 +836,7 @@ private fun MobileSettingsScreen(
                     onEditProfile = onEditProfile,
                     onPosterClick = onPosterClick,
                     hasNativeTrailingMenu = !showInternalHeader,
+                    onBack = if (profileDrawsOwnChrome) onNavigateBack else null,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {

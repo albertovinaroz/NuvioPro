@@ -26,8 +26,9 @@ fun HomePosterCard(
 
     NuvioPosterCard(
         title = item.name,
-        imageUrl = if (isLandscapeMode) (item.banner ?: item.poster) else item.poster,
+        imageUrl = if (isLandscapeMode) (item.landscapePoster ?: item.banner ?: item.poster) else item.poster,
         modifier = modifier,
+        fallbackImageUrl = item.rawPosterUrl,
         shape = if (isLandscapeMode) NuvioPosterShape.Landscape else item.posterShape.toNuvioPosterShape(),
         detailLine = when {
             posterCardStyle.hideLabelsEnabled -> null

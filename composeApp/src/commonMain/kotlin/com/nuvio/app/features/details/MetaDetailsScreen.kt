@@ -369,6 +369,7 @@ fun MetaDetailsScreen(
         tmdbSettingsUiState.useMoreLikeThis,
         tmdbSettingsUiState.useEpisodeRatings,
         tmdbSettingsUiState.language,
+        mdbListSettings,
     ) {
         if (displayedMeta != null && !uiState.isLoading) {
             MetaDetailsRepository.load(type, id)
@@ -1219,7 +1220,7 @@ fun MetaDetailsScreen(
 
                                 configuredMetaSectionItems(
                                     settings = metaScreenSettingsUiState,
-                                    isMdbListActive = mdbListSettings.enabled && mdbListSettings.hasApiKey,
+                                    isMdbListActive = mdbListSettings.isActive,
                                     meta = meta,
                                     isTablet = isTablet,
                                     contentHorizontalPadding = contentHorizontalPadding,
