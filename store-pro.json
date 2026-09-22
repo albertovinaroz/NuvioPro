@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.0-b2",
+          "buildVersion": "155",
+          "date": "2026-09-22T19:04:39Z",
+          "localizedDescription": "# Nuvio Pro 0.5.0-b2\r\n\r\n**AltStore/SideStore source:**\r\n```\r\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\r\n```\r\n\r\n## Changelog\r\n\r\n### Upstream (NuvioMedia)\r\n\r\n* feat(settings): collapse tracker cards by default @tapframe\r\n* fix(player): restore subtitles for each episode @tapframe\r\n* feat(mdblist): add tracking and library support @tapframe\r\n* fix(tmdb): remove inaccurate release date enrichment option @skoruppa\r\n* fix(player): record MX Player completion when no position is returned @zuko726\r\n* fix(tmdb): sort blank collection release dates last @tapframe\r\n* fix(ios): use clean player framework archive @tapframe\r\n* fix(player): preserve iOS audio during calls @tapframe\r\n* feat(posters): custom poster URL pattern support @skoruppa\r\n\r\n### Upstream (luqmanfadlli's fork)\r\n\r\n* feat(profile): split finished titles into Watched, Completed and Episodes @luqmanfadlli\r\n* fix(profile): show next-7-day episodes under Profile Insight's Upcoming @luqmanfadlli\r\n* feat(profile): iOS-style floating header on the Android Profile page @luqmanfadlli\r\n* feat(navigation): bring the jelly floating nav bar to iPad @luqmanfadlli\r\n* fix(navigation): keep the iPad floating bar on the tab that is showing @luqmanfadlli\r\n* feat(player): suggest More Like This titles at the end of a movie @luqmanfadlli\r\n* feat(player): snooze the movie recommendation card for a minute on dismiss @luqmanfadlli\r\n* feat(downloads): show the download button by default @luqmanfadlli\r\n* fix(ios): end the downloads Live Activity background task on the main actor @luqmanfadlli\r\n* fix(ios): run each plugin on its own large-stack thread to restore scraping speed @luqmanfadlli\r\n* fix(streams): keep source pinning working in the shared provider filter row @luqmanfadlli\r\n* fix(library): load and persist episode release schedule from app start @luqmanfadlli\r\n* chore(deps): update MPVKit @luqmanfadlli\r\n\r\n### Pro\r\n\r\n* feat(profile): redesign stats/taste layout and add a native profile menu @albertovinaroz\r\n* fix(home): show the library icon on the hero's save button when saved @albertovinaroz\r\n* fix(watched): stop UI freeze marking large series watched/unwatched @albertovinaroz\r\n\r\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.0-b2/nuvio-0.5.0-b2-pro-release.ipa",
+          "size": 68293305,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.4.26-b1",
           "buildVersion": "153",
           "date": "2026-09-21T22:15:24Z",
