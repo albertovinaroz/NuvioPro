@@ -771,7 +771,8 @@ internal fun HomeHeroSection(
                                                 Res.string.hero_add_to_library
                                             },
                                         ),
-                                        icon = if (isSavedToLibrary) Icons.Default.Check else Icons.Default.Add,
+                                        icon = Icons.Default.Add,
+                                        drawable = Res.drawable.sidebar_library.takeIf { isSavedToLibrary },
                                         active = isSavedToLibrary,
                                         progress = 1f,
                                         size = 52.dp,
