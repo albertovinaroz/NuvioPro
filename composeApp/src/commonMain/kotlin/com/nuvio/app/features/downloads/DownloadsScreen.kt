@@ -55,6 +55,7 @@ fun DownloadsScreen(
     initialShowId: String? = null,
     onNavigateToShow: ((showId: String, title: String) -> Unit)? = null,
     onBackFromShow: (() -> Unit)? = null,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     val uiState by remember {
         DownloadsRepository.ensureLoaded()
@@ -117,7 +118,7 @@ fun DownloadsScreen(
                         )
                     }
                     if (selectedShowId == null) {
-                        IconButton(onClick = { showSettings = true }) {
+                        IconButton(onClick = { onOpenSettings?.invoke() ?: run { showSettings = true } }) {
                             Icon(
                                 imageVector = Icons.Rounded.Settings,
                                 contentDescription = stringResource(Res.string.compose_settings_page_root),

@@ -15,6 +15,7 @@ import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsScreen
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.settings.SettingsPage
 import com.nuvio.app.features.settings.SettingsScreen
 import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.CollectionEditorPageRoute
@@ -22,10 +23,33 @@ import com.nuvio.app.navigation.CollectionEditorRoute
 import com.nuvio.app.navigation.CollectionsRoute
 import com.nuvio.app.navigation.DetailRoute
 import com.nuvio.app.navigation.DownloadShowRoute
+import com.nuvio.app.navigation.DownloadsPreferencesRoute
 import com.nuvio.app.navigation.DownloadsSettingsRoute
 import com.nuvio.app.navigation.FolderDetailRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import com.nuvio.app.navigation.SettingsPageRoute
+import com.nuvio.app.navigation.TrailingMenuAction
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.profile_insights_edit_profile
+import nuvio.composeapp.generated.resources.profile_insights_switch_profile
+import org.jetbrains.compose.resources.stringResource
+
+/** The Profile page's native trailing "..." nav bar menu; every other settings page gets none.
+ * Not composable-scoped to a pageName check since it's consumed inside a plain navigate() click
+ * lambda — call this once during composition and gate its use on `pageName` at the call site. */
+@Composable
+internal fun profileEditSwitchMenuActions(): List<TrailingMenuAction> = listOf(
+    TrailingMenuAction(
+        id = "edit_profile",
+        title = stringResource(Res.string.profile_insights_edit_profile),
+        systemImageName = "pencil",
+    ),
+    TrailingMenuAction(
+        id = "switch_profile",
+        title = stringResource(Res.string.profile_insights_switch_profile),
+        systemImageName = "person.2",
+    ),
+)
 
 @Composable
 internal fun SettingsDestination(
@@ -50,12 +74,23 @@ internal fun SettingsRootDestination(
     onEditProfile: (() -> Unit)? = null,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
+    val profileMenuActions = profileEditSwitchMenuActions()
     SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         initialPageName = route.pageName,
         rootActionsEnabled = false,
         onNavigatePage = { pageName, title ->
-            navController.navigate(SettingsPageRoute(pageName, title))
+            navController.navigate(
+                SettingsPageRoute(
+                    pageName = pageName,
+                    title = title,
+                    trailingMenuActions = if (pageName == SettingsPage.Profile.name) {
+                        profileMenuActions
+                    } else {
+                        emptyList()
+                    },
+                ),
+            )
         },
         onExternalBack = onBack,
         showInternalHeader = !useNativeNavigation,
@@ -81,6 +116,7 @@ internal fun DownloadsDestination(
     navController: NuvioNavigator,
     useNativeNavigation: Boolean,
     onOpenDownload: (DownloadItem) -> Unit,
+    settingsTitle: String,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     DownloadsScreen(
@@ -91,6 +127,7 @@ internal fun DownloadsDestination(
         } else {
             null
         },
+        onOpenSettings = { navController.navigate(DownloadsPreferencesRoute(settingsTitle)) },
     )
 }
 

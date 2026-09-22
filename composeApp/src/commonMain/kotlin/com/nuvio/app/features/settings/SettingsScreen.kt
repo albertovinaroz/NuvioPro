@@ -2,6 +2,7 @@ package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.build.AppFeaturePolicy
 
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.runtime.getValue
@@ -717,6 +719,13 @@ private fun MobileSettingsScreen(
             }
         }
 
+        // Profile's cinematic hero photo bleeds unclipped past its own top edge to reach behind
+        // the native nav bar (see ProfileInsightsHeroCinematic) — iOS's native rubber-band
+        // overscroll translates the whole list further down than that bleed amount on a fast
+        // top-of-list drag, revealing the photo's real edge. Every other settings page keeps the
+        // platform bounce; only Profile opts out to avoid exposing that seam.
+        val overscrollFactory = if (page == SettingsPage.Profile) null else LocalOverscrollFactory.current
+        CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -823,6 +832,7 @@ private fun MobileSettingsScreen(
                     onSwitchProfile = onSwitchProfile,
                     onEditProfile = onEditProfile,
                     onPosterClick = onPosterClick,
+                    hasNativeTrailingMenu = !showInternalHeader,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {
@@ -979,6 +989,7 @@ private fun MobileSettingsScreen(
                     uiState = liveTvUiState,
                 )
             }
+        }
         }
     }
 }

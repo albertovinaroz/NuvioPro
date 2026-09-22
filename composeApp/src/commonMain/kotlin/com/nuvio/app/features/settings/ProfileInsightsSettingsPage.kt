@@ -11,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -36,14 +39,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.CollectionsBookmark
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,9 +61,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +77,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
 import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.NuvioPrimaryButton
-import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
@@ -86,6 +85,7 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
@@ -118,6 +118,10 @@ internal fun LazyListScope.profileInsightsContent(
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
+    // True when a native "..." nav bar menu already covers Edit/Switch Profile (native
+    // navigation on phone) — the old floating hero buttons then stay hidden instead of
+    // duplicating those actions.
+    hasNativeTrailingMenu: Boolean = false,
 ) {
     item {
         ProfileInsightsBody(
@@ -125,6 +129,7 @@ internal fun LazyListScope.profileInsightsContent(
             onSwitchProfile = onSwitchProfile,
             onEditProfile = onEditProfile,
             onPosterClick = onPosterClick,
+            hasNativeTrailingMenu = hasNativeTrailingMenu,
         )
     }
 }
@@ -135,6 +140,7 @@ private fun ProfileInsightsBody(
     onSwitchProfile: (() -> Unit)?,
     onEditProfile: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
+    hasNativeTrailingMenu: Boolean = false,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -250,6 +256,7 @@ private fun ProfileInsightsBody(
             onCollectionClick = onCollectionClick,
             onEditProfile = onEditProfile.takeUnless { isTablet },
             onSwitchProfile = onSwitchProfile.takeUnless { isTablet },
+            hasNativeTrailingMenu = hasNativeTrailingMenu,
         )
         Column(
             modifier = Modifier
@@ -271,7 +278,7 @@ private fun ProfileInsightsBody(
             }
             ProfileWatchTimeRow(stats = stats)
             SettingsSection(
-                title = stringResource(Res.string.profile_insights_section_taste),
+                title = null,
                 isTablet = isTablet,
             ) {
                 ProfileTasteCard(stats = stats)
@@ -379,6 +386,7 @@ private fun ProfileInsightsHero(
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     onEditProfile: (() -> Unit)?,
     onSwitchProfile: (() -> Unit)?,
+    hasNativeTrailingMenu: Boolean = false,
 ) {
     // The bled, edge-to-edge treatment below is tuned specifically for the phone/portrait path:
     // it deliberately reaches past the Settings scaffold's padding to the true screen edges and
@@ -405,6 +413,7 @@ private fun ProfileInsightsHero(
             onCollectionClick = onCollectionClick,
             onEditProfile = onEditProfile,
             onSwitchProfile = onSwitchProfile,
+            hasNativeTrailingMenu = hasNativeTrailingMenu,
         )
     }
 }
@@ -503,6 +512,7 @@ private fun ProfileInsightsHeroCinematic(
     onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
     onEditProfile: (() -> Unit)?,
     onSwitchProfile: (() -> Unit)?,
+    hasNativeTrailingMenu: Boolean = false,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
@@ -602,25 +612,21 @@ private fun ProfileInsightsHeroCinematic(
                 )
             }
 
-            // Deliberately NOT bled like the photo above: that was fragile (offset+requiredWidth+
-            // horizontalScroll interactions kept mispositioning the first pill on iOS in ways that
-            // were hard to fully pin down) and the payoff — pills scrolling flush to the photo's
-            // true edge — wasn't worth repeat regressions. Plain row, same 18dp inset as everything
-            // else on the page, aligned with the avatar/title directly above it.
+            // No side padding: flush to the hero's own true edges (the hero Box is already
+            // full-width), matching the Airy Grid content below it. No end padding either — the
+            // row's own scroll clipping already cuts the last pill mid-way when they don't all
+            // fit, which is exactly the "there's more, scroll" affordance; reserving matching
+            // space on the right would just hide that peek.
             ProfileMetricPillRow(
                 stats = stats,
                 isCollectionAvailable = isCollectionAvailable,
                 onCollectionClick = onCollectionClick,
-                // No end padding: the row's own scroll clipping already cuts the last pill
-                // mid-way when they don't all fit, which is exactly the "there's more, scroll"
-                // affordance — reserving matching space on the right would just hide that peek.
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 18.dp)
                     .padding(bottom = 18.dp),
             )
 
-            if (onEditProfile != null) {
+            if (onEditProfile != null && !hasNativeTrailingMenu) {
                 // iOS's native nav bar (title/back button) paints on top of this whole strip
                 // as an opaque system layer, so this can't sit level with it like the back
                 // button — clearing at least the safe area, not just the header's own padding,
@@ -638,7 +644,7 @@ private fun ProfileInsightsHeroCinematic(
                 }
             }
 
-            if (onSwitchProfile != null) {
+            if (onSwitchProfile != null && !hasNativeTrailingMenu) {
                 // Same bottom anchor as the avatar/name column below, so this lines up with the
                 // profile name rather than the edit button above.
                 Box(
@@ -711,65 +717,87 @@ private fun ProfileMetricPillRow(
 ) {
     val pills = listOf(
         ProfileMetricPillSpec(
-            icon = Icons.Rounded.PlayArrow,
             value = stats.continueCount.toString(),
             label = stringResource(Res.string.profile_insights_hero_continue),
             collectionKind = ProfileInsightCollectionKind.Continue,
         ),
         ProfileMetricPillSpec(
-            icon = Icons.Rounded.CollectionsBookmark,
             value = stats.libraryCount.toString(),
             label = stringResource(Res.string.profile_insights_hero_library),
             collectionKind = ProfileInsightCollectionKind.Library,
         ),
         ProfileMetricPillSpec(
-            icon = Icons.Rounded.CalendarMonth,
             value = stats.upcomingCount.toString(),
             label = stringResource(Res.string.profile_insights_hero_upcoming),
             collectionKind = ProfileInsightCollectionKind.Upcoming,
         ),
         ProfileMetricPillSpec(
-            icon = Icons.Rounded.Favorite,
             value = stats.completedCount.toString(),
             label = stringResource(Res.string.profile_insights_stat_completed),
             collectionKind = ProfileInsightCollectionKind.Completed,
         ),
         ProfileMetricPillSpec(
-            icon = Icons.Rounded.Sync,
             value = stats.ongoingSeriesCount.toString(),
             label = stringResource(Res.string.profile_insights_stat_ongoing),
             collectionKind = ProfileInsightCollectionKind.Ongoing,
         ),
     )
 
-    // A plain scrollable Row instead of LazyRow: with contentPadding this wide (it reaches past
-    // the true screen edge to match the bled photo behind it), LazyRow was starting at a nonzero
-    // initial scroll offset on iOS, clipping the first pill until the user nudged it — a Row's
-    // scroll position is simply 0 at rest, with no such quirk.
-    // The start/end insets are real Spacer children, not an outer .padding() — padding applied
-    // after .horizontalScroll() resizes the viewport, it doesn't add space inside the scrollable
-    // content, so it was leaving the first pill flush against (and clipped by) the true edge.
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Spacer(modifier = Modifier.width(contentPadding.calculateStartPadding(LayoutDirection.Ltr)))
-        pills.forEach { pill ->
-            ProfileMetricPill(
-                spec = pill,
-                onClick = pill.collectionKind
-                    .takeIf(isCollectionAvailable)
-                    ?.let { kind -> { onCollectionClick(kind) } },
+    val scrollState = rememberScrollState()
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        // A plain scrollable Row instead of LazyRow: with contentPadding this wide (it reaches
+        // past the true screen edge to match the bled photo behind it), LazyRow was starting at a
+        // nonzero initial scroll offset on iOS, clipping the first pill until the user nudged it —
+        // a Row's scroll position is simply 0 at rest, with no such quirk.
+        // The start/end insets are real Spacer children, not an outer .padding() — padding applied
+        // after .horizontalScroll() resizes the viewport, it doesn't add space inside the
+        // scrollable content, so it was leaving the first pill flush against (and clipped by) the
+        // true edge.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState),
+            horizontalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            Spacer(modifier = Modifier.width(contentPadding.calculateStartPadding(LayoutDirection.Ltr)))
+            pills.forEach { pill ->
+                ProfileMetricPill(
+                    spec = pill,
+                    onClick = pill.collectionKind
+                        .takeIf(isCollectionAvailable)
+                        ?.let { kind -> { onCollectionClick(kind) } },
+                )
+            }
+            Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
+        }
+
+        if (scrollState.canScrollBackward) {
+            Icon(
+                imageVector = Icons.Rounded.ChevronLeft,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = (-6).dp)
+                    .size(20.dp),
             )
         }
-        Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
+        if (scrollState.canScrollForward) {
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 6.dp)
+                    .size(20.dp),
+            )
+        }
     }
 }
 
 private data class ProfileMetricPillSpec(
-    val icon: ImageVector,
     val value: String,
     val label: String,
     val collectionKind: ProfileInsightCollectionKind,
@@ -782,38 +810,40 @@ private fun ProfileMetricPill(
 ) {
     Column(
         modifier = Modifier
-            .width(96.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.14f))
-            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(18.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 14.dp),
+            .widthIn(min = 58.dp)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(
-            imageVector = spec.icon,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-            tint = Color.White,
-        )
-        Text(
-            text = spec.value,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 14.sp,
-                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-            ),
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
-        Text(
-            text = spec.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.72f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = spec.value,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 16.sp,
+                    maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+                ),
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+            Text(
+                text = spec.label,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .width(28.dp)
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(MaterialTheme.themePalette.accentBrush(alpha = 0.55f)),
         )
     }
 }
@@ -821,55 +851,24 @@ private fun ProfileMetricPill(
 @Composable
 private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
     val tokens = MaterialTheme.nuvio
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        color = tokens.colors.surface,
-        shape = tokens.shapes.card,
-        border = BorderStroke(1.dp, tokens.colors.borderSubtle),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                color = tokens.colors.accent.copy(alpha = tokens.opacity.pressed),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = tokens.colors.accent,
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(Res.string.profile_insights_stat_time),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tokens.colors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    text = stringResource(Res.string.profile_insights_stat_time_caption),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = tokens.colors.textMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                text = profileInsightDurationLabel(stats.trackedDurationMs),
-                style = MaterialTheme.typography.titleMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
+        Text(
+            text = profileInsightDurationLabel(stats.trackedDurationMs),
+            style = MaterialTheme.typography.displaySmall,
+            color = tokens.colors.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(Res.string.profile_insights_stat_time_caption),
+            style = MaterialTheme.typography.bodyMedium,
+            color = tokens.colors.textMuted,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -1050,96 +1049,61 @@ private fun ProfileInsightPosterTile(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProfileTasteCard(stats: ProfileInsightsStats) {
-    val tokens = MaterialTheme.nuvio
-    val fallbackType = when (stats.topType) {
-        "movie" -> stringResource(Res.string.profile_insights_type_movie)
-        "series" -> stringResource(Res.string.profile_insights_type_series)
-        null -> null
-        else -> stats.topType.fallbackDisplayLabel()
-    }
-    val topSignal = stats.topGenre ?: fallbackType ?: stringResource(Res.string.profile_insights_taste_empty)
-
-    NuvioSurfaceCard {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(32.dp),
+    ) {
+        if (stats.tasteSegments.isNotEmpty()) {
+            ProfileTasteGenreGrid(segments = stats.tasteSegments)
+        }
+        ProfileTasteBalanceNumbers(stats = stats)
+        if (stats.dnaChips.isNotEmpty()) {
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Surface(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .background(
-                            brush = MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed),
-                            shape = RoundedCornerShape(18.dp),
-                        ),
-                    color = Color.Transparent,
-                    shape = RoundedCornerShape(18.dp),
+                stats.dnaChips.forEach { chip ->
+                    ProfileTasteDnaChip(text = chip.localizedLabel())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileTasteGenreGrid(segments: List<ProfileTasteSegment>) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.profile_insights_taste_genres_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = tokens.colors.textMuted,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            segments.chunked(2).forEachIndexed { rowIndex, row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
-                            tint = tokens.colors.accent,
+                    row.forEachIndexed { columnIndex, segment ->
+                        ProfileTasteGenreTile(
+                            segment = segment,
+                            rank = rowIndex * 2 + columnIndex,
+                            modifier = Modifier.weight(1f),
                         )
                     }
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.profile_insights_taste_dna_title),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = tokens.colors.textMuted,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = topSignal,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = tokens.colors.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(Res.string.profile_insights_taste_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = tokens.colors.textMuted,
-                    )
-                }
-            }
-            if (stats.tasteSegments.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    stats.tasteSegments.forEach { segment ->
-                        ProfileTasteSegmentRow(segment = segment)
-                    }
-                }
-            }
-            ProfileTasteBalanceBar(stats = stats)
-            if (stats.dnaChips.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    stats.dnaChips.chunked(2).forEach { rowChips ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            rowChips.forEach { chip ->
-                                ProfileTasteDnaChip(
-                                    text = chip.localizedLabel(),
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            repeat(2 - rowChips.size) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
+                    if (row.size < 2) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -1148,102 +1112,105 @@ private fun ProfileTasteCard(stats: ProfileInsightsStats) {
 }
 
 @Composable
-private fun ProfileTasteSegmentRow(segment: ProfileTasteSegment) {
+private fun ProfileTasteGenreTile(
+    segment: ProfileTasteSegment,
+    rank: Int,
+    modifier: Modifier = Modifier,
+) {
     val tokens = MaterialTheme.nuvio
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = segment.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = "${(segment.share * 100f).roundToInt().coerceIn(1, 100)}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
-                maxLines = 1,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(tokens.colors.borderSubtle),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(segment.share.coerceIn(0f, 1f))
-                    .fillMaxHeight()
-                    .background(MaterialTheme.themePalette.accentBrush()),
-            )
-        }
+    // Ranked opacity instead of one flat tone for every tile: the top genre reads as the
+    // dominant signal at a glance, and the grid still feels like a ranking, not a checklist.
+    val valueAlpha = when (rank) {
+        0 -> 1f
+        1 -> 0.7f
+        else -> 0.5f
+    }
+    Column(
+        modifier = modifier
+            .drawBehind {
+                drawLine(
+                    color = tokens.colors.borderSubtle,
+                    start = Offset.Zero,
+                    end = Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            }
+            .padding(top = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = segment.label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tokens.colors.textPrimary,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = "${(segment.share * 100f).roundToInt().coerceIn(1, 100)}%",
+            style = MaterialTheme.typography.headlineSmall,
+            color = tokens.colors.accent.copy(alpha = valueAlpha),
+            fontWeight = FontWeight.Light,
+        )
     }
 }
 
 @Composable
-private fun ProfileTasteBalanceBar(stats: ProfileInsightsStats) {
+private fun ProfileTasteBalanceNumbers(stats: ProfileInsightsStats) {
     val tokens = MaterialTheme.nuvio
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val movieLeaning = stats.movieShare >= 0.5f
+    val accent = tokens.colors.accent
+    val muted = tokens.colors.textMuted.copy(alpha = 0.4f)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+    ) {
+        ProfileTasteBalanceNumber(
+            percent = stats.movieShare,
+            label = stringResource(Res.string.profile_insights_type_movie),
+            dotColor = if (movieLeaning) accent else muted,
+            valueColor = if (movieLeaning) tokens.colors.textPrimary else tokens.colors.textMuted,
+        )
+        ProfileTasteBalanceNumber(
+            percent = 1f - stats.movieShare,
+            label = stringResource(Res.string.profile_insights_type_series),
+            dotColor = if (movieLeaning) muted else accent,
+            valueColor = if (movieLeaning) tokens.colors.textMuted else tokens.colors.textPrimary,
+        )
+    }
+}
+
+@Composable
+private fun ProfileTasteBalanceNumber(
+    percent: Float,
+    label: String,
+    dotColor: Color,
+    valueColor: Color,
+) {
+    val tokens = MaterialTheme.nuvio
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = "${(percent * 100f).roundToInt().coerceIn(0, 100)}%",
+            style = MaterialTheme.typography.headlineMedium,
+            color = valueColor,
+            fontWeight = FontWeight.Light,
+        )
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(Res.string.profile_insights_taste_balance_title),
-                style = MaterialTheme.typography.labelMedium,
-                color = tokens.colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stats.typeBalanceLabel.localizedLabel(),
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
-                maxLines = 1,
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(tokens.colors.borderSubtle),
-        ) {
-            val movieLeaning = stats.movieShare >= 0.5f
-            val accentBrush = MaterialTheme.themePalette.accentBrush()
-            val mutedBrush = SolidColor(tokens.colors.textMuted.copy(alpha = 0.42f))
             Box(
                 modifier = Modifier
-                    .weight(stats.movieShare.coerceIn(0.05f, 0.95f))
-                    .fillMaxSize()
-                    .background(if (movieLeaning) accentBrush else mutedBrush),
-            )
-            Box(
-                modifier = Modifier
-                    .weight((1f - stats.movieShare).coerceIn(0.05f, 0.95f))
-                    .fillMaxSize()
-                    .background(if (movieLeaning) mutedBrush else accentBrush),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = stringResource(Res.string.profile_insights_type_movie),
-                style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textMuted,
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(dotColor),
             )
             Text(
-                text = stringResource(Res.string.profile_insights_type_series),
+                text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = tokens.colors.textMuted,
             )
@@ -1257,28 +1224,18 @@ private fun ProfileTasteDnaChip(
     modifier: Modifier = Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
-    Row(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(MaterialTheme.themePalette.accentBrush(alpha = tokens.opacity.pressed))
-            .border(1.dp, MaterialTheme.themePalette.accentBrush(alpha = 0.22f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .border(1.dp, tokens.colors.borderSubtle, RoundedCornerShape(999.dp))
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Rounded.AutoAwesome,
-            contentDescription = null,
-            modifier = Modifier
-                .size(14.dp)
-                .gradientMask(MaterialTheme.themePalette.accentBrush()),
-            tint = tokens.colors.accent,
-        )
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             color = tokens.colors.textPrimary,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -1764,6 +1721,10 @@ private fun profileTrackedDurationMs(
     progressEntries: List<WatchProgressEntry>,
 ): Long {
     val durationByKey = mutableMapOf<String, Long>()
+    // Built once per distinct show instead of once per watched episode: profileEstimatedDurationMs
+    // otherwise re-scans the show's whole episode list for every one of its watched episodes,
+    // which is quadratic for a fully-watched series with hundreds of episodes.
+    val episodeIndexByMetaId = mutableMapOf<String, Map<Pair<Int?, Int?>, MetaVideo>>()
 
     fun record(key: String?, durationMs: Long) {
         if (key == null || durationMs <= 0L) return
@@ -1776,7 +1737,14 @@ private fun profileTrackedDurationMs(
         record(entry.profileTrackableActivityKey(), entry.profileTrackedDurationMs())
     }
     watchedItems.forEach { item ->
-        record(item.profileTrackableActivityKey(), item.profileEstimatedDurationMs())
+        record(
+            item.profileTrackableActivityKey(),
+            item.profileEstimatedDurationMs { meta ->
+                episodeIndexByMetaId.getOrPut(meta.id) {
+                    meta.videos.associateBy { video -> video.season to video.episode }
+                }
+            },
+        )
     }
 
     return durationByKey.values.sum()
@@ -1896,7 +1864,9 @@ private fun WatchProgressEntry.isProfileTrackableActivity(): Boolean {
     return kind == "movie" || (kind == "series" && seasonNumber != null && episodeNumber != null)
 }
 
-private fun WatchedItem.profileEstimatedDurationMs(): Long {
+private fun WatchedItem.profileEstimatedDurationMs(
+    episodeIndexFor: (MetaDetails) -> Map<Pair<Int?, Int?>, MetaVideo>,
+): Long {
     val kind = type.profileCompletedContentKind() ?: return 0L
     val meta = profileCachedMeta(type, id)
     val minutes = when {
@@ -1904,8 +1874,8 @@ private fun WatchedItem.profileEstimatedDurationMs(): Long {
             meta?.runtime?.let(::profileParseRuntimeMinutes)?.toLong()
                 ?: ProfileInsightsFallbackMovieMinutes
         kind == "series" && season != null && episode != null ->
-            meta?.videos
-                ?.firstOrNull { video -> video.season == season && video.episode == episode }
+            meta?.let(episodeIndexFor)
+                ?.get(season to episode)
                 ?.runtime
                 ?.takeIf { runtime -> runtime > 0 }
                 ?.toLong()

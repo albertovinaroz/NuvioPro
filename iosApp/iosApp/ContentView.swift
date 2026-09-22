@@ -1068,7 +1068,11 @@ struct DetailComposeView: UIViewControllerRepresentable {
         return NuvioComposeHost.wrap(
             controller,
             disablesInteractiveContentPopGesture: true,
-            passesThroughEmptyNavigationBarAreas: true
+            // Screens with a native trailing "..." menu need the nav bar to handle its own hit
+            // testing normally — the passthrough override only recognizes plain UIControl-based
+            // buttons, but a SwiftUI Menu's tap target isn't one, so taps on it were falling
+            // through to the Compose content underneath instead of opening the menu.
+            passesThroughEmptyNavigationBarAreas: route.trailingMenuActions.isEmpty
         )
     }
 
@@ -1255,6 +1259,36 @@ private struct DetailDestinationView: View {
             if usesComposeNavigationHeader {
                 ToolbarItem(placement: .principal) {
                     Color.clear.frame(width: 1, height: 1)
+                }
+            }
+            if !wrapper.route.trailingMenuActions.isEmpty {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        ForEach(wrapper.route.trailingMenuActions, id: \.id) { action in
+                            Button {
+                                switch action.id {
+                                case "edit_profile":
+                                    appCoordinator.appGateController.requestEditProfile()
+                                case "switch_profile":
+                                    appCoordinator.appGateController.requestProfileSelection()
+                                default:
+                                    break
+                                }
+                            } label: {
+                                if let systemImageName = action.systemImageName {
+                                    Label(action.title, systemImage: systemImageName)
+                                } else {
+                                    Text(action.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        // SF Symbols has no dedicated vertical-ellipsis glyph; rotating the
+                        // standard horizontal one is the usual way to get the "kebab" look.
+                        Image(systemName: "ellipsis.circle")
+                            .rotationEffect(.degrees(90))
+                            .foregroundStyle(.white)
+                    }
                 }
             }
         }

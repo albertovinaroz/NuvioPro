@@ -148,10 +148,12 @@ import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.settings.AccountSettingsScreen
 import com.nuvio.app.features.settings.AddonsSettingsScreen
 import com.nuvio.app.features.settings.ContinueWatchingSettingsScreen
+import com.nuvio.app.features.settings.DownloadsSettingsScreen
 import com.nuvio.app.features.settings.HomescreenSettingsScreen
 import com.nuvio.app.features.settings.LicensesAttributionsSettingsScreen
 import com.nuvio.app.features.settings.MetaScreenSettingsScreen
 import com.nuvio.app.features.settings.PluginsSettingsScreen
+import com.nuvio.app.features.settings.SettingsPage
 import com.nuvio.app.features.settings.SupportersContributorsSettingsScreen
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.streams.BingeGroupCacheRepository
@@ -370,6 +372,17 @@ internal fun MainAppContent(
     val accountSettingsTitle = stringResource(Res.string.compose_settings_page_account)
     val editProfileTitle = stringResource(Res.string.profile_edit_edit_title)
     val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
+    val profileMenuActions = profileEditSwitchMenuActions()
+    // Only the pushed screen instance that IS the Profile page reacts — initialRoute is unique to
+    // whichever ScreenViewController the user currently has open, so this never fires for other
+    // screens' instances of MainAppContent.
+    val isProfilePageInstance = (initialRoute as? SettingsPageRoute)?.pageName == SettingsPage.Profile.name
+    LaunchedEffect(appGateController, isProfilePageInstance) {
+        if (!isProfilePageInstance) return@LaunchedEffect
+        appGateController?.editProfileRequests?.collect {
+            pushEditProfile()
+        }
+    }
     val supportersSettingsTitle = stringResource(Res.string.compose_settings_page_supporters_contributors)
     val licensesSettingsTitle = stringResource(Res.string.compose_settings_page_licenses_attributions)
     val whatsNewTitle = stringResource(Res.string.whats_new_title)
@@ -1585,7 +1598,17 @@ internal fun MainAppContent(
                                 onEditProfile = pushEditProfile,
                                 onSettingsPageClick = if (useNativeNavigation && !isTabletLayout) {
                                     { pageName, title ->
-                                        navController.navigate(SettingsPageRoute(pageName, title))
+                                        navController.navigate(
+                                            SettingsPageRoute(
+                                                pageName = pageName,
+                                                title = title,
+                                                trailingMenuActions = if (pageName == SettingsPage.Profile.name) {
+                                                    profileMenuActions
+                                                } else {
+                                                    emptyList()
+                                                },
+                                            ),
+                                        )
                                     }
                                 } else {
                                     null
@@ -1839,7 +1862,13 @@ internal fun MainAppContent(
                         navController = navController,
                         useNativeNavigation = useNativeNavigation,
                         onOpenDownload = ::openDownloadedItem,
+                        settingsTitle = downloadsSettingsTitle,
                     )
+                }
+                entry<DownloadsPreferencesRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        DownloadsSettingsScreen(onBack = onBack)
+                    }
                 }
                 entry<DownloadShowRoute> { route ->
                     DownloadShowDestination(

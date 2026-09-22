@@ -3,6 +3,14 @@ package com.nuvio.app.navigation
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
+/** One entry in a pushed screen's native trailing "..." nav bar menu (iOS UIMenu-style). */
+@Serializable
+data class TrailingMenuAction(
+    val id: String,
+    val title: String,
+    val systemImageName: String? = null,
+)
+
 @Serializable
 sealed interface AppRoute : NavKey {
     val title: String?
@@ -22,6 +30,10 @@ sealed interface AppRoute : NavKey {
     /** Lets an explicitly cross-tab route select its native SwiftUI stack. */
     val preferredTabName: String?
         get() = null
+
+    /** Native trailing nav bar menu for this pushed screen, if any (empty hides the button). */
+    val trailingMenuActions: List<TrailingMenuAction>
+        get() = emptyList()
 }
 
 @Serializable
@@ -70,6 +82,7 @@ data class EntityBrowseRoute(
 data class SettingsPageRoute(
     val pageName: String,
     override val title: String,
+    override val trailingMenuActions: List<TrailingMenuAction> = emptyList(),
 ) : SettingsDestinationRoute
 
 /** Reached from Home's notifications bell (poster hero style), not nested under any tab. */
@@ -125,6 +138,9 @@ data class DownloadShowRoute(
     val showId: String,
     override val title: String,
 ) : AppRoute
+
+@Serializable
+data class DownloadsPreferencesRoute(override val title: String = "") : AppRoute
 
 @Serializable
 data class AddonsSettingsRoute(override val title: String = "") : SettingsDestinationRoute
