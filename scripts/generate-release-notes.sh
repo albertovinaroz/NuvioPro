@@ -130,9 +130,44 @@ resolve_pull_request() {
         || true
 }
 
+# Buckets each bullet into one of our three release-notes sections. Username (a GitHub login when
+# resolvable, otherwise a sanitized author name) is the primary signal; author name/email are a
+# fallback for commits authored before a GitHub login can be resolved (e.g. offline mode).
+classify_author() {
+    local username_lower author_name_lower author_email_lower
+    username_lower="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+    author_name_lower="$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')"
+    author_email_lower="$(printf '%s' "${3:-}" | tr '[:upper:]' '[:lower:]')"
+
+    case "$username_lower" in
+        albertovinaroz) echo "pro"; return ;;
+        luqmanfadlli) echo "luqman"; return ;;
+    esac
+    if [[ "$author_email_lower" == albertovinaroz*@* ]]; then
+        echo "pro"; return
+    fi
+    if [[ "$author_name_lower" == "luqman fadlli" || "$author_email_lower" == luqman.fadlli@* ]]; then
+        echo "luqman"; return
+    fi
+    echo "nuviomedia"
+}
+
 seen_subjects=$'\n'
 seen_pull_requests=$'\n'
 separator=$'\x1f'
+notes_nuviomedia=""
+notes_luqman=""
+notes_pro=""
+
+append_note() {
+    local bucket="$1"
+    local line="$2"
+    case "$bucket" in
+        pro) notes_pro+="${line}"$'\n' ;;
+        luqman) notes_luqman+="${line}"$'\n' ;;
+        *) notes_nuviomedia+="${line}"$'\n' ;;
+    esac
+}
 
 while IFS="$separator" read -r commit short_hash subject author_name author_email; do
     [[ -n "$commit" ]] || continue
@@ -149,12 +184,13 @@ while IFS="$separator" read -r commit short_hash subject author_name author_emai
             seen_pull_requests+="${pull_request_number}"$'\n'
             is_release_note "$pull_request_title" || continue
             display_pull_request_title="$(printf '%s' "$pull_request_title" | sed -E 's/[[:space:]]+$//')"
-            printf -- '- [%s (#%s)](https://github.com/%s/pull/%s) @%s  \n' \
+            bucket="$(classify_author "$pull_request_username" "$author_name" "$author_email")"
+            append_note "$bucket" "$(printf -- '- [%s (#%s)](https://github.com/%s/pull/%s) @%s  ' \
                 "$display_pull_request_title" \
                 "$pull_request_number" \
                 "$repository" \
                 "$pull_request_number" \
-                "${pull_request_username:-unknown}"
+                "${pull_request_username:-unknown}")"
             continue
         fi
     fi
@@ -167,8 +203,22 @@ while IFS="$separator" read -r commit short_hash subject author_name author_emai
 
     display_subject="$(printf '%s' "$subject" | sed -E 's/[[:space:]]+$//; s/\.$//')"
     username="$(resolve_username "$commit" "$author_name" "$author_email")"
-    printf -- '- %s @%s  \n' "$display_subject" "$username"
+    bucket="$(classify_author "$username" "$author_name" "$author_email")"
+    append_note "$bucket" "$(printf -- '- %s @%s  ' "$display_subject" "$username")"
 done < <(
     git log "${from_ref}..${to_ref}" --no-merges \
         --format="%H${separator}%h${separator}%s${separator}%an${separator}%ae"
 )
+
+print_section() {
+    local title="$1"
+    local body="$2"
+    [[ -n "$body" ]] || return 0
+    printf '### %s\n\n' "$title"
+    printf '%s' "$body"
+    printf '\n'
+}
+
+print_section "Upstream (NuvioMedia)" "$notes_nuviomedia"
+print_section "Upstream (luqmanfadlli's fork)" "$notes_luqman"
+print_section "Pro" "$notes_pro"

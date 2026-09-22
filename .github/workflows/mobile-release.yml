@@ -136,12 +136,17 @@ jobs:
             --to "${CURRENT_BUMP}" \
             --repository "${GITHUB_REPOSITORY}" \
             --exclude "${EXCLUDE_COMMITS}" \
-            > release-notes.md
+            > changelog.md
 
-          if [[ ! -s release-notes.md ]]; then
+          if [[ ! -s changelog.md ]]; then
             echo "No release-note commits were found." >&2
             exit 1
           fi
+
+          ./scripts/render-pro-release-notes.sh \
+            --version "${{ steps.release.outputs.version }}" \
+            --changelog changelog.md \
+            > release-notes.md
 
           {
             echo "## ${{ steps.release.outputs.version }} release notes"
