@@ -877,8 +877,6 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var localizedAddProfileTitle = ""
     @Published var isProfileSwitcherPresented = false
 
-    private var tabBarTransitionTask: Task<Void, Never>?
-
     let homeCoordinator = TabNavigationCoordinator()
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
@@ -960,9 +958,6 @@ final class AppNavigationCoordinator: ObservableObject {
             profileTabInteraction.publishIconFrame()
         }
 
-        tabBarTransitionTask?.cancel()
-        tabBarTransitionTask = nil
-
         guard animated else {
             isTabBarVisible = visible
             isNativeTabBarVisible = visible
@@ -970,41 +965,14 @@ final class AppNavigationCoordinator: ObservableObject {
             return
         }
 
-        if visible {
-            guard !isTabBarVisible || !isCompactPillHidden else { return }
-            withAnimation(.smooth(duration: 0.38)) {
-                isTabBarVisible = visible
-            }
-            let needsGrowDelay = !isNativeTabBarVisible
-
-            tabBarTransitionTask = Task { [weak self] in
-                if needsGrowDelay {
-                    try? await Task.sleep(nanoseconds: 340_000_000)
-                }
-                guard !Task.isCancelled, let self, self.isTabBarVisible else { return }
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    self.isNativeTabBarVisible = true
-                    self.isCompactPillHidden = true
-                }
-                try? await Task.sleep(nanoseconds: 50_000_000)
-                guard !Task.isCancelled, self.isTabBarVisible else { return }
-                self.refreshNativeTabBarMetrics()
-            }
-            return
-        }
-
-        guard isTabBarVisible || isNativeTabBarVisible || isCompactPillHidden else { return }
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            isCompactPillHidden = false
-            isNativeTabBarVisible = false
-        }
-        withAnimation(.smooth(duration: 0.38)) {
-            isTabBarVisible = false
-        }
+        // `animated` is only ever requested for `.morphed`. Its custom glass pill
+        // (NuvioGlassTabBar) is the sole on-screen instrument in that mode (the real system tab
+        // bar stays hidden — see the `.toolbar` visibility below), and it already morphs between
+        // its own expanded/collapsed layouts inside one glass container via its own
+        // `.animation(value: isExpanded)`. There's no second view to hand off to, so a plain
+        // state flip is enough here.
+        guard isTabBarVisible != visible else { return }
+        isTabBarVisible = visible
     }
 
     func reloadLiveTvTabVisibility() {
@@ -1991,22 +1959,13 @@ struct NativeNavContentView: View {
             if appCoordinator.tabBarBehavior.usesCompactPill &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
-                GeometryReader { proxy in
-                    let metrics = appCoordinator.isTabBarVisible
-                        ? appCoordinator.nativeTabBarMetrics(for: proxy.size)
-                        : nil
-                    NuvioGlassTabBar(
-                        appCoordinator: appCoordinator,
-                        iconStore: iconStore,
-                        expandedMetrics: metrics
-                    )
-                    .padding(.leading, metrics?.leadingInset ?? (appCoordinator.isTabBarVisible ? 20 : 16))
-                    .padding(.trailing, metrics?.trailingInset ?? (appCoordinator.isTabBarVisible ? 20 : 16))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                }
-                .ignoresSafeArea(.all)
-                .opacity(appCoordinator.isCompactPillHidden ? 0 : 1)
-                .accessibilityHidden(appCoordinator.isCompactPillHidden)
+                // No .opacity/.accessibilityHidden gating here: this pill is the only tab bar
+                // instrument in `morphed` (the real one stays hidden), so it's always shown at
+                // this call site and morphs its own shape internally.
+                NuvioGlassTabBar(
+                    appCoordinator: appCoordinator,
+                    iconStore: iconStore
+                )
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
