@@ -140,16 +140,15 @@ object WatchingActions {
     ) {
         if (!meta.type.isSeriesLikeType()) return
 
+        // Looked up once here instead of once per episode below: progressForVideo() re-scans
+        // every progress entry across all shows on every call, which made unmarking a whole
+        // series with hundreds of episodes freeze the UI (one full rescan per episode).
+        val progressByVideoId = WatchProgressRepository.uiState.value.byVideoIdForContent(meta.id)
         WatchedRepository.reconcileSeriesWatchedState(
             meta = meta,
             todayIsoDate = todayIsoDate,
             isEpisodeCompleted = { episode ->
-                WatchProgressRepository.progressForVideo(
-                    videoId = meta.episodePlaybackId(episode),
-                    parentMetaId = meta.id,
-                    seasonNumber = episode.season,
-                    episodeNumber = episode.episode,
-                )?.isCompleted == true
+                progressByVideoId[meta.episodePlaybackId(episode)]?.isCompleted == true
             },
         )
     }

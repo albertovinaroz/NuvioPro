@@ -1127,8 +1127,9 @@ object WatchProgressRepository {
         if (videoIds.isEmpty()) return
 
         activeProgressProvider()?.let { provider ->
+            val videoIdSet = videoIds.toSet()
             val entriesToRemove = currentEntries().filter { entry ->
-                entry.videoId in videoIds &&
+                entry.videoId in videoIdSet &&
                     (parentMetaId == null || entry.parentMetaId == parentMetaId)
             }
             val locallyRemovedEntries = removeStoredLocalEntries(entriesToRemove)
