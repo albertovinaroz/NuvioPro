@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.1-b4",
+          "buildVersion": "159",
+          "date": "2026-09-23T18:08:16Z",
+          "localizedDescription": "# Nuvio Pro 0.5.1-b4\r\n\r\n**AltStore/SideStore source:**\r\n```\r\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\r\n```\r\n\r\n## Changelog\r\n\r\n### Upstream (luqmanfadlli's fork)\r\n\r\n- fix(settings): restore the tablet nav bar preview @luqmanfadlli  \r\n- fix(player): time the movie recommendations to the last two minutes @luqmanfadlli  \r\n- fix(navigation): keep the tab bar on Settings sub-pages @luqmanfadlli  \r\n- feat(navigation): inline labels on the tablet floating pill @luqmanfadlli  \r\n- fix(ios): fix Live TV visibility and legacy tab bar on iOS 26+ @luqmanfadlli  \r\n- feat(settings): let the floating nav bar sit at the top @luqmanfadlli  \r\n- fix(settings): preview the real tablet classic nav bar @luqmanfadlli  \r\n- fix(navigation): skip the pill slide on iPad after a drag @luqmanfadlli  \r\n\r\n### Pro\r\n\r\n- fix(navigation): use Nuvio's own sidebar icons in the Compose-rendered tab bars @albertovinaroz  \r\n\r\n\r\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.1-b4/nuvio-0.5.1-b4-pro-release.ipa",
+          "size": 68354850,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.1-b3",
           "buildVersion": "158",
           "date": "2026-09-23T13:51:25Z",
