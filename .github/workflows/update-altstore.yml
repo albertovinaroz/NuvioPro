@@ -194,7 +194,11 @@ jobs:
 
 
           def wait_for_asset(release_url, release, pattern, label):
-              attempts = 8
+              # A release edited (e.g. notes) while still a draft can take longer than a
+              # few seconds for the by-tag lookup to reflect its assets once published —
+              # observed once taking several minutes for 0.5.1-b2. 20 attempts * 15s is
+              # ~5 minutes of budget instead of the previous ~2.
+              attempts = 20
               for attempt in range(attempts):
                   asset = find_asset(release, pattern)
 
