@@ -96,6 +96,7 @@ internal fun JellyTabRow(
                             item.drawable != null -> Icon(painterResource(item.drawable), null, iconModifier, tint = iconTint)
                         }
                     }
+                    Spacer(Modifier.height(3.dp * labelFraction))
                     Box(Modifier.height(labelHeight * labelFraction).fillMaxWidth().clipToBounds().alpha(labelFraction)) {
                         Text(
                             text = item.label,

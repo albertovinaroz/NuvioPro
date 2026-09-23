@@ -215,11 +215,7 @@ internal fun mainFloatingNavigationItems(
         FloatingNavigationItem(
             selected = highlightedTab == AppScreenTab.Search,
             onClick = { onTabSelected(AppScreenTab.Search) },
-            // Res.drawable.sidebar_search/library fail to resolve from this file despite
-            // compiling into the generated commonMain resource accessors (a resource-
-            // generation edge case, not something this merge should reintroduce) —
-            // AppScreenTab.icon(...) is the same working icon source Home/LiveTv use here.
-            icon = AppScreenTab.Search.icon(highlightedTab == AppScreenTab.Search),
+            drawable = AppScreenTab.Search.sidebarDrawable,
             label = stringResource(Res.string.compose_nav_search),
         ),
     )
@@ -227,7 +223,7 @@ internal fun mainFloatingNavigationItems(
         FloatingNavigationItem(
             selected = highlightedTab == AppScreenTab.Library,
             onClick = { onTabSelected(AppScreenTab.Library) },
-            icon = AppScreenTab.Library.icon(highlightedTab == AppScreenTab.Library),
+            drawable = AppScreenTab.Library.sidebarDrawable,
             label = stringResource(Res.string.compose_nav_library),
         ),
     )
@@ -279,13 +275,13 @@ internal fun MainClassicNavigationBar(
         NavItem(
             selected = highlightedTab == AppScreenTab.Search,
             onClick = { onTabSelected(AppScreenTab.Search) },
-            icon = AppScreenTab.Search.icon(highlightedTab == AppScreenTab.Search),
+            icon = AppScreenTab.Search.sidebarDrawable,
             contentDescription = stringResource(Res.string.compose_nav_search),
         )
         NavItem(
             selected = highlightedTab == AppScreenTab.Library,
             onClick = { onTabSelected(AppScreenTab.Library) },
-            icon = AppScreenTab.Library.icon(highlightedTab == AppScreenTab.Library),
+            icon = AppScreenTab.Library.sidebarDrawable,
             contentDescription = stringResource(Res.string.compose_nav_library),
         )
         if (showLiveTv) {

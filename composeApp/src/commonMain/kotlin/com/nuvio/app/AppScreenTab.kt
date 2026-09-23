@@ -13,6 +13,10 @@ import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.nuvio.app.core.ui.NativeNavigationTab
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.sidebar_library
+import nuvio.composeapp.generated.resources.sidebar_search
+import org.jetbrains.compose.resources.DrawableResource
 
 enum class AppScreenTab {
     Home,
@@ -57,3 +61,21 @@ internal fun AppScreenTab.icon(selected: Boolean): ImageVector = when (this) {
     AppScreenTab.LiveTv -> if (selected) Icons.Filled.Tv else Icons.Outlined.Tv
     AppScreenTab.Settings -> if (selected) Icons.Filled.Person else Icons.Outlined.Person
 }
+
+/**
+ * Nuvio's own hand-drawn sidebar icon for [tab], matching what every other tab bar (native iOS,
+ * Android, the Settings preview) actually shows — unlike [icon] above, this isn't a generic
+ * Material fallback. Only defined for Search/Library, the two tabs where a custom drawable
+ * (rather than a Material icon) is the source of truth.
+ *
+ * Lives here instead of being referenced directly from MainTabsDestination.kt: Res.drawable.
+ * sidebar_search/library fail to resolve from that file specifically despite compiling into the
+ * generated commonMain resource accessors (a resource-generation edge case) — resolving them from
+ * this file and exposing them through a plain property works around it.
+ */
+internal val AppScreenTab.sidebarDrawable: DrawableResource
+    get() = when (this) {
+        AppScreenTab.Search -> Res.drawable.sidebar_search
+        AppScreenTab.Library -> Res.drawable.sidebar_library
+        else -> error("No sidebar drawable for $this")
+    }
