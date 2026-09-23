@@ -58,8 +58,14 @@ class LibraryProviderOrdersTest {
     fun `vertical filtering preserves server positions and title sorting stays local`() {
         val orders = mapOf(firstKey to keys.withIndex().associate { (index, key) -> key to index })
         val sections = listOf(LibrarySection(firstKey, "First", items))
-        val projection = buildLibraryVerticalProjection(sections, LibrarySourceMode.MDBLIST, firstKey, "movie",
-            LibrarySortOption.ADDED_ASC, orders)
+        val projection = buildLibraryVerticalProjection(
+            sections = sections,
+            sourceMode = LibrarySourceMode.MDBLIST,
+            selectedSectionKey = firstKey,
+            selectedType = "movie",
+            sortOption = LibrarySortOption.ADDED_ASC,
+            providerOrders = orders,
+        )
         assertEquals(listOf("Zulu", "Bravo"), projection.entries.map { it.item.name })
         assertEquals(listOf("Alpha", "Bravo", "Zulu"),
             sortLibraryItems(items, LibrarySortOption.TITLE_ASC, LibrarySourceMode.MDBLIST, firstKey, orders[firstKey]).map { it.name })
