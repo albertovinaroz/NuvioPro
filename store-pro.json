@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.1-b3",
+          "buildVersion": "158",
+          "date": "2026-09-23T13:51:25Z",
+          "localizedDescription": "# Nuvio Pro 0.5.1-b3\r\n\r\n**AltStore/SideStore source:**\r\n```\r\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\r\n```\r\n\r\n## Changelog\r\n\r\n### Pro\r\n\r\n- fix(livetv): add toggle to enable/disable Live TV @albertovinaroz\r\n- fix(tabbar): improve transparency level in morphed mode @albertovinaroz \r\n- fix(ci): widen the AltStore asset-visibility retry window @albertovinaroz  \r\n\r\n\r\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.1-b3/nuvio-0.5.1-b3-pro-release.ipa",
+          "size": 68330470,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.1-b2",
           "buildVersion": "157",
           "date": "2026-09-23T09:11:10Z",
