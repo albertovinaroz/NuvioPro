@@ -62,5 +62,5 @@ data class LiveTvUiState(
             stalkerSettings.isConfigured || xtreamSettings.isConfigured
 
     val showInNavigation: Boolean
-        get() = hasPlaylist && isNavigationEnabled
+        get() = isNavigationEnabled
 }

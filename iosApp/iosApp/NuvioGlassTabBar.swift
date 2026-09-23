@@ -176,7 +176,7 @@ struct NuvioGlassTabBar: View {
                     .frame(height: expandedHeight)
                 }
             }
-            .glassEffect(.clear.interactive(), in: Capsule())
+            .glassEffect(.regular.interactive(), in: Capsule())
             .glassEffectID(Self.barGlassID, in: glassNamespace)
         }
         .coordinateSpace(name: Self.tabBarCoordinateSpaceName)
