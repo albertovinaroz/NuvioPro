@@ -239,6 +239,14 @@ struct ComposeView: UIViewControllerRepresentable {
 // MARK: - Native iOS navigation
 
 @available(iOS 16.0, *)
+extension AppRoute {
+    var keepsTabBar: Bool { self is SettingsDestinationRoute }
+}
+
+extension Array where Element == RouteWrapper {
+    var keepsTabBar: Bool { allSatisfy { $0.route.keepsTabBar } }
+}
+
 struct RouteWrapper: Hashable, Identifiable {
     let id = UUID()
     let route: AppRoute
@@ -890,6 +898,11 @@ final class AppNavigationCoordinator: ObservableObject {
         setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
+        NativeTabBridgeKt.observeNativePopToRoot { [weak self] tabName in
+            guard let self, let tab = NuvioAppTab.from(kotlinName: tabName) else { return }
+            self.coordinator(for: tab).popToRoot()
+            self.selectedTab = tab
+        }
         NativeTabBridgeKt.observeNativeTabBarVisible { [weak self] visible in
             guard let self else { return }
             self.setTabBarVisible(visible.boolValue, animated: self.tabBarBehavior == .morphed)
@@ -929,7 +942,7 @@ final class AppNavigationCoordinator: ObservableObject {
     }
 
     private func refreshSelectedTabDepth() {
-        let atRoot = coordinator(for: selectedTab).path.isEmpty
+        let atRoot = coordinator(for: selectedTab).path.keepsTabBar
         if isSelectedTabAtRoot != atRoot {
             isSelectedTabAtRoot = atRoot
         }
@@ -1178,6 +1191,8 @@ struct AppGateComposeView: UIViewControllerRepresentable {
 @available(iOS 16.0, *)
 struct DetailComposeView: UIViewControllerRepresentable {
     let route: AppRoute
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     let coordinator: TabNavigationCoordinator
     let appCoordinator: AppNavigationCoordinator
 
@@ -1200,7 +1215,9 @@ struct DetailComposeView: UIViewControllerRepresentable {
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            appGateController: appCoordinator.appGateController
+            appGateController: appCoordinator.appGateController,
+            useNativeTabBar: usesNativeTabBar,
+            useTabletFloatingTabBar: usesTabletFloatingTabBar
         )
         return NuvioComposeHost.wrap(
             controller,
@@ -1248,6 +1265,8 @@ struct TabContentView: View {
                 if appCoordinator.selectedTab == tab {
                     DetailDestinationView(
                         wrapper: wrapper,
+                        usesNativeTabBar: usesNativeTabBar,
+                        usesTabletFloatingTabBar: usesTabletFloatingTabBar,
                         coordinator: coordinator,
                         appCoordinator: appCoordinator
                     )
@@ -1260,7 +1279,7 @@ struct TabContentView: View {
         .toolbar(
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
-                coordinator.path.isEmpty &&
+                coordinator.path.keepsTabBar &&
                 // `morphed` renders its own glass pill (NuvioGlassTabBar) as the only visible tab
                 // bar at all times — the real system one stays hidden so there's never a second
                 // instrument to keep in sync with it.
@@ -1330,6 +1349,8 @@ private struct NativeToolbarReadabilityFade: View {
 @available(iOS 16.0, *)
 private struct DetailDestinationView: View {
     let wrapper: RouteWrapper
+    let usesNativeTabBar: Bool
+    let usesTabletFloatingTabBar: Bool
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
     @StateObject private var trailerMuteViewModel = HeroTrailerMuteViewModel()
@@ -1350,6 +1371,8 @@ private struct DetailDestinationView: View {
         ZStack(alignment: .top) {
             DetailComposeView(
                 route: wrapper.route,
+                usesNativeTabBar: usesNativeTabBar,
+                usesTabletFloatingTabBar: usesTabletFloatingTabBar,
                 coordinator: coordinator,
                 appCoordinator: appCoordinator
             )
@@ -1429,7 +1452,14 @@ private struct DetailDestinationView: View {
                 }
             }
         }
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(
+            usesNativeTabBar &&
+                wrapper.route.keepsTabBar &&
+                appCoordinator.isNativeTabBarVisible
+                ? Visibility.visible
+                : Visibility.hidden,
+            for: .tabBar
+        )
         .toolbar(
             wrapper.route.hidesNavigationBar ? Visibility.hidden : Visibility.visible,
             for: .navigationBar
@@ -1821,7 +1851,7 @@ struct NativeNavContentView: View {
             return false
         }
         if #available(iOS 26.0, *) {
-            return true
+            return appCoordinator.tabBarBehavior.isEnabled
         }
         return false
     }
@@ -1946,6 +1976,7 @@ struct NativeNavContentView: View {
                 }
             }
         }
+        .id(appCoordinator.isLiveTvTabVisible)
         .tint(Color(uiColor: iconStore.accentColor))
         .tabBarMinimizeBehavior(
             appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
