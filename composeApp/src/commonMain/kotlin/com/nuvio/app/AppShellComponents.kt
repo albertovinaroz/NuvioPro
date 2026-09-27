@@ -157,7 +157,7 @@ internal data class AppTabActions(
     val onRequestedSettingsPageConsumed: () -> Unit = {},
     val onInitialHomeContentRendered: () -> Unit = {},
     val onNotificationsClick: (() -> Unit)? = null,
-    val onDownloadsClick: (() -> Unit)? = null,
+    val onLibraryDownloadsClick: (() -> Unit)? = null,
     val onLibraryRatedClick: (() -> Unit)? = null,
 )
 
@@ -217,7 +217,7 @@ internal fun AppTabHost(
                     onSectionViewAllClick = actions.onLibrarySectionViewAllClick,
                     onCloudFilePlay = actions.onCloudFilePlay,
                     onConnectCloudClick = actions.onConnectCloudClick,
-                    onDownloadsClick = actions.onDownloadsClick,
+                    onDownloadsClick = actions.onLibraryDownloadsClick,
                     disintegrationRequest = state.libraryDisintegrationRequest,
                     onRatedClick = actions.onLibraryRatedClick,
                 )
