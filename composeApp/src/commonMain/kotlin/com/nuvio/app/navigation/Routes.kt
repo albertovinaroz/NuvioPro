@@ -121,16 +121,16 @@ data class MetaScreenSettingsRoute(override val title: String = "") : SettingsDe
 data class ContinueWatchingSettingsRoute(override val title: String = "") : SettingsDestinationRoute
 
 @Serializable
-data class DownloadsSettingsRoute(
+data class DownloadsRoute(
     override val title: String = "",
-    // Every other SettingsDestinationRoute is only ever reached from within Settings, where
-    // hardcoding "Settings" is exactly right. This one is also reached from Home's downloads
-    // shortcut (see MainAppContent's onDownloadsClick) — that push should stay on whichever tab
-    // it came from instead, so it can opt out and fall back to the origin tab.
-    val forceSettingsTab: Boolean = true,
+    // Reached from within Library (its own downloads button), where hardcoding "Library" is
+    // exactly right, and from Home's downloads shortcut (see MainAppContent's onDownloadsClick)
+    // — that push should stay on whichever tab it came from instead, so it can opt out and fall
+    // back to the origin tab.
+    val forceLibraryTab: Boolean = true,
 ) : AppRoute {
     override val preferredTabName: String?
-        get() = if (forceSettingsTab) "Settings" else null
+        get() = if (forceLibraryTab) "Library" else null
 }
 
 @Serializable
