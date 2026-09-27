@@ -107,6 +107,8 @@ private fun PlayerGestureFeedback(
                     val trackHeight = minOf(maxHeight / 4, 104.dp)
                     val animatedLevel by animateFloatAsState(level, tween(80), label = "playerGestureLevel")
                     val percent = (level * 100f).roundToInt()
+                    // Fork: gestures can supply their own reading (e.g. a custom label) via messageArgs.
+                    val reading = feedback.messageArgs.firstOrNull()?.toString() ?: percent.toString()
                     Column(
                         modifier = Modifier
                             .align(if (isBrightness) Alignment.CenterStart else Alignment.CenterEnd)
@@ -117,7 +119,7 @@ private fun PlayerGestureFeedback(
                         // Centered on the bar; unbounded width lets the digits overflow the 6dp
                         // column evenly on both sides so the bar itself never moves.
                         Text(
-                            text = percent.toString(),
+                            text = reading,
                             color = Color.White,
                             style = MaterialTheme.nuvioTypeScale.bodySm.copy(
                                 fontWeight = FontWeight.SemiBold,

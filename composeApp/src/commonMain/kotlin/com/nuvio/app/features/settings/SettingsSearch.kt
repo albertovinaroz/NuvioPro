@@ -108,6 +108,7 @@ internal fun settingsSearchEntries(
     val detailPage = stringResource(Res.string.compose_settings_page_meta_screen)
     val continueWatchingPage = stringResource(Res.string.compose_settings_page_continue_watching)
     val posterStylePage = stringResource(Res.string.compose_settings_page_poster_customization)
+    val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
     val addonsPage = stringResource(Res.string.compose_settings_page_addons)
     val pluginsPage = stringResource(Res.string.compose_settings_page_plugins)
     val collectionsPage = stringResource(Res.string.collections_header)
@@ -238,6 +239,15 @@ internal fun settingsSearchEntries(
         pageLabel = contentDiscoveryPage,
         section = stringResource(Res.string.settings_content_discovery_section_search),
         icon = Icons.Rounded.Search,
+    )
+    addRow(
+        page = SettingsPage.Downloads,
+        key = "download-location",
+        title = stringResource(Res.string.settings_downloads_location_title),
+        description = stringResource(Res.string.compose_settings_root_downloads_description),
+        pageLabel = downloadsPage,
+        section = downloadsPage,
+        icon = Icons.Rounded.CloudDownload,
     )
     addPage(
         page = SettingsPage.Playback,

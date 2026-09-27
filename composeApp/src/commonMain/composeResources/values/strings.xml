@@ -654,7 +654,6 @@
     <string name="detail_comments_spoiler_card">This comment contains spoilers.</string>
     <string name="detail_comments_spoiler_hidden_sheet">This comment contains spoilers and has been hidden.</string>
     <string name="detail_comments_title">Comments</string>
-    <string name="detail_play_random_episode">Play random episode</string>
     <string name="detail_rating_star">%1$d star</string>
     <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_trailer_category_count">%1$s (%2$d)</string>
@@ -1331,8 +1330,6 @@
     <string name="settings_playback_libmpv_yuv420p">libmpv YUV420P Compatibility</string>
     <string name="settings_playback_libmpv_yuv420p_description">Force YUV420P output for devices with renderer or color issues.</string>
     <string name="settings_playback_section_next_episode">NEXT EPISODE</string>
-    <string name="settings_playback_random_episodes_include_watched">Include watched episodes in random playback</string>
-    <string name="settings_playback_random_episodes_include_watched_description">When disabled, random playback prioritizes unwatched episodes and only falls back to watched episodes when all are watched.</string>
     <string name="settings_playback_section_player">PLAYER</string>
     <string name="settings_playback_section_skip_segments">SKIP SEGMENTS</string>
     <string name="settings_playback_section_stream_auto_play">STREAM AUTO-PLAY</string>

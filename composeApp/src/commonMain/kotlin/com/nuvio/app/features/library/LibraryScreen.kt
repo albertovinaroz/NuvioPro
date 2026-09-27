@@ -1,5 +1,7 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.togetherWith
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -102,6 +105,7 @@ import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioShelfSection
 import com.nuvio.app.core.ui.NuvioViewAllPillSize
@@ -109,7 +113,6 @@ import com.nuvio.app.core.ui.ScopedDisintegrationTracker
 import com.nuvio.app.core.ui.SkeletonBlock
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
-import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.features.cloud.CloudLibraryFile
 import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.cloud.CloudLibraryItemType
@@ -121,7 +124,6 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.HomePosterCard
 import com.nuvio.app.features.home.components.HomeSkeletonRow
-import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
 import com.nuvio.app.features.watched.WatchedRepository
@@ -152,9 +154,9 @@ fun LibraryScreen(
     onSectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     onConnectCloudClick: (() -> Unit)? = null,
-    onDownloadsClick: (() -> Unit)? = null,
     disintegrationRequest: DisintegrationRequest<String>? = null,
     onRatedClick: (() -> Unit)? = null,
+    onDownloadsClick: (() -> Unit)? = null,
 ) {
     val uiState by remember {
         LibraryRepository.ensureLoaded()
@@ -430,73 +432,6 @@ fun LibraryScreen(
                     // A touch more than the bare status-bar inset — matching Search's header,
                     // which gets the same small top margin.
                     topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                    actions = {
-                        if (sourceMode == LibraryViewMode.Saved) {
-                            LibraryListManagementButton()
-                            val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
-                                LibraryLayoutMode.VERTICAL
-                            } else {
-                                LibraryLayoutMode.HORIZONTAL
-                            }
-                            IconButton(
-                                onClick = {
-                                    LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
-                                },
-                            ) {
-                                Crossfade(
-                                    targetState = targetLayout,
-                                    animationSpec = tween(durationMillis = 140),
-                                    label = "libraryLayoutAction",
-                                ) { animatedTargetLayout ->
-                                    Icon(
-                                        imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                            Icons.Rounded.GridView
-                                        } else {
-                                            Icons.Rounded.ViewAgenda
-                                        },
-                                        contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                            stringResource(Res.string.library_layout_show_vertical)
-                                        } else {
-                                            stringResource(Res.string.library_layout_show_horizontal)
-                                        },
-                                        tint = MaterialTheme.nuvio.colors.textPrimary,
-                                    )
-                                }
-                            }
-                        }
-                        if (sourceMode != LibraryViewMode.Cloud) {
-                            val openCalendarLabel = stringResource(Res.string.library_calendar_open)
-                            IconButton(
-                                onClick = { showReleaseCalendar = true },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .semantics { contentDescription = openCalendarLabel },
-                            ) {
-                                LibraryCalendarGlyph(
-                                    modifier = Modifier.size(19.dp),
-                                    tint = MaterialTheme.nuvio.colors.textPrimary,
-                                    cutoutColor = MaterialTheme.colorScheme.background,
-                                )
-                            }
-                        }
-                        if (onDownloadsClick != null) {
-                            LibraryDownloadsButton(onClick = onDownloadsClick)
-                        }
-                        val openRatedLabel = stringResource(Res.string.library_rated_open)
-                        IconButton(
-                            onClick = { onRatedClick?.invoke() },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .semantics { contentDescription = openRatedLabel },
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(19.dp),
-                                tint = MaterialTheme.nuvio.colors.textPrimary,
-                            )
-                        }
-                    },
                 )
                 // Same title-to-control gap as Search's header-to-searchbar spacer, so the two
                 // sections read as sharing one layout rhythm.
@@ -507,14 +442,89 @@ fun LibraryScreen(
                         sourceModeName = mode.name
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
-                )
+                ) {
+                    if (sourceMode == LibraryViewMode.Saved) {
+                        LibraryListManagementButton()
+                        val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+                            LibraryLayoutMode.VERTICAL
+                        } else {
+                            LibraryLayoutMode.HORIZONTAL
+                        }
+                        IconButton(
+                            onClick = {
+                                LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
+                            },
+                        ) {
+                            Crossfade(
+                                targetState = targetLayout,
+                                animationSpec = tween(durationMillis = 140),
+                                label = "libraryLayoutAction",
+                            ) { animatedTargetLayout ->
+                                Icon(
+                                    imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                        Icons.Rounded.GridView
+                                    } else {
+                                        Icons.Rounded.ViewAgenda
+                                    },
+                                    contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                        stringResource(Res.string.library_layout_show_vertical)
+                                    } else {
+                                        stringResource(Res.string.library_layout_show_horizontal)
+                                    },
+                                    tint = MaterialTheme.nuvio.colors.textPrimary,
+                                )
+                            }
+                        }
+                    }
+                    if (sourceMode != LibraryViewMode.Cloud) {
+                        val openCalendarLabel = stringResource(Res.string.library_calendar_open)
+                        IconButton(
+                            onClick = { showReleaseCalendar = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .semantics { contentDescription = openCalendarLabel },
+                        ) {
+                            LibraryCalendarGlyph(
+                                modifier = Modifier.size(19.dp),
+                                tint = MaterialTheme.nuvio.colors.textPrimary,
+                                cutoutColor = MaterialTheme.colorScheme.background,
+                            )
+                        }
+                    }
+                    if (onDownloadsClick != null) {
+                        LibraryDownloadsButton(onClick = onDownloadsClick)
+                    }
+                    val openRatedLabel = stringResource(Res.string.library_rated_open)
+                    IconButton(
+                        onClick = { onRatedClick?.invoke() },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .semantics { contentDescription = openRatedLabel },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(19.dp),
+                            tint = MaterialTheme.nuvio.colors.textPrimary,
+                        )
+                    }
+                }
                 // Matches Search's searchbar-to-content spacer.
                 Spacer(modifier = Modifier.height(14.dp))
             }
         }
 
         BoxWithConstraints(modifier = Modifier.weight(1f)) {
-            val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
+            val windowSize = LocalWindowInfo.current.containerSize
+            val density = LocalDensity.current
+            val windowShortSide = with(density) { minOf(windowSize.width, windowSize.height).toDp() }
+            val isLandscape = maxWidth > maxHeight
+            val gridColumns = remember(isLandscape, windowShortSide) {
+                libraryGridColumnCount(
+                    isLandscape = isLandscape,
+                    isTablet = windowShortSide >= 600.dp,
+                )
+            }
 
             NuvioScreen(
                 modifier = Modifier.fillMaxSize(),
@@ -896,10 +906,12 @@ private fun LibrarySourceSwitch(
     selectedMode: LibraryViewMode,
     onModeSelected: (LibraryViewMode) -> Unit,
     modifier: Modifier = Modifier,
+    trailingActions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         LibraryChip(
             label = stringResource(Res.string.library_source_saved),
@@ -910,6 +922,12 @@ private fun LibrarySourceSwitch(
             label = stringResource(Res.string.library_source_cloud),
             selected = selectedMode == LibraryViewMode.Cloud,
             onClick = { onModeSelected(LibraryViewMode.Cloud) },
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = trailingActions,
         )
     }
 }
@@ -2877,4 +2895,11 @@ private fun libraryCalendarDatePlusDays(date: LibraryCalendarDate, days: Int): L
         }
     }
     return LibraryCalendarDate(year, month, day)
+}
+
+internal fun libraryGridColumnCount(isLandscape: Boolean, isTablet: Boolean): Int = when {
+    isTablet && isLandscape -> 7
+    isTablet -> 5
+    isLandscape -> 6
+    else -> 3
 }

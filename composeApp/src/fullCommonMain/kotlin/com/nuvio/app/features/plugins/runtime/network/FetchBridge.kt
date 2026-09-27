@@ -70,7 +70,7 @@ internal class FetchBridge : HostModule {
         InAppLogger.info(
             "PluginRuntime/Fetch",
             "$method ${InAppLogger.redactUrl(url)} headers=${InAppLogger.headerKeys(headers)} " +
-                "bodyChars=${body.length} followRedirects=$followRedirects",
+                "bodyKind=$bodyKind bodyChars=${body.length} followRedirects=$followRedirects",
         )
 
         val response = httpRequestRaw(

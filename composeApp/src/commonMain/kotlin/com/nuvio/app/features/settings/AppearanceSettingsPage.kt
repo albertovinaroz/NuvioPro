@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -69,6 +70,8 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 
 internal fun LazyListScope.appearanceSettingsContent(
     isTablet: Boolean,
@@ -246,7 +249,10 @@ internal fun LazyListScope.appearanceSettingsContent(
 
         if (navBarStyleAvailable && showNavBarStyleSheet) {
             NavigationBarSettingsSheet(
-                isTablet = isTablet,
+                // Passing false keeps the style list visible on tablets: the sheet hides it when
+                // isTablet is true, which only fits upstream's tablet top rail.
+                isTablet = false,
+                tabletLayout = LocalNuvioTabletNavLayout.current,
                 selectedStyle = effectiveNavBarStyle,
                 onStyleSelected = onNavBarStyleSelected,
                 glowEnabled = glowEnabled,

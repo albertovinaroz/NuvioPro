@@ -1,27 +1,39 @@
 package com.nuvio.app
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +55,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -70,6 +83,7 @@ import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileBackgroundBackdrop
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
+import com.nuvio.app.features.profiles.ProfileSwitcherTab
 import com.nuvio.app.features.search.SearchScreen
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.HapticsSettingsRepository
@@ -83,6 +97,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.app_brand_name
+import nuvio.composeapp.generated.resources.compose_nav_home
+import nuvio.composeapp.generated.resources.compose_nav_library
+import nuvio.composeapp.generated.resources.compose_nav_live_tv
+import nuvio.composeapp.generated.resources.compose_nav_profile
+import nuvio.composeapp.generated.resources.compose_nav_search
+import nuvio.composeapp.generated.resources.sidebar_library
+import nuvio.composeapp.generated.resources.sidebar_search
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -258,8 +280,177 @@ internal fun AppTabHost(
     }
 }
 
+@Composable
+internal fun TabletFloatingTopBar(
+    selectedTab: AppScreenTab,
+    showLiveTv: Boolean,
+    onTabSelected: (AppScreenTab) -> Unit,
+    onProfileSelected: (NuvioProfile) -> Unit,
+    onAddProfileRequested: () -> Unit,
+    modifier: Modifier = Modifier,
+    topInset: Dp? = null,
+) {
+    val tokens = MaterialTheme.nuvio
+    val statusBarPadding = topInset ?: (WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + NuvioTokens.Space.s10)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = statusBarPadding, bottom = tokens.spacing.controlGap),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Surface(
+            color = tokens.colors.surface.copy(alpha = tokens.opacity.visible - tokens.opacity.subtle),
+            shape = tokens.shapes.chip,
+            tonalElevation = tokens.elevation.playerControls,
+            shadowElevation = tokens.elevation.overlay,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = NuvioTokens.Space.s10, vertical = tokens.spacing.controlGap),
+                horizontalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TabletTopPillItem(
+                    label = stringResource(Res.string.compose_nav_home),
+                    selected = selectedTab == AppScreenTab.Home,
+                    onClick = { onTabSelected(AppScreenTab.Home) },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Home,
+                            contentDescription = stringResource(Res.string.compose_nav_home),
+                            modifier = Modifier.size(NuvioTokens.Space.s18),
+                            tint = if (selectedTab == AppScreenTab.Home) {
+                                tokens.colors.textPrimary
+                            } else {
+                                tokens.colors.textMuted
+                            },
+                        )
+                    },
+                )
+                TabletTopPillItem(
+                    label = stringResource(Res.string.compose_nav_search),
+                    selected = selectedTab == AppScreenTab.Search,
+                    onClick = { onTabSelected(AppScreenTab.Search) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(Res.drawable.sidebar_search),
+                            contentDescription = stringResource(Res.string.compose_nav_search),
+                            modifier = Modifier.size(NuvioTokens.Space.s18),
+                            tint = if (selectedTab == AppScreenTab.Search) {
+                                tokens.colors.textPrimary
+                            } else {
+                                tokens.colors.textMuted
+                            },
+                        )
+                    },
+                )
+                TabletTopPillItem(
+                    label = stringResource(Res.string.compose_nav_library),
+                    selected = selectedTab == AppScreenTab.Library,
+                    onClick = { onTabSelected(AppScreenTab.Library) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(Res.drawable.sidebar_library),
+                            contentDescription = stringResource(Res.string.compose_nav_library),
+                            modifier = Modifier.size(NuvioTokens.Space.s18),
+                            tint = if (selectedTab == AppScreenTab.Library) {
+                                tokens.colors.textPrimary
+                            } else {
+                                tokens.colors.textMuted
+                            },
+                        )
+                    },
+                )
+                if (showLiveTv) {
+                    TabletTopPillItem(
+                        label = stringResource(Res.string.compose_nav_live_tv),
+                        selected = selectedTab == AppScreenTab.LiveTv,
+                        onClick = { onTabSelected(AppScreenTab.LiveTv) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Tv,
+                                contentDescription = stringResource(Res.string.compose_nav_live_tv),
+                                modifier = Modifier.size(18.dp),
+                                tint = if (selectedTab == AppScreenTab.LiveTv) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
+                        },
+                    )
+                }
+                Surface(
+                    color = if (selectedTab == AppScreenTab.Settings) {
+                        tokens.colors.overlaySelected
+                    } else {
+                        tokens.colors.surface
+                    },
+                    shape = tokens.shapes.chip,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = tokens.spacing.listGap, vertical = tokens.spacing.controlGap),
+                        horizontalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ProfileSwitcherTab(
+                            selected = selectedTab == AppScreenTab.Settings,
+                            onClick = { onTabSelected(AppScreenTab.Settings) },
+                            onProfileSelected = onProfileSelected,
+                            onAddProfileRequested = onAddProfileRequested,
+                        )
+                        Text(
+                            text = stringResource(Res.string.compose_nav_profile),
+                            modifier = Modifier.clickable { onTabSelected(AppScreenTab.Settings) },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selectedTab == AppScreenTab.Settings) {
+                                tokens.colors.textPrimary
+                            } else {
+                                tokens.colors.textMuted
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 internal fun ContinueWatchingItem.isCloudLibraryContinueWatchingItem(): Boolean =
     parentMetaType.equals(CloudLibraryContentType, ignoreCase = true)
+
+@Composable
+private fun TabletTopPillItem(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    Surface(
+        color = if (selected) tokens.colors.overlaySelected else tokens.colors.surface,
+        shape = tokens.shapes.chip,
+        tonalElevation = if (selected) tokens.elevation.raised else tokens.elevation.flat,
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = tokens.components.chipHorizontalPadding, vertical = NuvioTokens.Space.s10),
+            horizontalArrangement = Arrangement.spacedBy(tokens.spacing.controlGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon()
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) {
+                    tokens.colors.textPrimary
+                } else {
+                    tokens.colors.textMuted
+                },
+            )
+        }
+    }
+}
 
 @Composable
 internal fun AppLoadingContent(

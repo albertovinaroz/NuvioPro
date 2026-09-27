@@ -3,10 +3,10 @@ package com.nuvio.app.features.catalog
 import com.nuvio.app.core.poster.CustomPosterUrlRepository
 import com.nuvio.app.core.poster.withCustomPosterUrls
 import com.nuvio.app.features.collection.CollectionRepository
-import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MoreLikeThisPage
 import com.nuvio.app.features.details.MoreLikeThisSource
 import com.nuvio.app.features.simkl.SimklRelatedRepository
+import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.tmdb.TmdbMetadataService
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.trakt.TraktRelatedRepository
@@ -259,18 +259,24 @@ private suspend fun fetchMoreLikeThisCatalogPage(
 
         // Simkl's related-titles endpoint returns a single fixed batch with no page concept,
         // so only the first page has items and hasMore is always false.
-        MoreLikeThisSource.SIMKL -> MoreLikeThisPage(
-            items = if (page <= 1) {
-                SimklRelatedRepository.getRelated(
-                    meta = MetaDetails(id = target.itemId, type = target.itemType, name = ""),
-                    fallbackItemId = target.itemId,
-                    fallbackItemType = target.itemType,
-                )
+        MoreLikeThisSource.SIMKL -> {
+            if (page > 1) {
+                MoreLikeThisPage()
             } else {
-                emptyList()
-            },
-            hasMore = false,
-        )
+                val meta = MetaDetailsRepository.peek(type = target.itemType, id = target.itemId)
+                    ?: MetaDetailsRepository.fetch(type = target.itemType, id = target.itemId)
+                MoreLikeThisPage(
+                    items = meta?.let { details ->
+                        SimklRelatedRepository.getRelated(
+                            meta = details,
+                            fallbackItemId = target.itemId,
+                            fallbackItemType = target.itemType,
+                        )
+                    }.orEmpty(),
+                    hasMore = false,
+                )
+            }
+        }
     }
     return CatalogPage(
         items = result.items,
