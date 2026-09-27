@@ -701,20 +701,6 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         }
     }
 
-    LaunchedEffect(playbackSnapshot.isEnded, nextEpisodeInfo, nextEpisodeCardDismissed) {
-        if (
-            playbackSnapshot.isEnded &&
-            nextEpisodeInfo != null &&
-            !showNextEpisodeCard &&
-            !nextEpisodeCardDismissed
-        ) {
-            showNextEpisodeCard = true
-            if (playerSettingsUiState.streamAutoPlayNextEpisodeEnabled && nextEpisodeInfo?.hasAired == true) {
-                playNextEpisode()
-            }
-        }
-    }
-
     LaunchedEffect(
         playbackSnapshot.positionMs,
         playbackSnapshot.durationMs,
