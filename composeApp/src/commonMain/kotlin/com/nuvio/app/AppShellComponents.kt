@@ -134,7 +134,6 @@ internal data class AppTabActions(
     val onLibrarySectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)? = null,
     val onCloudFilePlay: ((CloudLibraryItem, CloudLibraryFile) -> Unit)? = null,
     val onConnectCloudClick: (() -> Unit)? = null,
-    val onDownloadsClick: () -> Unit = {},
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
     val onContinueWatchingLongPress: ((ContinueWatchingItem) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
@@ -191,7 +190,6 @@ internal fun AppTabHost(
                         onFolderClick = actions.onFolderClick,
                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
                         onNotificationsClick = actions.onNotificationsClick,
-                        onDownloadsClick = actions.onDownloadsClick,
                     )
                 }
             }

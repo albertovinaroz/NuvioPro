@@ -1067,28 +1067,6 @@ fun MetaDetailsScreen(
                         savedProgress?.lastPositionMs,
                     )
                 }
-                val onRandomEpisodeClick: (() -> Unit)? = if (meta.type == "series" || hasEpisodes) {
-                    {
-                        val episodes = meta.releasedPlayableEpisodes(todayIsoDate)
-                        val unwatched = episodes.filterNot { episode ->
-                            WatchingState.isEpisodeWatched(
-                                watchedKeys = watchedUiState.watchedKeys,
-                                metaType = meta.type,
-                                metaId = meta.id,
-                                episode = episode,
-                            )
-                        }
-                        val candidates = if (playerSettingsUiState.randomEpisodesIncludeWatched) {
-                            episodes
-                        } else {
-                            unwatched.ifEmpty { episodes }
-                        }
-                        candidates.randomOrNull()
-                            ?.let(onEpisodePlayClick)
-                    }
-                } else {
-                    null
-                }
                 if (showShuffle && showShuffleButton) {
                     EpisodeShuffleSheet(
                         meta = meta,
@@ -1298,7 +1276,6 @@ fun MetaDetailsScreen(
                                     }) else null,
                                     shuffleEnabled = shuffleSettings.enabled,
                                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
-                                    onRandomEpisodeClick = onRandomEpisodeClick,
                                     onSaveClick = toggleSaved,
                                     onSaveLongClick = openLibraryListPicker,
                                     onWatchedClick = toggleWatched,
@@ -2002,7 +1979,6 @@ private fun LazyListScope.configuredMetaSectionItems(
     onShuffleClick: (() -> Unit)?,
     shuffleEnabled: Boolean,
     onPrimaryPlayLongClick: (() -> Unit)?,
-    onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
@@ -2089,7 +2065,6 @@ private fun LazyListScope.configuredMetaSectionItems(
                     onShuffleClick = onShuffleClick,
                     shuffleEnabled = shuffleEnabled,
                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
-                    onRandomEpisodeClick = onRandomEpisodeClick,
                     onSaveClick = onSaveClick,
                     onSaveLongClick = onSaveLongClick,
                     onWatchedClick = onWatchedClick,
@@ -2249,7 +2224,6 @@ private fun ConfiguredMetaSections(
     onShuffleClick: (() -> Unit)?,
     shuffleEnabled: Boolean,
     onPrimaryPlayLongClick: (() -> Unit)?,
-    onRandomEpisodeClick: (() -> Unit)?,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
     onWatchedClick: () -> Unit,
@@ -2333,13 +2307,6 @@ private fun ConfiguredMetaSections(
                             onClick = playFromStart,
                         ))
                     }
-                    onRandomEpisodeClick?.let { playRandomEpisode ->
-                        add(DetailSecondaryAction(
-                            label = stringResource(Res.string.detail_play_random_episode),
-                            icon = Icons.Default.Shuffle,
-                            onClick = playRandomEpisode,
-                        ))
-                    }
                     onPlayExternallyClick?.let { playExternally ->
                         add(DetailSecondaryAction(
                             label = stringResource(Res.string.streams_open_external_player),
@@ -2405,13 +2372,6 @@ private fun ConfiguredMetaSections(
                                 onClick = onSaveClick,
                                 onLongClick = onSaveLongClick,
                             ))
-                            onRandomEpisodeClick?.let { playRandomEpisode ->
-                                add(DetailSecondaryAction(
-                                    label = stringResource(Res.string.detail_play_random_episode),
-                                    icon = Icons.Default.Shuffle,
-                                    onClick = playRandomEpisode,
-                                ))
-                            }
                         },
                         isTablet = isTablet,
                         onPlayClick = onPrimaryPlayClick,

@@ -128,7 +128,6 @@ fun HomeScreen(
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
-    onDownloadsClick: (() -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -1217,9 +1216,7 @@ fun HomeScreen(
             listState = homeListState,
             isTablet = maxWidth.value >= 600f,
             notificationsIconEnabled = homeSettingsUiState.heroNotificationsIconEnabled,
-            downloadsIconEnabled = homeSettingsUiState.heroDownloadsIconEnabled,
             onNotificationsClick = onNotificationsClick,
-            onDownloadsClick = onDownloadsClick,
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }

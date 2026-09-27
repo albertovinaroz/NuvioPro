@@ -464,9 +464,6 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        if (onDownloadsClick != null) {
-                            LibraryDownloadsButton(onClick = onDownloadsClick)
-                        }
                         if (sourceMode != LibraryViewMode.Cloud) {
                             val openCalendarLabel = stringResource(Res.string.library_calendar_open)
                             IconButton(
@@ -481,6 +478,9 @@ fun LibraryScreen(
                                     cutoutColor = MaterialTheme.colorScheme.background,
                                 )
                             }
+                        }
+                        if (onDownloadsClick != null) {
+                            LibraryDownloadsButton(onClick = onDownloadsClick)
                         }
                         val openRatedLabel = stringResource(Res.string.library_rated_open)
                         IconButton(

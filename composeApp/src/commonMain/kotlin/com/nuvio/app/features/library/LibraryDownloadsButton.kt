@@ -48,7 +48,7 @@ internal fun LibraryDownloadsButton(onClick: () -> Unit) {
                 modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                 tint = Color.White,
             )
-            else -> DownloadIcon(tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> DownloadIcon(tint = MaterialTheme.nuvio.colors.textPrimary)
         }
     }
 }

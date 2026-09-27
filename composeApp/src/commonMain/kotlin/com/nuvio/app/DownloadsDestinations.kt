@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadsScreen
 import com.nuvio.app.navigation.DownloadShowRoute
+import com.nuvio.app.navigation.DownloadsPreferencesRoute
 import com.nuvio.app.navigation.DownloadsRoute
 import com.nuvio.app.navigation.NuvioNavigator
 
@@ -13,6 +14,7 @@ internal fun DownloadsDestination(
     navController: NuvioNavigator,
     useNativeNavigation: Boolean,
     onOpenDownload: (DownloadItem) -> Unit,
+    settingsTitle: String,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     DownloadsScreen(
@@ -23,6 +25,7 @@ internal fun DownloadsDestination(
         } else {
             null
         },
+        onOpenSettings = { navController.navigate(DownloadsPreferencesRoute(settingsTitle)) },
     )
 }
 

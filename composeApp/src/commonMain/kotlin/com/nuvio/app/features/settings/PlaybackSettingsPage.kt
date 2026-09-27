@@ -1175,14 +1175,6 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
                 )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_playback_random_episodes_include_watched),
-                    description = stringResource(Res.string.settings_playback_random_episodes_include_watched_description),
-                    checked = autoPlayPlayerSettings.randomEpisodesIncludeWatched,
-                    isTablet = isTablet,
-                    onCheckedChange = PlayerSettingsRepository::setRandomEpisodesIncludeWatched,
-                )
                 if (autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled &&
                     autoPlayPlayerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
                     SettingsGroupDivider(isTablet = isTablet)

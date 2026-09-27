@@ -1584,19 +1584,6 @@ internal fun MainAppContent(
                                 onNotificationsClick = {
                                     navController.navigate(NotificationFeedRoute(title = notificationsFeedTitle))
                                 },
-                                onDownloadsClick = {
-                                    // The real fix: DownloadsRoute hardcodes preferredTabName =
-                                    // "Library" by default — the native side (ContentView's
-                                    // AppNavigationCoordinator.push) reads that before it ever
-                                    // considers which tab the push came from, so no amount of
-                                    // Kotlin-side launchSingleTop/activateTab juggling could keep
-                                    // this one on Home. forceLibraryTab = false opts out, so it
-                                    // falls back to the origin tab instead, same as
-                                    // NotificationFeedRoute (which has no tab preference at all).
-                                    navController.navigate(
-                                        DownloadsRoute(downloadsTitle, forceLibraryTab = false),
-                                    )
-                                },
                                 onLibraryRatedClick = {
                                     navController.navigate(LibraryRatedRoute(title = libraryRatedTitle))
                                 },
@@ -1897,6 +1884,7 @@ internal fun MainAppContent(
                         navController = navController,
                         useNativeNavigation = useNativeNavigation,
                         onOpenDownload = ::openDownloadedItem,
+                        settingsTitle = downloadsTitle,
                     )
                 }
                 entry<DownloadsPreferencesRoute> { route ->

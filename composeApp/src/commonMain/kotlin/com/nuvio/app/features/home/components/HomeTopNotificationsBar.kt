@@ -21,7 +21,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -78,12 +77,10 @@ internal fun HomeTopNotificationsBar(
     listState: LazyListState,
     isTablet: Boolean,
     notificationsIconEnabled: Boolean,
-    downloadsIconEnabled: Boolean,
     onNotificationsClick: (() -> Unit)?,
-    onDownloadsClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    if (!notificationsIconEnabled && !downloadsIconEnabled) return
+    if (!notificationsIconEnabled) return
 
     val density = LocalDensity.current
     val fadeStartPx = with(density) { BAR_BACKGROUND_FADE_START_DP.dp.toPx() }
@@ -145,13 +142,6 @@ internal fun HomeTopNotificationsBar(
             horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.End),
             verticalAlignment = Alignment.Top,
         ) {
-            if (downloadsIconEnabled) {
-                TopBarIconButton(
-                    icon = Icons.Rounded.CloudDownload,
-                    contentDescription = stringResource(Res.string.compose_settings_root_downloads_title),
-                    onClick = { onDownloadsClick?.invoke() },
-                )
-            }
             if (notificationsIconEnabled) {
                 NotificationsBellButton(
                     unreadCount = notificationFeedUiState.unreadCount,

@@ -106,7 +106,6 @@ internal fun LazyListScope.homescreenSettingsContent(
     showCatalogType: Boolean,
     hideUnreleasedContent: Boolean,
     notificationsIconEnabled: Boolean,
-    downloadsIconEnabled: Boolean,
     items: List<HomeCatalogSettingsItem>,
     isCatalogLoading: Boolean,
     catalogErrorMessage: String?,
@@ -198,14 +197,6 @@ internal fun LazyListScope.homescreenSettingsContent(
                     checked = notificationsIconEnabled,
                     isTablet = isTablet,
                     onCheckedChange = HomeCatalogSettingsRepository::setHeroNotificationsIconEnabled,
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_homescreen_downloads_icon),
-                    description = stringResource(Res.string.settings_homescreen_downloads_icon_description),
-                    checked = downloadsIconEnabled,
-                    isTablet = isTablet,
-                    onCheckedChange = HomeCatalogSettingsRepository::setHeroDownloadsIconEnabled,
                 )
             }
         }
