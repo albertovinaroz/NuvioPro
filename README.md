@@ -54,7 +54,7 @@ Everything below is added on top of upstream Nuvio Mobile.
 | **Trailer start with sound** — start the hero trailer unmuted instead of muted. You can still mute it with the speaker button. Appears once trailer playback is on. | Settings → Layout → Home Layout → **Start with sound** | Off |
 | **Trailer start delay** — how long the artwork holds before the trailer starts, `Instant` to 10 s. Appears once trailer playback is on. | Settings → Layout → Home Layout → **Trailer Start Delay** | Instant |
 | **Hero style** — `Full-bleed` (artwork spans the screen), `Card` (rounded, inset), or `Poster` (taller, HBO Max–style layout with the title and details grouped to the left). | Settings → Layout → Home Layout → **Hero Style** | Full-bleed |
-| **Home notifications & downloads bar** — a bell (opens the notification feed) and a downloads shortcut float above the hero in every style; hide either one independently for a cleaner look. | Settings → Layout → Home Layout → **Notifications icon** / **Downloads icon** | Both on |
+| **Home notifications bar** — a bell that opens the notification feed floats above the hero in every style; hide it for a cleaner look. | Settings → Layout → Home Layout → **Notifications icon** | On |
 | **Top 10 rank cards & catalog view mode** — a wide card with a big rank numeral for any catalog, plus a per-catalog Portrait/Landscape view mode that also applies to regular cards. | Settings → Layout → Home Layout → expand a catalog | Off |
 | **Long-press to add to a list** — long-press the hero's add-to-library button to add or remove the item from specific custom lists instead of just toggling the default. | Hero → add-to-library button | — |
 | **Dynamic background** — tints the home screen with a gradient pulled from the featured artwork's colours. | Settings → Layout → **Dynamic background color** | Off |
@@ -96,13 +96,14 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **M3U playlists** | Settings → Integrations → Live TV → **Playlists** | — |
 | **Xtream** — connect with a server URL, username and password. | Settings → Integrations → Live TV → **Providers** → Xtream | Not configured |
 | **Stalker Portal** — connect with a portal URL and MAC address; login details optional. | Settings → Integrations → Live TV → **Providers** → Stalker Portal | Not configured |
-| **Show Live TV in navigation** — the tab appears once at least one source is configured. | Settings → Integrations → Live TV → **Show Live TV in navigation** | On |
+| **Show Live TV in navigation** — a standalone switch, not tied to whether a source is configured: turn it off and the tab disappears immediately even with playlists set up, turn it on and the tab shows even before you've added a source. | Settings → Integrations → Live TV → **Show Live TV in navigation** | On |
 
 ### Profiles
 
 | Feature | Where | Default |
 |---|---|---|
-| **Profile Insights** — activity, library and taste breakdowns for the active profile, in Overview and Taste sections. | Settings → **Profile** | Always available |
+| **Profile Insights** — total watch time plus tappable stat counts (in progress, saved, upcoming, watched, completed, ongoing series, episodes watched); tapping a number opens a poster grid of exactly those titles. | Settings → **Profile** | Always available |
+| **Taste DNA** — your top genres ranked by share of what you watch, plus a Movies vs Series balance. | Settings → Profile → scroll down | Always available |
 | **Custom profile background** — point a profile at any `http(s)` image URL. | Edit Profile → **Choose Profile Background** → Custom → **Custom background URL** | None |
 | **Animated profile switch** — tapping a profile glides its avatar to the center of the screen into the loading transition, instead of a hard cut. | Profile selection screen | Always on |
 | **Branded launch intro** — a quick wordmark reveal plays while the app resolves your session on cold start, replacing the old loading spinner. | App launch | Always on |
@@ -117,11 +118,10 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **Budget and revenue** — added to the details block for movies. | Shown with Settings → Layout → Detail Page → **Details** | — |
 | **Real IMDb episode ratings** — episode cards show the actual IMDb rating (via OMDb) instead of TMDB's vote average, falling back to TMDB per episode when IMDb has none. | Settings → Integrations → TMDB Enrichment → **Episode ratings** | On |
 | **Your own OMDb API key** — add a free key so episode ratings draw from your own quota instead of sharing one with every other user. | Settings → Integrations → **OMDb** | Uses a shared key if left empty |
-| **Icon action row** — play/resume spans the full width and the other actions (download, start from the beginning, random episode, external player, watched, library) sit as icons underneath it, instead of hiding behind the 3-dots menu. Turn it off to get the old row back. | Settings → Layout → Detail Page → **Icon action row** | On |
+| **Icon action row** — play/resume spans the full width and the other actions (download, start from the beginning, shuffle, external player, watched, library) sit as icons underneath it, instead of hiding behind the 3-dots menu. Turn it off to get the old row back. | Settings → Layout → Detail Page → **Icon action row** | On |
 | **Download button** — adds a download button under Play that opens the stream list in download mode. | Settings → Downloads → **Show download button** | Off |
 | **Trailer start with sound** — start the details-page trailer unmuted. Appears once trailer playback is on. | Settings → Layout → Detail Page → **Start with sound** | Off |
-| **Random Episode** — Play random episode for series. | 3 dots next to play button → **random icon** | — |
-| **Include watched episodes toggle** — Include watched episodes in random playback. | Settings → Playback → **Include watched episodes in random playback**| Off |
+| **Episode shuffle** — shuffle through a series instead of watching in order: pick whether already-watched episodes are included, preview the episode it lands on, then start. Once on, a pinned Shuffle button sits next to Play and stays on for that series until you switch it off. | Settings → Layout → Detail Page → **Shuffle** | Off |
 | **Season-complete celebration** — a haptic tap and a toast when marking the last unwatched episode of a season as watched. | Episode watched-status sheet | Always on |
 
 ### Streams
@@ -137,6 +137,8 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 |---|---|---|
 | **Library Calendar** — full-screen view of upcoming release dates for ongoing series in the library. | Library screen → **calendar icon** | — |
 | **"Recently added" indicator** — a small dot marks posters saved to the library within the last 3 days; opening the poster clears it early. | Library screen | Always on |
+| **Downloads shortcut** — opens the Downloads screen; the icon animates while something's actively downloading and stays highlighted after a download finishes until you check it. | Library screen → **downloads icon** | Always on |
+| **Rate titles & filter by rating** — rate any movie or show, then filter the Library down to just what you've rated. | Library screen → **Rated** | — |
 
 ### Downloads
 
@@ -168,6 +170,10 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **Pill-shaped search bars** — every search field (Settings, Search, Live TV, Player live channels, Cloud Library) uses a fully rounded pill, matching iOS conventions. | — | Always on |
 | **Liquid Glass mute button** — mutes the hero trailer without leaving Home, in the app's Liquid Glass style. | Top-right of the hero, while a trailer is playing | — |
 | **Filled/outlined tab bar icons** — Home, Search, Library and Live TV glyphs swap between filled and outlined artwork based on selection instead of only changing tint. | — | Always on |
+| **Poster Card Style** — poster width, corner radius, a landscape-poster mode for catalogs, and hiding title labels under posters. | Settings → Layout → **Poster Card Style** | Defaults |
+| **Custom Poster Source** — plug in a poster URL pattern from an external service to override artwork; falls back to the original poster per-title if the pattern doesn't resolve. Toggle it on independently for Home, Continue Watching, Collections, Library, Search and Details. | Settings → Layout → Poster Card Style → **Custom Poster Source** | Off |
+| **Card Depth Effect** — a subtle edge/sheen/coverage 3D look for cards, tuned separately for posters, continue watching, episode cards, cast and trailers. | Settings → Layout → Poster Card Style → **Card Depth Effect** | Off |
+| **Tab Bar / Interface Haptics** — a light vibration when switching tabs, and on profile selection and other interface moments. Two independent toggles. | Settings → Advanced → **Haptics** | Both on |
 
 ---
 
