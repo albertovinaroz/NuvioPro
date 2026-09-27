@@ -497,10 +497,12 @@ fun HomeScreen(
         )
     }
 
-    val customPosterPattern by com.nuvio.app.core.poster.CustomPosterUrlRepository.let { repo ->
+    val cwPosterPattern by com.nuvio.app.core.poster.CustomPosterUrlRepository.let { repo ->
         repo.ensureLoaded()
-        repo.pattern
-    }.collectAsStateWithLifecycle()
+        kotlinx.coroutines.flow.combine(repo.pattern, repo.enabledScreens) { pattern, screens ->
+            if (com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING in screens) pattern else ""
+        }
+    }.collectAsStateWithLifecycle(initialValue = com.nuvio.app.core.poster.CustomPosterUrlRepository.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING))
 
     val allContinueWatchingItems = remember(
         visibleContinueWatchingEntries,
@@ -509,7 +511,7 @@ fun HomeScreen(
         nextUpSuppressedSeriesIds,
         continueWatchingPreferences.sortMode,
         cloudLibraryUiState,
-        customPosterPattern,
+        cwPosterPattern,
     ) {
         buildHomeContinueWatchingItems(
             visibleEntries = visibleContinueWatchingEntries,
@@ -520,7 +522,7 @@ fun HomeScreen(
             todayIsoDate = CurrentDateProvider.todayIsoDate(),
             cloudLibraryUiState = cloudLibraryUiState,
         ).let { items ->
-            items.withCustomPosterUrls(customPosterPattern)
+            items.withCustomPosterUrls(cwPosterPattern)
         }
     }
     val (continueWatchingItems, upcomingItems) = remember(
