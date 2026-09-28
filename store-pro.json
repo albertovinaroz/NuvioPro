@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.4-b1",
+          "buildVersion": "164",
+          "date": "2026-09-28T16:12:28Z",
+          "localizedDescription": "# Nuvio Pro 0.5.4-b1\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n\n- fix(player): ignore short clips for tracking @tapframe  \n- fix(ios): update quickjs to 1.0.15 @tapframe  \n- fix(player): reduce buffer durations @tapframe  \n- fix(details): keep custom posters when returning to a title @tapframe  \n- fix(settings): use shared chip on detail page @tapframe  \n- fix(details): replay watched series from first episode @tapframe  \n- fix(player): resume restored player from current position @tapframe  \n- fix(i18n): align episode labels and metadata with tv @tapframe  \n- fix(streams): prevent rotation during binge group lookup @tapframe  \n- fix(profiles): center pin dialog content @tapframe  \n- Implement async plugin timers @paregi12  \n- Add setTimeout support to plugin runtime @paregi12  \n\n### Upstream (luqmanfadlli's fork)\n\n- feat(ratings): star rating row under details actions, fit icon row, episode badge @luqmanfadlli  \n- feat(ratings): in-app ratings synced with Trakt, Simkl and MDBList @luqmanfadlli  \n\n### Pro\n\n- fix(tests): stabilize tests broken by the 0.5.4 merge @albertovinaroz  \n- feat(ratings): show synced provider ratings in Library > Rated @albertovinaroz  \n\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.4-b1/nuvio-0.5.4-b1-pro-release.ipa",
+          "size": 69143050,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.3-b3",
           "buildVersion": "163",
           "date": "2026-09-28T00:12:43Z",
