@@ -12,14 +12,17 @@ import com.nuvio.app.features.player.skip.SkipInterval
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
+import com.nuvio.app.features.watchprogress.WatchProgressStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -32,13 +35,24 @@ import kotlin.test.assertNull
 class PlayerAutoPlayTest {
     @get:Rule
     val compose = createComposeRule()
-    private val scope = CoroutineScope(StandardTestDispatcher())
+    private val testDispatcher = StandardTestDispatcher()
+    private val scope = CoroutineScope(testDispatcher)
     private val episodes = (1..8).map {
         MetaVideo(id = "autoplay-test:1:$it", title = "Episode $it", season = 1, episode = it)
     }
     private val nearEnd = PlayerPlaybackSnapshot(
         isLoading = false, isPlaying = false, positionMs = 1_190_000L, durationMs = 1_200_000L,
     )
+
+    @Before
+    fun setUp() {
+        // WatchProgressStorage backs onto a real SharedPreferences file that outlives a single
+        // test class within the same Gradle test JVM. clearLocalState() only resets in-memory
+        // state, so a payload persisted by an earlier-run test (or an earlier method here) can
+        // resurface via a mid-test ensureLoaded() reload unless we wipe it up front.
+        WatchProgressStorage.initialize(RuntimeEnvironment.getApplication())
+        WatchProgressStorage.savePayload(1, "")
+    }
 
     @After
     fun cleanup() {
@@ -238,6 +252,10 @@ class PlayerAutoPlayTest {
                         durationMs = durationMs,
                     ))
                 }
+                // See errorClipDoesNotOverwriteExistingEpisodeProgressWhenEndingWithoutDuration:
+                // advance the runtime's own scheduler so its scrobble/progress side effects run
+                // before asserting.
+                testDispatcher.scheduler.advanceUntilIdle()
                 compose.runOnIdle {
                     assertFalse(runtime.hasRequestedScrobbleStartForCurrentItem)
                     assertFalse(runtime.hasSentCompletionScrobbleForCurrentItem)
@@ -268,6 +286,10 @@ class PlayerAutoPlayTest {
                 isLoading = false, isEnded = true, positionMs = 30_000L,
             ))
         }
+        // The ended snapshot's scrobble/progress side effects are launched on the runtime's own
+        // (test-controlled) scope; advance its scheduler so they run before asserting, otherwise
+        // this check can race a still-queued write.
+        testDispatcher.scheduler.advanceUntilIdle()
         compose.runOnIdle {
             val progress = WatchProgressRepository.uiState.value.entries.single()
             assertEquals(300_000L, progress.lastPositionMs)
