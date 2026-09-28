@@ -15,6 +15,7 @@ import com.nuvio.app.features.tracking.countersTotal
 import com.nuvio.app.features.tracking.intOrNull
 import com.nuvio.app.features.tracking.notFoundTotal
 import com.nuvio.app.features.tracking.objectOrNull
+import com.nuvio.app.features.tracking.stringOrNull
 import com.nuvio.app.features.tracking.toTrackingExternalIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -141,26 +142,36 @@ object TraktRatingsProvider : TrackingRatingProvider {
     private fun JsonObject.toRecord(scope: TrackingRatingScope): TrackingRatingRecord? {
         val rating = intOrNull("rating") ?: return null
         return when (scope) {
-            TrackingRatingScope.MOVIE -> TrackingRatingRecord(
-                scope, get("movie").objectOrNull()?.get("ids").toTrackingExternalIds(), rating,
-            )
-            TrackingRatingScope.SHOW -> TrackingRatingRecord(
-                scope, get("show").objectOrNull()?.get("ids").toTrackingExternalIds(), rating,
-            )
+            TrackingRatingScope.MOVIE -> get("movie").objectOrNull()?.let { movie ->
+                TrackingRatingRecord(
+                    scope, movie["ids"].toTrackingExternalIds(), rating,
+                    title = movie.stringOrNull("title"), year = movie.intOrNull("year"),
+                )
+            }
+            TrackingRatingScope.SHOW -> get("show").objectOrNull()?.let { show ->
+                TrackingRatingRecord(
+                    scope, show["ids"].toTrackingExternalIds(), rating,
+                    title = show.stringOrNull("title"), year = show.intOrNull("year"),
+                )
+            }
             TrackingRatingScope.SEASON -> {
                 val season = get("season").objectOrNull()?.intOrNull("number") ?: return null
+                val show = get("show").objectOrNull()
                 TrackingRatingRecord(
-                    scope, get("show").objectOrNull()?.get("ids").toTrackingExternalIds(), rating, season = season,
+                    scope, show?.get("ids").toTrackingExternalIds(), rating, season = season,
+                    title = show?.stringOrNull("title"), year = show?.intOrNull("year"),
                 )
             }
             TrackingRatingScope.EPISODE -> {
                 val episode = get("episode").objectOrNull() ?: return null
+                val show = get("show").objectOrNull()
                 TrackingRatingRecord(
                     scope,
-                    get("show").objectOrNull()?.get("ids").toTrackingExternalIds(),
+                    show?.get("ids").toTrackingExternalIds(),
                     rating,
                     season = episode.intOrNull("season") ?: return null,
                     episode = episode.intOrNull("number") ?: return null,
+                    title = show?.stringOrNull("title"), year = show?.intOrNull("year"),
                 )
             }
         }

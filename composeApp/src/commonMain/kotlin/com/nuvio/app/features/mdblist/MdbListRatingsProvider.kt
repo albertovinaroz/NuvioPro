@@ -12,6 +12,7 @@ import com.nuvio.app.features.tracking.countersTotal
 import com.nuvio.app.features.tracking.intOrNull
 import com.nuvio.app.features.tracking.notFoundTotal
 import com.nuvio.app.features.tracking.objectOrNull
+import com.nuvio.app.features.tracking.stringOrNull
 import com.nuvio.app.features.tracking.toTrackingExternalIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
@@ -128,38 +129,60 @@ internal class MdbListRatingsProvider(
         payload["movies"].arrayOrEmpty().forEach { row ->
             val obj = row.objectOrNull() ?: return@forEach
             val rating = obj.intOrNull("rating") ?: return@forEach
-            add(TrackingRatingRecord(TrackingRatingScope.MOVIE, obj["movie"].objectOrNull()?.get("ids").toTrackingExternalIds(), rating))
+            val movie = obj["movie"].objectOrNull()
+            add(
+                TrackingRatingRecord(
+                    TrackingRatingScope.MOVIE, movie?.get("ids").toTrackingExternalIds(), rating,
+                    title = movie?.stringOrNull("title"), year = movie?.intOrNull("year"),
+                ),
+            )
         }
         payload["shows"].arrayOrEmpty().forEach { row ->
             val obj = row.objectOrNull() ?: return@forEach
             val rating = obj.intOrNull("rating") ?: return@forEach
-            add(TrackingRatingRecord(TrackingRatingScope.SHOW, obj["show"].objectOrNull()?.get("ids").toTrackingExternalIds(), rating))
+            val show = obj["show"].objectOrNull()
+            add(
+                TrackingRatingRecord(
+                    TrackingRatingScope.SHOW, show?.get("ids").toTrackingExternalIds(), rating,
+                    title = show?.stringOrNull("title"), year = show?.intOrNull("year"),
+                ),
+            )
         }
         payload["seasons"].arrayOrEmpty().forEach { row ->
             val obj = row.objectOrNull() ?: return@forEach
             val rating = obj.intOrNull("rating") ?: return@forEach
             val season = obj["season"].objectOrNull() ?: return@forEach
             val number = season.intOrNull("number") ?: return@forEach
-            add(TrackingRatingRecord(TrackingRatingScope.SEASON, showIds(obj, season), rating, season = number))
+            val show = showObject(obj, season)
+            add(
+                TrackingRatingRecord(
+                    TrackingRatingScope.SEASON, showIds(show), rating, season = number,
+                    title = show?.stringOrNull("title"), year = show?.intOrNull("year"),
+                ),
+            )
         }
         payload["episodes"].arrayOrEmpty().forEach { row ->
             val obj = row.objectOrNull() ?: return@forEach
             val rating = obj.intOrNull("rating") ?: return@forEach
             val episode = obj["episode"].objectOrNull() ?: return@forEach
+            val show = showObject(obj, episode)
             add(
                 TrackingRatingRecord(
                     TrackingRatingScope.EPISODE,
-                    showIds(obj, episode),
+                    showIds(show),
                     rating,
                     season = episode.intOrNull("season") ?: return@forEach,
                     episode = episode.intOrNull("number") ?: return@forEach,
+                    title = show?.stringOrNull("title"), year = show?.intOrNull("year"),
                 ),
             )
         }
     }.filter { it.ids.hasAny }
 
-    private fun showIds(row: JsonObject, child: JsonObject): TrackingExternalIds =
-        (child["show"].objectOrNull() ?: row["show"].objectOrNull())?.get("ids").toTrackingExternalIds()
+    private fun showObject(row: JsonObject, child: JsonObject): JsonObject? =
+        child["show"].objectOrNull() ?: row["show"].objectOrNull()
+
+    private fun showIds(show: JsonObject?): TrackingExternalIds = show?.get("ids").toTrackingExternalIds()
 
     private fun scope(profileId: Int): MdbListAuthScope = store.scope().also {
         if (it.profileId != profileId) throw CancellationException("MDBList profile changed")

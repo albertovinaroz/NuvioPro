@@ -1,8 +1,12 @@
 package com.nuvio.app.features.ratings
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -39,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
@@ -346,36 +353,75 @@ private fun UserRatingScale(
 }
 
 @Composable
-private fun ProviderChip(
+internal fun ProviderChip(
     providerId: TrackingProviderId,
     rating: Int?,
     selected: Boolean,
     onToggle: () -> Unit,
 ) {
-    Surface(
-        onClick = onToggle,
-        shape = RoundedCornerShape(50),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = tween(durationMillis = 140),
+        label = "rating_provider_chip_scale",
+    )
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
         } else {
-            MaterialTheme.colorScheme.surfaceVariant
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         },
-        contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 180),
+        label = "rating_provider_chip_container",
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 180),
+        label = "rating_provider_chip_content",
+    )
+    Box(
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .height(36.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(containerColor)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onToggle,
+            )
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (selected) {
-                Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(16.dp),
+                )
             }
             Text(
                 text = buildString {
                     append(providerId.displayName)
                     rating?.let { append(" · ").append(it) }
                 },
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                    letterSpacing = 0.1.sp,
+                ),
+                color = contentColor,
+                maxLines = 1,
             )
         }
     }

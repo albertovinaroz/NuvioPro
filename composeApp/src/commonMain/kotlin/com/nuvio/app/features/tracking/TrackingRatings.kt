@@ -59,6 +59,9 @@ data class TrackingRatingRecord(
     val rating: Int,
     val season: Int? = null,
     val episode: Int? = null,
+    /** Display metadata the provider's own response happened to carry; never fetched separately. */
+    val title: String? = null,
+    val year: Int? = null,
 ) {
     fun matches(target: TrackingRatingTarget): Boolean =
         scope == target.scope &&
@@ -134,6 +137,9 @@ internal fun JsonElement?.arrayOrEmpty(): List<JsonElement> = (this as? JsonArra
 
 internal fun JsonObject.intOrNull(key: String): Int? =
     (this[key] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.toDoubleOrNull()?.toInt()
+
+internal fun JsonObject.stringOrNull(key: String): String? =
+    (this[key] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content?.trim()?.takeIf(String::isNotEmpty)
 
 /** Sums the numeric counters of a `{"movies": 1, "shows": 0, ...}` receipt object. */
 internal fun JsonElement?.countersTotal(): Int =

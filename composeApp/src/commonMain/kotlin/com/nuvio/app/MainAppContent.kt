@@ -1845,6 +1845,7 @@ internal fun MainAppContent(
                                 LibraryRepository.markPosterOpened(item)
                                 openLibraryItem(item)
                             },
+                            onSyncedPosterClick = { item -> openLibraryItem(item) },
                         )
                     }
                 }

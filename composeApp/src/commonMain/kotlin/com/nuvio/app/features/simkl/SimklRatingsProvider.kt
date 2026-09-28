@@ -13,6 +13,7 @@ import com.nuvio.app.features.tracking.countersTotal
 import com.nuvio.app.features.tracking.intOrNull
 import com.nuvio.app.features.tracking.notFoundTotal
 import com.nuvio.app.features.tracking.objectOrNull
+import com.nuvio.app.features.tracking.stringOrNull
 import com.nuvio.app.features.tracking.toTrackingExternalIds
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
@@ -118,7 +119,10 @@ object SimklRatingsProvider : TrackingRatingProvider {
             ?: return null
         val ids = media["ids"].toTrackingExternalIds()
         if (!ids.hasAny) return null
-        return TrackingRatingRecord(scope = scope, ids = ids, rating = rating)
+        return TrackingRatingRecord(
+            scope = scope, ids = ids, rating = rating,
+            title = media.stringOrNull("title"), year = media.intOrNull("year"),
+        )
     }
 
     private fun checkProfile(profileId: Int) {

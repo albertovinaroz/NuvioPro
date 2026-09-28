@@ -6,12 +6,14 @@ import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TRACKING_RATING_MAX
 import com.nuvio.app.features.tracking.TRACKING_RATING_MIN
+import com.nuvio.app.features.tracking.TrackingExternalIds
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.features.tracking.TrackingRatingProvider
 import com.nuvio.app.features.tracking.TrackingRatingRecord
 import com.nuvio.app.features.tracking.TrackingRatingScope
 import com.nuvio.app.features.tracking.TrackingRatingTarget
+import com.nuvio.app.features.tracking.sharesIdentityWith
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +58,15 @@ data class UserRatingsUiState(
     val entries: Map<String, UserRatingEntry> = emptyMap(),
     val disabledProviders: Set<TrackingProviderId> = emptySet(),
     val profileId: Int = -1,
+)
+
+/** One rated movie or show, merged across every provider that has it rated. */
+data class AggregatedUserRating(
+    val scope: TrackingRatingScope,
+    val ids: TrackingExternalIds,
+    val title: String?,
+    val year: Int?,
+    val ratingsByProvider: Map<TrackingProviderId, Int>,
 )
 
 /**
@@ -155,6 +166,61 @@ object UserRatingsRepository {
                 }
             }
         }
+    }
+
+    /**
+     * Every movie and show rated on any connected provider, one entry per title even when it is
+     * rated on several. Used by the Library "Rated" view to show synced ratings alongside local
+     * ones; not cached beyond [ratingsFor]'s own TTL, so callers should hold the result themselves.
+     */
+    suspend fun loadAllTitleRatings(): List<AggregatedUserRating> {
+        ensureRegistered()
+        syncProfile()
+        val profileId = _uiState.value.profileId
+        val titleScopes = setOf(TrackingRatingScope.MOVIE, TrackingRatingScope.SHOW)
+        val providers = TrackingProviderRegistry.connectedRatingProviders()
+            .filter { provider -> provider.supportedScopes.any { it in titleScopes } }
+        if (providers.isEmpty()) return emptyList()
+
+        val perProviderRecords = coroutineScope {
+            providers.flatMap { provider ->
+                titleScopes.filter { it in provider.supportedScopes }.map { ratingScope ->
+                    async {
+                        provider.providerId to runCatching { ratingsFor(provider, profileId, ratingScope, CACHE_TTL_MS) }
+                            .getOrElse { error ->
+                                if (error is CancellationException) throw error
+                                log.w { "Failed to read ${provider.providerId.storageId} ratings: ${error.message}" }
+                                emptyList()
+                            }
+                    }
+                }
+            }.awaitAll()
+        }
+
+        val aggregated = mutableListOf<AggregatedUserRating>()
+        for ((providerId, records) in perProviderRecords) {
+            for (record in records) {
+                val index = aggregated.indexOfFirst { it.scope == record.scope && it.ids.sharesIdentityWith(record.ids) }
+                if (index >= 0) {
+                    val existing = aggregated[index]
+                    aggregated[index] = existing.copy(
+                        ids = existing.ids.mergeMissing(record.ids),
+                        title = existing.title ?: record.title,
+                        year = existing.year ?: record.year,
+                        ratingsByProvider = existing.ratingsByProvider + (providerId to record.rating),
+                    )
+                } else {
+                    aggregated += AggregatedUserRating(
+                        scope = record.scope,
+                        ids = record.ids,
+                        title = record.title,
+                        year = record.year,
+                        ratingsByProvider = mapOf(providerId to record.rating),
+                    )
+                }
+            }
+        }
+        return aggregated
     }
 
     private suspend fun ratingsFor(

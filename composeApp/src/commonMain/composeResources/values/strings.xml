@@ -2093,6 +2093,7 @@
     <string name="library_rated_title">Rated</string>
     <string name="library_rated_empty_title">No ratings yet</string>
     <string name="library_rated_empty_message">Rate a movie or show from its details page and it will show up here.</string>
+    <string name="library_rated_synced_section">Synced ratings</string>
     <string name="library_layout_show_horizontal">Show horizontal shelves</string>
     <string name="library_layout_show_vertical">Show vertical grid</string>
     <string name="library_load_failed">Couldn't load library</string>
