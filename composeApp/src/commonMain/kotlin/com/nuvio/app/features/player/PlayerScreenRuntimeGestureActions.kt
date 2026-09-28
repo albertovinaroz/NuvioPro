@@ -71,6 +71,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
     showVideoSettingsModal = false
     showStreamInfoModal = false
     showSleepTimerModal = false
+    showUserRatingSheet = false
     showSourcesPanel = false
     showEpisodesPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()

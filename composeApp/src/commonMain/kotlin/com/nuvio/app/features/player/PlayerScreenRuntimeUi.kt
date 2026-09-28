@@ -28,6 +28,12 @@ import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
+import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
+import com.nuvio.app.features.ratings.UserRatingPlayerOverlay
+import com.nuvio.app.features.ratings.rememberCanRate
+import com.nuvio.app.features.ratings.rememberUserRating
+import com.nuvio.app.features.ratings.toUserRatingTarget
+import com.nuvio.app.features.tracking.TrackingRatingTarget
 import nuvio.composeapp.generated.resources.*
 
 @Composable
@@ -353,6 +359,9 @@ private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
 @Composable
 private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, isEpisode: Boolean) {
     val isInPip = rememberIsInPictureInPicture()
+    val userRatingTarget = currentUserRatingTarget()
+    val canRate = rememberCanRate(userRatingTarget)
+    val userRating = rememberUserRating(userRatingTarget.takeIf { canRate })
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
@@ -429,6 +438,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             onSleepTimerClick = { showSleepTimerModal = true },
             sleepTimerActive = sleepTimerEndAtMs != null,
+            onRateClick = if (canRate) {
+                { showUserRatingSheet = true }
+            } else null,
+            userRating = userRating,
             onVideoSettingsClick = if (isIos) {
                 {
                     showVideoSettingsModal = true
@@ -882,7 +895,35 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSleepTimerCancelled = { cancelSleepTimer() },
         onSleepTimerModalDismissed = { showSleepTimerModal = false },
     )
+
+    if (showUserRatingSheet) {
+        currentUserRatingTarget()?.let { target ->
+            UserRatingPlayerOverlay(
+                target = target,
+                title = activeEpisodeTitle?.takeIf { target.episode != null && it.isNotBlank() } ?: title,
+                subtitle = if (target.episode != null) {
+                    listOfNotNull(
+                        title,
+                        localizedSeasonEpisodeCode(target.season, target.episode),
+                    ).joinToString(" · ")
+                } else {
+                    null
+                },
+                onDismiss = {
+                    showUserRatingSheet = false
+                    controlsVisible = true
+                },
+            )
+        }
+    }
 }
+
+/** The movie or episode currently playing, for in-player rating. */
+@Composable
+private fun PlayerScreenRuntime.currentUserRatingTarget(): TrackingRatingTarget? =
+    remember(parentMetaId, contentType, parentMetaType, activeVideoId, activeSeasonNumber, activeEpisodeNumber) {
+        if (isLiveTvPlayback) null else currentTrackingMedia().toUserRatingTarget()
+    }
 
 private const val MOVIE_RECOMMENDATION_LIMIT = 10
 
