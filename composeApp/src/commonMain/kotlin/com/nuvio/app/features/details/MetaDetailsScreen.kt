@@ -2468,6 +2468,13 @@ private fun ConfiguredMetaSections(
                     iconActions = iconActions,
                     secondaryActions = buildList {
                         if (!shuffleEnabled) shuffleAction?.let(::add)
+                        onDownloadClick?.let { download ->
+                            add(DetailSecondaryAction(
+                                label = stringResource(Res.string.details_download_action),
+                                icon = Icons.Rounded.Download,
+                                onClick = download,
+                            ))
+                        }
                         add(DetailSecondaryAction(
                             label = if (isWatched) {
                                 stringResource(Res.string.hero_mark_unwatched)
@@ -2497,7 +2504,6 @@ private fun ConfiguredMetaSections(
                     },
                     isTablet = isTablet,
                     onPlayClick = onPrimaryPlayClick,
-                    onDownloadClick = onDownloadClick.takeIf { !settings.iconActionRow },
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                     userRating = userRating,
                     onRateClick = onRateClick,

@@ -883,6 +883,8 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private var localizedTabTitles: [NuvioAppTab: String] = [:]
     @Published private(set) var localizedSwitchProfileTitle = ""
     @Published private(set) var localizedAddProfileTitle = ""
+    @Published private(set) var localizedDownloadsTitle = ""
+    @Published private(set) var localizedLibraryRatedTitle = ""
     @Published var isProfileSwitcherPresented = false
 
     let homeCoordinator = TabNavigationCoordinator()
@@ -1028,7 +1030,9 @@ final class AppNavigationCoordinator: ObservableObject {
         library: String,
         profile: String,
         switchProfile: String,
-        addProfile: String
+        addProfile: String,
+        downloads: String,
+        libraryRated: String
     ) {
         localizedTabTitles = [
             .home: home,
@@ -1039,6 +1043,8 @@ final class AppNavigationCoordinator: ObservableObject {
         ]
         localizedSwitchProfileTitle = switchProfile
         localizedAddProfileTitle = addProfile
+        localizedDownloadsTitle = downloads
+        localizedLibraryRatedTitle = libraryRated
     }
 
     func updateAppReady(_ ready: Bool) {
@@ -1131,14 +1137,16 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            onTabTitles: { home, search, library, profile, switchProfile, addProfile in
+            onTabTitles: { home, search, library, profile, switchProfile, addProfile, downloads, libraryRated in
                 appCoordinator.updateTabTitles(
                     home: home,
                     search: search,
                     library: library,
                     profile: profile,
                     switchProfile: switchProfile,
-                    addProfile: addProfile
+                    addProfile: addProfile,
+                    downloads: downloads,
+                    libraryRated: libraryRated
                 )
             },
             appGateController: appCoordinator.appGateController
@@ -1243,6 +1251,8 @@ struct TabContentView: View {
     // Only Home's hero ever has a trailer to mute, and only one TabContentView (whichever tab is
     // current) needs to actually observe — see the `tab == .home` guards below on start/stop.
     @StateObject private var trailerMuteViewModel = HeroTrailerMuteViewModel()
+    // Same one-observer-per-tab guard as trailerMuteViewModel, gated on `tab == .library` instead.
+    @StateObject private var downloadsButtonViewModel = NativeDownloadsButtonViewModel()
 
     var body: some View {
         NavigationStack(
@@ -1308,6 +1318,33 @@ struct TabContentView: View {
                 .padding(.top, 8 + 56)
                 .padding(.trailing, 18)
                 .transition(.opacity)
+            } else if tab == .library && coordinator.path.isEmpty {
+                // Aligned with Compose's own "Library" title row (statusBar + 8pt, since this
+                // overlay's topTrailing guide already sits at the safe-area edge Compose's own
+                // offset is measured from) — see GlassIconButtonGroup on the Kotlin side, which
+                // this replaces on iOS.
+                LibraryHeaderGlassButtons(
+                    downloadsTitle: appCoordinator.localizedDownloadsTitle,
+                    ratedTitle: appCoordinator.localizedLibraryRatedTitle,
+                    isDownloading: downloadsButtonViewModel.isDownloading,
+                    hasUnseenCompletedDownload: downloadsButtonViewModel.hasUnseenCompleted,
+                    onDownloads: {
+                        appCoordinator.push(
+                            DownloadsRoute(title: appCoordinator.localizedDownloadsTitle),
+                            from: coordinator,
+                            launchSingleTop: true
+                        )
+                    },
+                    onRated: {
+                        appCoordinator.push(
+                            LibraryRatedRoute(title: appCoordinator.localizedLibraryRatedTitle),
+                            from: coordinator,
+                            launchSingleTop: true
+                        )
+                    }
+                )
+                .padding(.top, 8)
+                .padding(.trailing, 16)
             }
         }
         .animation(.easeInOut(duration: 0.22), value: trailerMuteViewModel.visible)
@@ -1315,10 +1352,16 @@ struct TabContentView: View {
             if tab == .home {
                 trailerMuteViewModel.startObserving()
             }
+            if tab == .library {
+                downloadsButtonViewModel.startObserving()
+            }
         }
         .onDisappear {
             if tab == .home {
                 trailerMuteViewModel.stopObserving()
+            }
+            if tab == .library {
+                downloadsButtonViewModel.stopObserving()
             }
         }
     }
@@ -1513,6 +1556,24 @@ private final class HeroTrailerMuteViewModel: ObservableObject {
     }
 }
 
+private final class NativeDownloadsButtonViewModel: ObservableObject {
+    @Published private(set) var isDownloading = false
+    @Published private(set) var hasUnseenCompleted = false
+
+    private let controller = NativeDownloadsButtonController()
+
+    func startObserving() {
+        controller.observeState { [weak self] isDownloading, hasUnseenCompleted in
+            self?.isDownloading = isDownloading.boolValue
+            self?.hasUnseenCompleted = hasUnseenCompleted.boolValue
+        }
+    }
+
+    func stopObserving() {
+        controller.stopObserving()
+    }
+}
+
 /// A hero trailer's mute toggle, styled to match the automatic Liquid Glass treatment a
 /// `NavigationStack`'s own back button gets for free on iOS 26 — used both as a Details toolbar
 /// item (which would otherwise get that treatment automatically) and as a floating overlay on
@@ -1567,6 +1628,121 @@ private struct HeroTrailerMuteButton: View {
             Circle()
                 .fill(.ultraThinMaterial)
                 .frame(width: Self.diameter, height: Self.diameter)
+        }
+    }
+}
+
+/// Library's Downloads + Rated actions as one native Liquid Glass capsule — same recipe as
+/// [HeroTrailerMuteButton], just widened to hold two independent tap zones side by side instead
+/// of one, so the pair reads as a single fused surface rather than two separate glass circles
+/// (which is all Compose's own GlassIconButtonGroup can approximate on this platform).
+@available(iOS 16.0, *)
+private struct LibraryHeaderGlassButtons: View {
+    let downloadsTitle: String
+    let ratedTitle: String
+    let isDownloading: Bool
+    let hasUnseenCompletedDownload: Bool
+    let onDownloads: () -> Void
+    let onRated: () -> Void
+
+    private static let diameter: CGFloat = 44
+
+    private var ratedIcon: some View {
+        Image(systemName: "star.fill")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.white)
+    }
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            // Each icon gets its own `.glassEffect(interactive:)` — the interactive press/drag
+            // shimmer only fires on the same view a Button's press-state lives on, not on a
+            // shared background shape sitting behind separately-gestured content (tried that
+            // first: right fused pill shape, but tap/drag never animated). GlassEffectContainer
+            // fuses the two adjacent circles into one pill the same way iOS fuses its own
+            // grouped toolbar buttons, so the merged look survives the split.
+            GlassEffectContainer(spacing: 0) {
+                HStack(spacing: 0) {
+                    glassButton(label: downloadsTitle, action: onDownloads) {
+                        DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
+                    }
+                    glassButton(label: ratedTitle, action: onRated) { ratedIcon }
+                }
+            }
+        } else {
+            HStack(spacing: 0) {
+                plainButton(label: downloadsTitle, action: onDownloads) {
+                    DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
+                }
+                plainButton(label: ratedTitle, action: onRated) { ratedIcon }
+            }
+            .frame(height: Self.diameter)
+            .background(Capsule().fill(.ultraThinMaterial))
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func glassButton(
+        label: String,
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> some View
+    ) -> some View {
+        Button(action: action) {
+            icon()
+                .frame(width: Self.diameter, height: Self.diameter)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.clear.interactive(), in: Circle())
+        .accessibilityLabel(label)
+    }
+
+    private func plainButton(
+        label: String,
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> some View
+    ) -> some View {
+        icon()
+            .frame(width: Self.diameter, height: Self.diameter)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(label)
+    }
+}
+
+/// Downloads' icon reflects the same two states Compose's own FlowingDownloadIcon/gradient-mask
+/// combo signals on Android — an active download pulses, an unseen completed one picks up the
+/// app's accent color — so the native button doesn't silently drop information the Compose one
+/// shows.
+@available(iOS 16.0, *)
+private struct DownloadsGlassIcon: View {
+    let isDownloading: Bool
+    let hasUnseenCompleted: Bool
+
+    @StateObject private var tabIconStore = NativeTabIconStore()
+    @State private var pulse = false
+
+    var body: some View {
+        Image(systemName: "arrow.down.circle")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(
+                hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
+            )
+            .opacity(isDownloading && pulse ? 0.35 : 1)
+            .onAppear { updatePulse() }
+            .onChange(of: isDownloading) { _ in updatePulse() }
+    }
+
+    private func updatePulse() {
+        if isDownloading {
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+        } else {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                pulse = false
+            }
         }
     }
 }

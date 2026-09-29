@@ -155,6 +155,7 @@ import com.nuvio.app.features.settings.AddonsSettingsScreen
 import com.nuvio.app.features.settings.ContinueWatchingSettingsScreen
 import com.nuvio.app.features.settings.DownloadsSettingsScreen
 import com.nuvio.app.features.settings.HomescreenSettingsScreen
+import com.nuvio.app.features.settings.NotificationsSettingsScreen
 import com.nuvio.app.features.settings.LicensesAttributionsSettingsScreen
 import com.nuvio.app.features.settings.MetaScreenSettingsScreen
 import com.nuvio.app.features.settings.PluginsSettingsScreen
@@ -211,7 +212,18 @@ internal fun MainAppContent(
     onGoBack: (() -> Unit)? = null,
     onReplace: ((AppRoute) -> Unit)? = null,
     onActivate: ((AppScreenTab) -> Unit)? = null,
-    onTabTitles: ((home: String, search: String, library: String, profile: String, switchProfile: String, addProfile: String) -> Unit)? = null,
+    onTabTitles: (
+        (
+            home: String,
+            search: String,
+            library: String,
+            profile: String,
+            switchProfile: String,
+            addProfile: String,
+            downloads: String,
+            libraryRated: String,
+        ) -> Unit
+    )? = null,
     appGateController: AppGateController? = null,
     onRootContentReady: ((Boolean) -> Unit)? = null,
     onSwitchProfile: () -> Unit = {},
@@ -373,6 +385,7 @@ internal fun MainAppContent(
     val continueWatchingSettingsTitle = stringResource(Res.string.compose_settings_page_continue_watching)
     val debridSettingsTitle = stringResource(Res.string.compose_settings_page_debrid)
     val notificationsFeedTitle = stringResource(Res.string.notifications_feed_title)
+    val notificationsSettingsTitle = stringResource(Res.string.compose_settings_page_notifications)
     val libraryRatedTitle = stringResource(Res.string.library_rated_title)
     val downloadsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
@@ -506,6 +519,8 @@ internal fun MainAppContent(
         nativeTabProfileTitle,
         nativeSwitchProfileTitle,
         nativeAddProfileTitle,
+        downloadsTitle,
+        libraryRatedTitle,
         onTabTitles,
     ) {
         NativeTabBridge.publishTabTitles(
@@ -521,6 +536,8 @@ internal fun MainAppContent(
             nativeTabProfileTitle,
             nativeSwitchProfileTitle,
             nativeAddProfileTitle,
+            downloadsTitle,
+            libraryRatedTitle,
         )
     }
 
@@ -1832,7 +1849,15 @@ internal fun MainAppContent(
                                     }
                                 }
                             },
+                            onOpenSettings = {
+                                navController.navigate(NotificationsPreferencesRoute(notificationsSettingsTitle))
+                            },
                         )
+                    }
+                }
+                entry<NotificationsPreferencesRoute> { route ->
+                    SettingsDestination(route, navController) { onBack ->
+                        NotificationsSettingsScreen(onBack = onBack)
                     }
                 }
 

@@ -82,7 +82,18 @@ internal fun AppGate(
     onAppReady: ((Boolean) -> Unit)?,
     onMainContentMountChanged: ((Boolean) -> Unit)?,
     onMainContentVisibleChanged: ((Boolean) -> Unit)?,
-    onTabTitles: ((home: String, search: String, library: String, profile: String, switchProfile: String, addProfile: String) -> Unit)?,
+    onTabTitles: (
+        (
+            home: String,
+            search: String,
+            library: String,
+            profile: String,
+            switchProfile: String,
+            addProfile: String,
+            downloads: String,
+            libraryRated: String,
+        ) -> Unit
+    )?,
     nativeProfileSwitcherController: NativeProfileSwitcherController?,
     appGateController: AppGateController?,
 ) {
