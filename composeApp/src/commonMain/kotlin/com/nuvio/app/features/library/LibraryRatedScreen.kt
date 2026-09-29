@@ -1,7 +1,10 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,38 +20,52 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
+import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
+import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
+import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
+import com.nuvio.app.features.home.components.PosterGridSkeletonRow
 import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.features.ratings.AggregatedUserRating
 import com.nuvio.app.features.ratings.UserRatingsRepository
@@ -58,10 +75,15 @@ import com.nuvio.app.features.tracking.TrackingRatingScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.cloud_library_refresh
+import nuvio.composeapp.generated.resources.library_filter_provider
 import nuvio.composeapp.generated.resources.library_filter_rating
+import nuvio.composeapp.generated.resources.library_rated_all_services
 import nuvio.composeapp.generated.resources.library_rated_empty_message
 import nuvio.composeapp.generated.resources.library_rated_empty_title
+import nuvio.composeapp.generated.resources.library_rated_remove_rating
 import nuvio.composeapp.generated.resources.library_rated_synced_section
 import nuvio.composeapp.generated.resources.library_rated_title
 import nuvio.composeapp.generated.resources.library_rating_any
@@ -74,6 +96,7 @@ private data class ResolvedSyncedRating(
     val item: LibraryItem?,
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryRatedScreen(
     onBack: () -> Unit,
@@ -86,6 +109,8 @@ fun LibraryRatedScreen(
     }.collectAsStateWithLifecycle()
 
     var minRating by rememberSaveable { mutableStateOf(0) }
+    var providerFilterId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedProvider = remember(providerFilterId) { providerFilterId?.let(TrackingProviderId::fromStorage) }
     val anyRatingLabel = stringResource(Res.string.library_rating_any)
     val sortedEntries = remember(ratingsUiState, minRating) {
         ratingsUiState.entries.values
@@ -107,6 +132,17 @@ fun LibraryRatedScreen(
         isLoadingSynced = true
         syncedRatings = runCatching { UserRatingsRepository.loadAllTitleRatings() }.getOrDefault(emptyList())
         isLoadingSynced = false
+    }
+    val coroutineScope = rememberCoroutineScope()
+    val refreshSyncedRatings: () -> Unit = {
+        if (connectedProviders.isNotEmpty()) {
+            coroutineScope.launch {
+                // maxAgeMs = 0 skips the repository's own cache so a manual refresh actually hits
+                // the network instead of just replaying whatever the last fetch already saw.
+                syncedRatings = runCatching { UserRatingsRepository.loadAllTitleRatings(maxAgeMs = 0L) }
+                    .getOrDefault(syncedRatings)
+            }
+        }
     }
 
     // Best-effort cross-reference by IMDb id, cache-only (no network) so this stays cheap.
@@ -133,24 +169,42 @@ fun LibraryRatedScreen(
         val matched = syncedByLocalId.values.toSet()
         syncedRatings.filterNot { it in matched }
     }
-
-    // Resolve poster/name for synced-only titles via the same catalog lookup details screens use.
-    var allResolvedSyncedOnly by remember { mutableStateOf<List<ResolvedSyncedRating>>(emptyList()) }
-    LaunchedEffect(syncedOnly) {
-        allResolvedSyncedOnly = if (syncedOnly.isEmpty()) {
-            emptyList()
+    // A provider filter only makes sense against titles actually rated on that provider, so it
+    // drops local-only entries entirely rather than just dimming them.
+    val displayedLocalEntries = remember(sortedEntries, syncedByLocalId, selectedProvider) {
+        if (selectedProvider == null) {
+            sortedEntries
         } else {
-            coroutineScope {
-                syncedOnly.map { rating -> async { ResolvedSyncedRating(rating, rating.resolveLibraryItem()) } }.awaitAll()
+            sortedEntries.filter { entry ->
+                syncedByLocalId[entry.id]?.ratingsByProvider?.containsKey(selectedProvider) == true
             }
         }
     }
+
+    // Resolve poster/name for synced-only titles via the same catalog lookup details screens use.
+    var allResolvedSyncedOnly by remember { mutableStateOf<List<ResolvedSyncedRating>>(emptyList()) }
+    var isResolvingSyncedMetadata by remember { mutableStateOf(false) }
+    LaunchedEffect(syncedOnly) {
+        if (syncedOnly.isEmpty()) {
+            allResolvedSyncedOnly = emptyList()
+            return@LaunchedEffect
+        }
+        isResolvingSyncedMetadata = true
+        allResolvedSyncedOnly = coroutineScope {
+            syncedOnly.map { rating -> async { ResolvedSyncedRating(rating, rating.resolveLibraryItem()) } }.awaitAll()
+        }
+        isResolvingSyncedMetadata = false
+    }
     // The star filter is on the same 1-5 scale everywhere: a synced title's best provider rating
     // (1-10) is converted (7 -> 4★, 8 -> 4★, ...) before it's compared against it.
-    val resolvedSyncedOnly = remember(allResolvedSyncedOnly, minRating) {
-        allResolvedSyncedOnly.filter { minRating <= 0 || it.rating.bestFiveStarRating() >= minRating }
+    val resolvedSyncedOnly = remember(allResolvedSyncedOnly, minRating, selectedProvider) {
+        allResolvedSyncedOnly.filter { resolved ->
+            (minRating <= 0 || resolved.rating.bestFiveStarRating() >= minRating) &&
+                (selectedProvider == null || resolved.rating.ratingsByProvider.containsKey(selectedProvider))
+        }
     }
     val hasAnyRatings = ratingsUiState.entries.isNotEmpty() || syncedRatings.isNotEmpty() || isLoadingSynced
+    var removeRatingTarget by remember { mutableStateOf<RatedLibraryEntry?>(null) }
 
     val tokens = MaterialTheme.nuvio
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -158,7 +212,9 @@ fun LibraryRatedScreen(
             posterGridColumnCountForWidth(maxWidth - tokens.spacing.screenHorizontal * 2)
         }
 
-        NuvioScreen(modifier = Modifier.fillMaxSize()) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+        ) {
             stickyHeader {
                 NuvioScreenHeader(
                     title = stringResource(Res.string.library_rated_title),
@@ -175,13 +231,51 @@ fun LibraryRatedScreen(
                         }
                     }
                 }
-                NuvioDropdownChip(
-                    title = stringResource(Res.string.library_filter_rating),
-                    label = if (minRating <= 0) anyRatingLabel else stringResource(Res.string.library_rating_min_stars, minRating),
-                    selectedKey = minRating.toString(),
-                    options = ratingOptions,
-                    onSelected = { option -> minRating = option.key.toIntOrNull() ?: 0 },
-                )
+                val allServicesLabel = stringResource(Res.string.library_rated_all_services)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        NuvioDropdownChip(
+                            title = stringResource(Res.string.library_filter_rating),
+                            label = if (minRating <= 0) anyRatingLabel else stringResource(Res.string.library_rating_min_stars, minRating),
+                            selectedKey = minRating.toString(),
+                            options = ratingOptions,
+                            onSelected = { option -> minRating = option.key.toIntOrNull() ?: 0 },
+                        )
+                        if (connectedProviders.isNotEmpty()) {
+                            val providerOptions = remember(connectedProviders) {
+                                buildList {
+                                    add(NuvioDropdownOption(key = "all", label = allServicesLabel))
+                                    connectedProviders.sortedBy { it.ordinal }.forEach { provider ->
+                                        add(NuvioDropdownOption(key = provider.storageId, label = provider.displayName))
+                                    }
+                                }
+                            }
+                            NuvioDropdownChip(
+                                title = stringResource(Res.string.library_filter_provider),
+                                label = selectedProvider?.displayName ?: allServicesLabel,
+                                selectedKey = providerFilterId ?: "all",
+                                options = providerOptions,
+                                onSelected = { option -> providerFilterId = option.key.takeIf { it != "all" } },
+                            )
+                        }
+                    }
+                    if (connectedProviders.isNotEmpty()) {
+                        IconButton(onClick = refreshSyncedRatings) {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = stringResource(Res.string.cloud_library_refresh),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
             }
 
             if (sortedEntries.isEmpty() && !hasAnyRatings) {
@@ -194,9 +288,9 @@ fun LibraryRatedScreen(
                         message = stringResource(Res.string.library_rated_empty_message),
                     )
                 }
-            } else if (sortedEntries.isNotEmpty()) {
+            } else if (displayedLocalEntries.isNotEmpty()) {
                 items(
-                    items = sortedEntries.chunked(columns),
+                    items = displayedLocalEntries.chunked(columns),
                     key = { rowEntries -> "rated:${rowEntries.first().type}:${rowEntries.first().id}" },
                 ) { rowEntries ->
                     Row(
@@ -209,6 +303,7 @@ fun LibraryRatedScreen(
                                 syncedProviders = syncedByLocalId[entry.id]?.ratingsByProvider.orEmpty(),
                                 modifier = Modifier.weight(1f),
                                 onClick = { onPosterClick(entry) },
+                                onLongClick = { removeRatingTarget = entry },
                             )
                         }
                         repeat(columns - rowEntries.size) {
@@ -218,40 +313,42 @@ fun LibraryRatedScreen(
                 }
             }
 
-            if (isLoadingSynced || resolvedSyncedOnly.isNotEmpty()) {
+            val isSyncedSectionSettling = isLoadingSynced || isResolvingSyncedMetadata
+            if (isSyncedSectionSettling || resolvedSyncedOnly.isNotEmpty()) {
                 item(key = "synced-header") {
-                    Row(
+                    Text(
+                        text = stringResource(Res.string.library_rated_synced_section),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.library_rated_synced_section),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        if (isLoadingSynced) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        }
-                    }
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
                 }
-                items(
-                    items = resolvedSyncedOnly.chunked(columns),
-                    key = { rowEntries -> "synced:${rowEntries.first().rating.ids}:${rowEntries.first().rating.scope}" },
-                ) { rowEntries ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                if (isSyncedSectionSettling) {
+                    items(
+                        count = 2,
+                        key = { index -> "synced-skeleton:$index" },
                     ) {
-                        rowEntries.forEach { resolved ->
-                            SyncedRatedPosterTile(
-                                resolved = resolved,
-                                modifier = Modifier.weight(1f),
-                                onClick = resolved.item?.let { item -> { onSyncedPosterClick(item) } },
-                            )
-                        }
-                        repeat(columns - rowEntries.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                        PosterGridSkeletonRow(columns = columns)
+                    }
+                } else {
+                    items(
+                        items = resolvedSyncedOnly.chunked(columns),
+                        key = { rowEntries -> "synced:${rowEntries.first().rating.ids}:${rowEntries.first().rating.scope}" },
+                    ) { rowEntries ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            rowEntries.forEach { resolved ->
+                                SyncedRatedPosterTile(
+                                    resolved = resolved,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = resolved.item?.let { item -> { onSyncedPosterClick(item) } },
+                                )
+                            }
+                            repeat(columns - rowEntries.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -261,14 +358,63 @@ fun LibraryRatedScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+
+        LocalRatingRemoveSheet(
+            target = removeRatingTarget,
+            onDismiss = { removeRatingTarget = null },
+        )
     }
 }
 
-/** The best rating across providers (1-10), rounded onto the app's usual 1-5 star scale. */
-private fun AggregatedUserRating.bestFiveStarRating(): Int {
-    val best = ratingsByProvider.values.maxOrNull() ?: return 0
-    return ((best + 1) / 2).coerceIn(1, LibraryRatingMax)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LocalRatingRemoveSheet(
+    target: RatedLibraryEntry?,
+    onDismiss: () -> Unit,
+) {
+    if (target == null) return
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+
+    NuvioModalBottomSheet(
+        onDismissRequest = {
+            coroutineScope.launch {
+                dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+            }
+        },
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = nuvioSafeBottomPadding(16.dp)),
+        ) {
+            Text(
+                text = target.name,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            NuvioBottomSheetDivider()
+            NuvioBottomSheetActionRow(
+                icon = Icons.Rounded.StarBorder,
+                title = stringResource(Res.string.library_rated_remove_rating),
+                onClick = {
+                    LibraryRatingsRepository.setRating(target.toMetaPreview(), 0)
+                    coroutineScope.launch {
+                        dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                    }
+                },
+            )
+        }
+    }
 }
+
+private fun AggregatedUserRating.bestFiveStarRating(): Int = bestFiveStarRating(ratingsByProvider)
 
 private suspend fun AggregatedUserRating.resolveLibraryItem(): LibraryItem? {
     val imdb = ids.imdb?.trim()?.takeIf { it.startsWith("tt", ignoreCase = true) } ?: return null
@@ -285,13 +431,16 @@ private suspend fun AggregatedUserRating.resolveLibraryItem(): LibraryItem? {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RatedPosterTile(
     entry: RatedLibraryEntry,
     syncedProviders: Map<TrackingProviderId, Int>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -302,7 +451,13 @@ private fun RatedPosterTile(
                 .aspectRatio(if (entry.posterShape == PosterShape.Landscape) 1.78f else 0.68f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surface)
-                .clickable(onClick = onClick),
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
+                    },
+                ),
         ) {
             if (entry.poster != null) {
                 AsyncImage(
