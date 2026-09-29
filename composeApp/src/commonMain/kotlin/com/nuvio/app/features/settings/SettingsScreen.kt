@@ -732,6 +732,7 @@ private fun MobileSettingsScreen(
         // platform bounce; only Profile opts out to avoid exposing that seam.
         val overscrollFactory = if (page == SettingsPage.Profile) null else LocalOverscrollFactory.current
         val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
+        ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
         CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
@@ -1001,6 +1002,7 @@ private fun MobileSettingsScreen(
             }
         }
         }
+        }
     }
 }
 
@@ -1233,6 +1235,7 @@ private fun TabletSettingsScreen(
                     listState.animateScrollToItem(0)
                 }
             }
+            ProfileInsightsPullToRefresh(enabled = page == SettingsPage.Profile) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1480,6 +1483,7 @@ private fun TabletSettingsScreen(
                         uiState = liveTvUiState,
                     )
                 }
+            }
             }
         }
     }
