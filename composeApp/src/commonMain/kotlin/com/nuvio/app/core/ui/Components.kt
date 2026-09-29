@@ -79,6 +79,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.nuvio.app.navigation.LocalNativeNavigationBarHidden
 import com.nuvio.app.navigation.LocalUseNativeNavigation
+import com.nuvio.app.core.ui.glass.FrostedGlassBar
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 
@@ -351,6 +352,25 @@ fun HeroGlassIconButton(
         contentAlignment = Alignment.Center,
     ) {
         content()
+    }
+}
+
+/**
+ * Groups a row of icon actions under one shared "Liquid Glass" pill — [FrostedGlassBar]'s
+ * no-haze branch (flat tinted fill + top-lit edge) standing in for spots with no hero art behind
+ * them to blur, the way iOS's own [GlassEffectContainer]-grouped toolbar buttons read as one unit.
+ */
+@Composable
+fun GlassIconButtonGroup(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Box(
+        modifier = modifier.clip(RoundedCornerShape(50)),
+        contentAlignment = Alignment.Center,
+    ) {
+        FrostedGlassBar(hazeState = null, modifier = Modifier.matchParentSize(), glowStrength = 1f)
+        Row(verticalAlignment = Alignment.CenterVertically, content = content)
     }
 }
 

@@ -101,6 +101,8 @@ import com.nuvio.app.core.format.resolveReleaseInfoForDisplay
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.DisintegrationRequest
+import com.nuvio.app.core.ui.GlassIconButtonGroup
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
@@ -125,6 +127,9 @@ import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.HomePosterCard
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.ratings.AggregatedUserRating
+import com.nuvio.app.features.ratings.UserRatingsRepository
+import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
@@ -220,8 +225,37 @@ fun LibraryScreen(
         LibraryRatingsRepository.ensureLoaded()
         LibraryRatingsRepository.uiState
     }.collectAsStateWithLifecycle()
-    val ratingFor = remember(libraryRatingsUiState) {
-        { item: LibraryItem -> LibraryRatingsRepository.ratingFor(item.id, item.type) }
+    // The rating filter also has to see Trakt/Simkl/MDBList ratings, not just the local ones:
+    // since the details screen dropped its own rating picker in favor of the synced one, most new
+    // ratings never touch LibraryRatingsRepository at all.
+    val connectedRatingProviders by TrackingProviderRegistry.connectedProviderIds.collectAsStateWithLifecycle()
+    var syncedRatingsForFilter by remember { mutableStateOf<List<AggregatedUserRating>>(emptyList()) }
+    LaunchedEffect(connectedRatingProviders) {
+        syncedRatingsForFilter = if (connectedRatingProviders.isEmpty()) {
+            emptyList()
+        } else {
+            runCatching { UserRatingsRepository.loadAllTitleRatings() }.getOrDefault(emptyList())
+        }
+    }
+    val syncedRatingsByImdbId = remember(syncedRatingsForFilter) {
+        syncedRatingsForFilter.mapNotNull { rating ->
+            rating.ids.imdb?.trim()?.lowercase()?.takeIf(String::isNotEmpty)?.let { it to rating }
+        }.toMap()
+    }
+    val ratingFor = remember(libraryRatingsUiState, syncedRatingsByImdbId) {
+        { item: LibraryItem ->
+            val localRating = LibraryRatingsRepository.ratingFor(item.id, item.type)
+            val syncedRating = if (syncedRatingsByImdbId.isEmpty()) {
+                0
+            } else {
+                MetaDetailsRepository.peek(item.type, item.id)
+                    ?.imdbId?.trim()?.lowercase()?.takeIf(String::isNotEmpty)
+                    ?.let(syncedRatingsByImdbId::get)
+                    ?.let { bestFiveStarRating(it.ratingsByProvider) }
+                    ?: 0
+            }
+            maxOf(localRating, syncedRating)
+        }
     }
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -432,6 +466,29 @@ fun LibraryScreen(
                     // A touch more than the bare status-bar inset — matching Search's header,
                     // which gets the same small top margin.
                     topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
+                    actions = {
+                        // Native nav (iOS) renders these as a real Liquid Glass capsule instead —
+                        // see LibraryHeaderGlassButtons in ContentView.swift.
+                        if (!LocalUseNativeNavigation.current) {
+                            val openRatedLabel = stringResource(Res.string.library_rated_open)
+                            GlassIconButtonGroup {
+                                if (onDownloadsClick != null) {
+                                    LibraryDownloadsButton(onClick = onDownloadsClick)
+                                }
+                                IconButton(
+                                    onClick = { onRatedClick?.invoke() },
+                                    modifier = Modifier.semantics { contentDescription = openRatedLabel },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(19.dp),
+                                        tint = Color.White,
+                                    )
+                                }
+                            }
+                        }
+                    },
                 )
                 // Same title-to-control gap as Search's header-to-searchbar spacer, so the two
                 // sections read as sharing one layout rhythm.
@@ -490,23 +547,6 @@ fun LibraryScreen(
                                 cutoutColor = MaterialTheme.colorScheme.background,
                             )
                         }
-                    }
-                    if (onDownloadsClick != null) {
-                        LibraryDownloadsButton(onClick = onDownloadsClick)
-                    }
-                    val openRatedLabel = stringResource(Res.string.library_rated_open)
-                    IconButton(
-                        onClick = { onRatedClick?.invoke() },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .semantics { contentDescription = openRatedLabel },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(19.dp),
-                            tint = MaterialTheme.nuvio.colors.textPrimary,
-                        )
                     }
                 }
                 // Matches Search's searchbar-to-content spacer.

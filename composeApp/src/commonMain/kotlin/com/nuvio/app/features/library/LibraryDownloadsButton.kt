@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.gradientMask
@@ -48,7 +50,7 @@ internal fun LibraryDownloadsButton(onClick: () -> Unit) {
                 modifier = Modifier.gradientMask(MaterialTheme.themePalette.accentBrush()),
                 tint = Color.White,
             )
-            else -> DownloadIcon(tint = MaterialTheme.nuvio.colors.textPrimary)
+            else -> DownloadIcon(tint = Color.White)
         }
     }
 }
@@ -93,7 +95,7 @@ private fun DownloadIcon(
     Icon(
         imageVector = Icons.Rounded.Download,
         contentDescription = stringResource(Res.string.compose_settings_root_downloads_title),
-        modifier = modifier,
+        modifier = Modifier.size(19.dp).then(modifier),
         tint = tint,
     )
 }

@@ -2,6 +2,7 @@ package com.nuvio.app.features.library
 
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
+import com.nuvio.app.features.tracking.TrackingProviderId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +13,12 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 const val LibraryRatingMax = 5
+
+/** The best rating across providers (1-10), rounded onto the app's 1-5 star scale. */
+internal fun bestFiveStarRating(ratingsByProvider: Map<TrackingProviderId, Int>): Int {
+    val best = ratingsByProvider.values.maxOrNull() ?: return 0
+    return ((best + 1) / 2).coerceIn(1, LibraryRatingMax)
+}
 
 /**
  * A rating plus just enough display data to render it in the "Rated" view without depending on

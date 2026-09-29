@@ -173,7 +173,7 @@ object UserRatingsRepository {
      * rated on several. Used by the Library "Rated" view to show synced ratings alongside local
      * ones; not cached beyond [ratingsFor]'s own TTL, so callers should hold the result themselves.
      */
-    suspend fun loadAllTitleRatings(): List<AggregatedUserRating> {
+    suspend fun loadAllTitleRatings(maxAgeMs: Long = CACHE_TTL_MS): List<AggregatedUserRating> {
         ensureRegistered()
         syncProfile()
         val profileId = _uiState.value.profileId
@@ -186,7 +186,7 @@ object UserRatingsRepository {
             providers.flatMap { provider ->
                 titleScopes.filter { it in provider.supportedScopes }.map { ratingScope ->
                     async {
-                        provider.providerId to runCatching { ratingsFor(provider, profileId, ratingScope, CACHE_TTL_MS) }
+                        provider.providerId to runCatching { ratingsFor(provider, profileId, ratingScope, maxAgeMs) }
                             .getOrElse { error ->
                                 if (error is CancellationException) throw error
                                 log.w { "Failed to read ${provider.providerId.storageId} ratings: ${error.message}" }
