@@ -2525,6 +2525,18 @@ private object ProfileTitleFactsStore {
         scheduleSave()
     }
 
+    suspend fun clearAll() {
+        ensureLoaded()
+        resumeJob?.cancel()
+        resumeJob = null
+        _facts.value = emptyMap()
+        failures.clear()
+        attemptedFetchKeys.clear()
+        syncFailedKeys()
+        scheduleSave()
+        lastRequest?.let { request -> mainScope.launch { hydrate(request) } }
+    }
+
     fun clearFailures() {
         if (failures.isEmpty()) return
         failures.keys.forEach(attemptedFetchKeys::remove)
@@ -2704,6 +2716,10 @@ private object ProfileTitleFactsStore {
             profileInsightsLog.w(error) { "Failed to persist profile title facts cache" }
         }
     }
+}
+
+internal suspend fun clearProfileInsightTitleFacts() {
+    ProfileTitleFactsStore.clearAll()
 }
 
 private class ProfileInsightsRefreshContext(
