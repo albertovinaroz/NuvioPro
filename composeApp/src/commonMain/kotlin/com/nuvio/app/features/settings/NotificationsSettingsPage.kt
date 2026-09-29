@@ -11,12 +11,18 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsUiState
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.settings_homescreen_notifications_icon
+import nuvio.composeapp.generated.resources.settings_homescreen_notifications_icon_description
 import nuvio.composeapp.generated.resources.settings_notifications_disabled_in_app
 import nuvio.composeapp.generated.resources.settings_notifications_episode_release_alerts
 import nuvio.composeapp.generated.resources.settings_notifications_episode_release_alerts_description
@@ -36,6 +42,10 @@ internal fun LazyListScope.notificationsSettingsContent(
     uiState: EpisodeReleaseNotificationsUiState,
 ) {
     item {
+        val homescreenSettingsUiState by remember {
+            HomeCatalogSettingsRepository.snapshot()
+            HomeCatalogSettingsRepository.uiState
+        }.collectAsStateWithLifecycle()
         SettingsSection(
             title = stringResource(Res.string.settings_notifications_section_alerts),
             isTablet = isTablet,
@@ -48,6 +58,14 @@ internal fun LazyListScope.notificationsSettingsContent(
                     enabled = !uiState.isLoading,
                     isTablet = isTablet,
                     onCheckedChange = EpisodeReleaseNotificationsRepository::setEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_homescreen_notifications_icon),
+                    description = stringResource(Res.string.settings_homescreen_notifications_icon_description),
+                    checked = homescreenSettingsUiState.heroNotificationsIconEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = HomeCatalogSettingsRepository::setHeroNotificationsIconEnabled,
                 )
             }
         }

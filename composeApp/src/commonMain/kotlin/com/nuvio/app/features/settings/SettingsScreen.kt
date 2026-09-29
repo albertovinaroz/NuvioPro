@@ -151,6 +151,13 @@ fun SettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onWhatsNewClick: () -> Unit = {},
     onCollectionsClick: () -> Unit = {},
+    // Reused from Library/Home's own entry points to the same content screens (DownloadsRoute,
+    // NotificationFeedRoute) so "Downloads"/"Notifications" in the settings root menu lands on
+    // the actual content — its own gear icon reaches these pages' settings — rather than jumping
+    // straight to settings the way every other row here does. Falls back to that local settings
+    // page when unset (previews, callers that don't wire it) rather than doing nothing.
+    onDownloadsContentClick: (() -> Unit)? = null,
+    onNotificationsContentClick: (() -> Unit)? = null,
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
@@ -472,6 +479,8 @@ fun SettingsScreen(
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onWhatsNewClick = onWhatsNewClick,
                         onCollectionsClick = onCollectionsClick,
+                        onDownloadsContentClick = onDownloadsContentClick,
+                        onNotificationsContentClick = onNotificationsContentClick,
                     )
                 } else {
                     MobileSettingsScreen(
@@ -556,6 +565,8 @@ fun SettingsScreen(
                         onTestUpdateBannerClick = onTestUpdateBannerClick,
                         onWhatsNewClick = onWhatsNewClick,
                         onCollectionsClick = onCollectionsClick,
+                        onDownloadsContentClick = onDownloadsContentClick,
+                        onNotificationsContentClick = onNotificationsContentClick,
                     )
                 }
             }
@@ -646,6 +657,8 @@ private fun MobileSettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onWhatsNewClick: () -> Unit = {},
     onCollectionsClick: () -> Unit = {},
+    onDownloadsContentClick: (() -> Unit)? = null,
+    onNotificationsContentClick: (() -> Unit)? = null,
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
@@ -799,7 +812,10 @@ private fun MobileSettingsScreen(
                             onPlaybackClick = { onPageChange(SettingsPage.Playback) },
                             onAppearanceClick = { onPageChange(SettingsPage.Appearance) },
                             onAdvancedClick = { onPageChange(SettingsPage.Advanced) },
-                            onNotificationsClick = { onPageChange(SettingsPage.Notifications) },
+                            onNotificationsClick = onNotificationsContentClick
+                                ?: { onPageChange(SettingsPage.Notifications) },
+                            onDownloadsClick = onDownloadsContentClick
+                                ?: { onPageChange(SettingsPage.Downloads) },
                             onContentDiscoveryClick = { onPageChange(SettingsPage.ContentDiscovery) },
                             onIntegrationsClick = { onPageChange(SettingsPage.Integrations) },
                             onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
@@ -859,7 +875,7 @@ private fun MobileSettingsScreen(
                     useLibass = useLibass,
                     libassRenderType = libassRenderType,
                 ).also {
-                    experimentalPictureInPictureSettingsContent()
+                    experimentalPictureInPictureSettingsContent(isTablet = false)
                 }
                 SettingsPage.Streams -> streamsSettingsContent(
                     isTablet = false,
@@ -937,7 +953,6 @@ private fun MobileSettingsScreen(
                     heroTrailerStartUnmuted = homescreenHeroTrailerStartUnmuted,
                     showCatalogType = homescreenShowCatalogType,
                     hideUnreleasedContent = homescreenHideUnreleasedContent,
-                    notificationsIconEnabled = homescreenHeroNotificationsIconEnabled,
                     items = homescreenItems,
                     isCatalogLoading = homescreenCatalogLoading,
                     catalogErrorMessage = homescreenCatalogErrorMessage,
@@ -1107,6 +1122,8 @@ private fun TabletSettingsScreen(
     onTestUpdateBannerClick: (() -> Unit)? = null,
     onWhatsNewClick: () -> Unit = {},
     onCollectionsClick: () -> Unit = {},
+    onDownloadsContentClick: (() -> Unit)? = null,
+    onNotificationsContentClick: (() -> Unit)? = null,
 ) {
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
@@ -1274,7 +1291,10 @@ private fun TabletSettingsScreen(
                                 onPlaybackClick = { openInlinePage(SettingsPage.Playback) },
                                 onAppearanceClick = { openInlinePage(SettingsPage.Appearance) },
                                 onAdvancedClick = { openInlinePage(SettingsPage.Advanced) },
-                                onNotificationsClick = { openInlinePage(SettingsPage.Notifications) },
+                                onNotificationsClick = onNotificationsContentClick
+                                    ?: { openInlinePage(SettingsPage.Notifications) },
+                                onDownloadsClick = onDownloadsContentClick
+                                    ?: { openInlinePage(SettingsPage.Downloads) },
                                 onContentDiscoveryClick = { openInlinePage(SettingsPage.ContentDiscovery) },
                                 onIntegrationsClick = { openInlinePage(SettingsPage.Integrations) },
                                 onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
@@ -1336,7 +1356,7 @@ private fun TabletSettingsScreen(
                         useLibass = useLibass,
                         libassRenderType = libassRenderType,
                     ).also {
-                        experimentalPictureInPictureSettingsContent()
+                        experimentalPictureInPictureSettingsContent(isTablet = true)
                     }
                     SettingsPage.Streams -> streamsSettingsContent(
                         isTablet = true,
@@ -1414,7 +1434,6 @@ private fun TabletSettingsScreen(
                         heroTrailerStartUnmuted = homescreenHeroTrailerStartUnmuted,
                         showCatalogType = homescreenShowCatalogType,
                         hideUnreleasedContent = homescreenHideUnreleasedContent,
-                    notificationsIconEnabled = homescreenHeroNotificationsIconEnabled,
                         items = homescreenItems,
                         isCatalogLoading = homescreenCatalogLoading,
                         catalogErrorMessage = homescreenCatalogErrorMessage,

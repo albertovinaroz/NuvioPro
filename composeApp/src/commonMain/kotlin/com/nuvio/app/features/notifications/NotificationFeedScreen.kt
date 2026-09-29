@@ -16,8 +16,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -26,7 +28,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,10 +45,13 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
+import com.nuvio.app.features.settings.NotificationsSettingsScreen
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_remove
 import nuvio.composeapp.generated.resources.app_icon_original
+import nuvio.composeapp.generated.resources.compose_settings_page_notifications
 import nuvio.composeapp.generated.resources.notifications_feed_clear_all
 import nuvio.composeapp.generated.resources.notifications_feed_empty_description
 import nuvio.composeapp.generated.resources.notifications_feed_empty_title
@@ -56,11 +64,22 @@ import org.jetbrains.compose.resources.stringResource
 fun NotificationFeedScreen(
     onBack: () -> Unit,
     onItemClick: (NotificationFeedItem) -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
 ) {
     val uiState by remember {
         NotificationFeedRepository.ensureLoaded()
         NotificationFeedRepository.uiState
     }.collectAsStateWithLifecycle()
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+
+    if (showSettings) {
+        NotificationsSettingsScreen(
+            onBack = { showSettings = false },
+        )
+        return
+    }
+
+    val tokens = MaterialTheme.nuvio
 
     NuvioScreen(modifier = Modifier.fillMaxSize()) {
         stickyHeader {
@@ -77,6 +96,13 @@ fun NotificationFeedScreen(
                         TextButton(onClick = NotificationFeedRepository::clearAll) {
                             Text(stringResource(Res.string.notifications_feed_clear_all))
                         }
+                    }
+                    IconButton(onClick = { onOpenSettings?.invoke() ?: run { showSettings = true } }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Settings,
+                            contentDescription = stringResource(Res.string.compose_settings_page_notifications),
+                            tint = tokens.colors.textPrimary,
+                        )
                     }
                 },
             )

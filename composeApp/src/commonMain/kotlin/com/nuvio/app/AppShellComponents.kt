@@ -274,6 +274,8 @@ internal fun AppTabHost(
                     onTestUpdateBannerClick = actions.onTestUpdateBannerClick,
                     onWhatsNewClick = actions.onWhatsNewSettingsClick,
                     onCollectionsClick = actions.onCollectionsSettingsClick,
+                    onDownloadsContentClick = actions.onLibraryDownloadsClick,
+                    onNotificationsContentClick = actions.onNotificationsClick,
                 )
             }
         }

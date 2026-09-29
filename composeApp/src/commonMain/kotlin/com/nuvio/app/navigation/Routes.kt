@@ -121,10 +121,11 @@ data class MetaScreenSettingsRoute(override val title: String = "") : SettingsDe
 data class ContinueWatchingSettingsRoute(override val title: String = "") : SettingsDestinationRoute
 
 @Serializable
-data class DownloadsRoute(override val title: String = "") : AppRoute {
-    override val preferredTabName: String
-        get() = "Library"
-}
+// No preferredTabName override (matches NotificationFeedRoute): every existing pusher already
+// either originates from Library or calls activateTab(Library) itself first, so this was already
+// a no-op for them — but it forced a jarring tab-switch when the Settings root menu started
+// pushing this route too, since Settings is a different tab than Library.
+data class DownloadsRoute(override val title: String = "") : AppRoute
 
 @Serializable
 data class DownloadShowRoute(
@@ -134,6 +135,9 @@ data class DownloadShowRoute(
 
 @Serializable
 data class DownloadsPreferencesRoute(override val title: String = "") : AppRoute
+
+@Serializable
+data class NotificationsPreferencesRoute(override val title: String = "") : AppRoute
 
 @Serializable
 data class AddonsSettingsRoute(override val title: String = "") : SettingsDestinationRoute

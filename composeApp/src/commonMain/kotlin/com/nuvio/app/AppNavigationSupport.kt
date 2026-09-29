@@ -50,6 +50,7 @@ internal val navigationSavedStateConfiguration = SavedStateConfiguration {
             subclass(CatalogRoute::class, CatalogRoute.serializer())
             subclass(PlayerRoute::class, PlayerRoute.serializer())
             subclass(NotificationFeedRoute::class, NotificationFeedRoute.serializer())
+            subclass(NotificationsPreferencesRoute::class, NotificationsPreferencesRoute.serializer())
             subclass(WhatsNewRoute::class, WhatsNewRoute.serializer())
             subclass(LibraryRatedRoute::class, LibraryRatedRoute.serializer())
         }
