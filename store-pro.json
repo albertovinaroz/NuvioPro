@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.4-b2",
+          "buildVersion": "165",
+          "date": "2026-09-29T17:30:48Z",
+          "localizedDescription": "# Nuvio Pro 0.5.4-b2\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n\n- feat(settings): Downloads/Notifications open to content first, relocate notifications icon toggle @albertovinaroz  \n- feat(ios): native Liquid Glass header for Library, circular Play button in details @albertovinaroz  \n- fix(library): rating filter and Downloads row now also account for synced ratings @albertovinaroz  \n- feat(library): add rating removal, provider filter, and manual refresh to Rated screen @albertovinaroz  \n\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.4-b2/nuvio-0.5.4-b2-pro-release.ipa",
+          "size": 69203098,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.4-b1",
           "buildVersion": "164",
           "date": "2026-09-28T16:12:28Z",
