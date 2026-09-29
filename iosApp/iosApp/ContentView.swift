@@ -1655,20 +1655,20 @@ private struct LibraryHeaderGlassButtons: View {
 
     var body: some View {
         if #available(iOS 26.0, *) {
-            // Each icon gets its own `.glassEffect(interactive:)` — the interactive press/drag
-            // shimmer only fires on the same view a Button's press-state lives on, not on a
-            // shared background shape sitting behind separately-gestured content (tried that
-            // first: right fused pill shape, but tap/drag never animated). GlassEffectContainer
-            // fuses the two adjacent circles into one pill the same way iOS fuses its own
-            // grouped toolbar buttons, so the merged look survives the split.
-            GlassEffectContainer(spacing: 0) {
-                HStack(spacing: 0) {
-                    glassButton(label: downloadsTitle, action: onDownloads) {
-                        DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
-                    }
-                    glassButton(label: ratedTitle, action: onRated) { ratedIcon }
+            // One glassEffect on the HStack itself — wrapping both buttons as descendants,
+            // rather than sitting behind them as a separate background — instead of
+            // GlassEffectContainer + a per-button glassEffect. That earlier version fixed
+            // tap/drag interactivity (a glassEffect on a sibling background never sees presses
+            // happening in unrelated gestured content) but the container's proximity-based
+            // fusion never actually merged the two circles into one surface at this size/gap —
+            // this one is a single shape by construction, so there's no fusion threshold to miss.
+            HStack(spacing: 0) {
+                glassButton(label: downloadsTitle, action: onDownloads) {
+                    DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
+                glassButton(label: ratedTitle, action: onRated) { ratedIcon }
             }
+            .glassEffect(.clear.interactive(), in: Capsule())
         } else {
             HStack(spacing: 0) {
                 plainButton(label: downloadsTitle, action: onDownloads) {
@@ -1690,10 +1690,9 @@ private struct LibraryHeaderGlassButtons: View {
         Button(action: action) {
             icon()
                 .frame(width: Self.diameter, height: Self.diameter)
-                .contentShape(Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .glassEffect(.clear.interactive(), in: Circle())
         .accessibilityLabel(label)
     }
 

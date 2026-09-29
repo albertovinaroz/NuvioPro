@@ -3,11 +3,6 @@ package com.nuvio.app.features.details.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -42,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,7 +45,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -65,11 +60,7 @@ import nuvio.composeapp.generated.resources.details_actions_menu_label
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-
-// Fraction of menuProgress the Play pill spends at rest before its width starts shrinking —
-// gives PlayButton's own (quicker, independent) label collapse a head start so the label is
-// gone before the pill visibly narrows, instead of both happening at once.
-private const val PlayShrinkStartFraction = 0.35f
+import kotlin.math.roundToInt
 
 data class DetailSecondaryAction(
     val label: String,
@@ -171,38 +162,19 @@ fun DetailActionButtons(
             return@Column
         }
 
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(buttonHeight),
         ) {
-        // A true lerp between two fixed endpoints — what weight(1f) gives it at rest (maxWidth
-        // minus every other sibling's own width, all of which are constant-size regardless of
-        // menuProgress; only secondaryActions' OWN widths animate, not this) down to exactly
-        // iconButtonSize — rather than subtracting secondaryActions' current width and flooring
-        // the result. Flooring only guarantees "at least" iconButtonSize: whatever slack the row
-        // actually has left over at menuProgress=1 was free to land above that floor, and a
-        // circle needs width to land exactly on it, not just clear it — anything wider renders as
-        // a stadium (pill), not a circle, no matter how the corner radius clamps.
-        val pinnedWidth = if (pinnedAction != null) iconButtonSize + 12.dp else 0.dp
-        val moreButtonWidth = if (hasSecondaryActions) iconButtonSize else 0.dp
-        val playRestWidth = maxWidth - pinnedWidth - moreButtonWidth
-        val playCollapsesToIcon = hasSecondaryActions && secondaryActions.size >= 4
-        // The label's own AnimatedVisibility (see PlayButton) collapses and re-centers the icon
-        // on actionsExpanded directly, independent of and quicker than this width shrink — so the
-        // label is already gone by the time the pill visibly starts narrowing, rather than both
-        // happening at once and reading as the label getting squeezed out by the shrinking pill.
-        // PlayShrinkStartFraction holds the width lerp at rest until menuProgress has cleared
-        // that head start.
-        val playShrinkProgress = if (playCollapsesToIcon) {
-            ((menuProgress - PlayShrinkStartFraction) / (1f - PlayShrinkStartFraction)).coerceIn(0f, 1f)
+        // Width stays plain weight(1f) always — same as the <4 case, which already reads fine —
+        // the only thing 4+ secondaryActions changes is the label fading out as menuProgress
+        // does, on the same clock as everything else in this row (secondaryActions' own widths,
+        // the "..." rotation), rather than reshaping the pill itself.
+        val playTextVisibleFraction = if (hasSecondaryActions && secondaryActions.size >= 4) {
+            (1f - menuProgress).coerceIn(0f, 1f)
         } else {
-            0f
-        }
-        val playWidth = if (playCollapsesToIcon) {
-            lerp(playRestWidth, iconButtonSize, playShrinkProgress).coerceAtLeast(iconButtonSize)
-        } else {
-            null
+            1f
         }
         Row(
             modifier = Modifier
@@ -220,8 +192,8 @@ fun DetailActionButtons(
                 isTablet = isTablet,
                 onPlayClick = onPlayClick,
                 onPlayLongClick = onPlayLongClick,
-                showText = !(playCollapsesToIcon && actionsExpanded),
-                modifier = if (playWidth != null) Modifier.width(playWidth) else Modifier.weight(1f),
+                textVisibleFraction = playTextVisibleFraction,
+                modifier = Modifier.weight(1f),
             )
 
             if (pinnedAction != null) {
@@ -400,13 +372,8 @@ private fun PlayButton(
     onPlayClick: () -> Unit,
     onPlayLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    showText: Boolean = true,
+    textVisibleFraction: Float = 1f,
 ) {
-        // Deliberately always playShape, never CircleShape: the caller already shrinks this
-        // button's own width down to iconButtonSize (matching buttonHeight) once menuProgress
-        // finishes, and playShape's corner radius exceeds half of that — Compose's own
-        // corner-clamping already renders that as a clean circle on its own. Switching shape
-        // outright would just reintroduce a jump cut this is meant to avoid.
         Surface(
             modifier = modifier
                 .height(buttonHeight)
@@ -444,31 +411,35 @@ private fun PlayButton(
             ) {
                 Icon(
                     painter = playPainter,
-                    contentDescription = if (!showText) playLabel else null,
+                    contentDescription = if (textVisibleFraction < 0.5f) playLabel else null,
                     modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
                 )
-                // A quick, independent collapse — deliberately not tied to the caller's own
-                // (slower) menuProgress-driven width shrink. Finishing this first, before that
-                // shrink even starts (see PlayShrinkStartFraction), is what makes the label read
-                // as dismissed on its own rather than squeezed out by the pill narrowing under it.
-                AnimatedVisibility(
-                    visible = showText,
-                    enter = expandHorizontally(tween(120)) + fadeIn(tween(120)),
-                    exit = shrinkHorizontally(tween(120)) + fadeOut(tween(120)),
+                // Scales the label's own measured width down to textVisibleFraction of itself
+                // (rather than an AnimatedVisibility with its own separate clock) so it shrinks
+                // and fades in lockstep with menuProgress, same as everything else in this row.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val width = (placeable.width * textVisibleFraction).roundToInt()
+                            layout(width, placeable.height) {
+                                placeable.placeRelative(0, 0)
+                            }
+                        }
+                        .graphicsLayer { alpha = textVisibleFraction },
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = playLabel,
-                            style = if (isTablet) {
-                                MaterialTheme.typography.titleMedium
-                            } else {
-                                MaterialTheme.typography.titleSmall
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = playLabel,
+                        style = if (isTablet) {
+                            MaterialTheme.typography.titleMedium
+                        } else {
+                            MaterialTheme.typography.titleSmall
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
