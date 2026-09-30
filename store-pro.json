@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.4-b3",
+          "buildVersion": "166",
+          "date": "2026-09-30T05:39:29Z",
+          "localizedDescription": "# Nuvio Pro 0.5.4-b3\r\n\r\n**AltStore/SideStore source:**\r\n```\r\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\r\n```\r\n\r\n## Changelog\r\n\r\n### Upstream (luqmanfadlli's fork)\r\n\r\n- perf(profile): persist Profile Insight title facts across launches @luqmanfadlli  \r\n- perf(profile): compute Profile Insight stats off the main thread @luqmanfadlli  \r\n- [feat(ratings): polish and add animation to stars and bottomsheet (#139)](https://github.com/luqmanfadlli/NuvioMobile-Enhanced/pull/139) @chrisk325  \r\n\r\n### Pro\r\n\r\n- fix(ios): fuse Library's glass icons into one capsule, simplify Play's 4-action collapse @albertovinaroz  \r\n\r\n\r\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.4-b3/nuvio-0.5.4-b3-pro-release.ipa",
+          "size": 69277386,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.4-b2",
           "buildVersion": "165",
           "date": "2026-09-29T17:30:48Z",
