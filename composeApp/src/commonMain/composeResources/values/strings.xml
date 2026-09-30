@@ -1361,7 +1361,7 @@
     <string name="settings_playback_parental_guide_description">Show parental guidance overlay when playback starts.</string>
     <string name="settings_playback_subtitle_background_color">Background Color</string>
     <string name="settings_playback_subtitle_background_transparency">Transparency</string>
-    <string name="settings_playback_subtitle_background_transparency_value">%1$d%%</string>
+    <string name="settings_playback_subtitle_background_transparency_value">%1$d%</string>
     <string name="settings_playback_subtitle_bold">Bold</string>
     <string name="settings_playback_subtitle_bold_description">Use a heavier subtitle font weight.</string>
     <string name="settings_playback_subtitle_color_transparent">Transparent</string>
@@ -2591,7 +2591,7 @@
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
     <string name="player_torrent_buffered_status">%1$s buffered · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
+    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%</string>
     <string name="player_torrent_connecting_peers">Connecting to peers…</string>
     <string name="player_torrent_starting_engine">Starting P2P engine…</string>
     <string name="player_torrent_fetching_metadata">Fetching torrent metadata…</string>
