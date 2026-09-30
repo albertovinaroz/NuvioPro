@@ -1597,6 +1597,7 @@ private fun buildProfileInsightsCore(
     val libraryGenresByKey = profileLibraryGenresByKey(libraryItems)
     val lastActivityByTitleKey = profileLastActivityByTitleKey(watchedItems, progressEntries)
     val watchedDurationRefs = profileWatchedDurationRefs(watchedItems)
+    val trackedTitleKeys = (typeBalance.titleKeys + watchedDurationRefs.map { ref -> ref.titleKey }).distinct()
     val recentActivityCount = profileRecentActivityCount(
         watchedItems = watchedItems,
         progressEntries = progressEntries,
