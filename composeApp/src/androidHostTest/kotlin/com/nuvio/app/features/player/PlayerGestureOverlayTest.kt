@@ -57,15 +57,25 @@ class PlayerGestureOverlayTest {
                     if (currentFeedback != null) runtime.renderedGestureFeedback = currentFeedback
                 }
                 Box(
-                    Modifier.size(480.dp, 270.dp)
+                    // Wide enough that width/12 (the smallest fraction any test swipes) clears
+                    // this fork's horizontal seek activation threshold — touchSlop * 3f, ~48dp —
+                    // confirmed via PlayerHorizontalGestureTouchSlopMultiplier in
+                    // PlayerScreenSupport.kt, which doesn't exist upstream in this form. The
+                    // seek-amount assertions are fraction-of-width based, so widening this doesn't
+                    // change what's being tested, just clears a threshold the original 480dp
+                    // surface (from upstream, whose gesture system has no such multiplier) didn't
+                    // need to.
+                    Modifier.size(960.dp, 270.dp)
                         .testTag("surface")
                         .playerSurfaceDragGestures(
                             gestureController = null,
+                            playerController = runtime.playerController,
                             layoutSize = IntSize(480, 270),
                             playbackGesturesEnabled = true,
                             sideGestureSystemEdgeExclusionPx = 0f,
                             playerControlsLockedState = callbacks.playerControlsLocked,
                             touchGesturesEnabledState = callbacks.touchGesturesEnabled,
+                            swipeToSeekEnabledState = callbacks.swipeToSeekEnabled,
                             isHoldToSpeedGestureActiveState = callbacks.isHoldToSpeedGestureActive,
                             currentPositionMsState = callbacks.currentPositionMs,
                             currentDurationMsState = callbacks.currentDurationMs,
@@ -238,7 +248,9 @@ class PlayerGestureOverlayTest {
             runtime.liveGestureFeedback = null
             runtime.showBrightnessFeedback(0.4f)
         }
-        compose.onNodeWithText("40").assertIsDisplayed()
+        // This fork's brightness feedback reads "Brightness 40%" (Res.string.compose_player_brightness_level),
+        // not upstream's bare "40" — substring match checks the value without pinning exact wording.
+        compose.onNodeWithText("40", substring = true).assertIsDisplayed()
         compose.onNodeWithText("2x").assertDoesNotExist()
     }
 
