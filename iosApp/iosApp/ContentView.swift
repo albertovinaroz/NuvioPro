@@ -1747,7 +1747,7 @@ private struct LibraryHeaderGlassButtons: View {
             // happening in unrelated gestured content) but the container's proximity-based
             // fusion never actually merged the two circles into one surface at this size/gap —
             // this one is a single shape by construction, so there's no fusion threshold to miss.
-            HStack(spacing: 8) {
+            HStack(spacing: 14) {
                 glassButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
@@ -1755,7 +1755,7 @@ private struct LibraryHeaderGlassButtons: View {
             }
             .glassEffect(.clear.interactive(), in: Capsule())
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: 14) {
                 plainButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }

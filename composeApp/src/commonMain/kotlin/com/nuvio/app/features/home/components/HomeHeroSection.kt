@@ -543,9 +543,11 @@ internal fun HomeHeroSection(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxWidth(layout.contentWidthFraction)
+                            .widthIn(max = layout.contentMaxWidth)
                             .height(layout.heroHeight)
                             .heroStretchZoom(stretchPx),
+                        contentAlignment = if (layout.isTablet) Alignment.CenterStart else Alignment.BottomStart,
                     ) {
                         visiblePages.forEach { layer ->
                             val item = items[layer.itemIndex]
