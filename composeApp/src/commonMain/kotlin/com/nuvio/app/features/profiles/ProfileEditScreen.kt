@@ -28,11 +28,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +57,7 @@ import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.ProfileBackgroundRepository
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -152,6 +155,20 @@ fun ProfileEditScreen(
                 isSaving = false
             }
         }
+    }
+
+    val currentSaveEnabled by rememberUpdatedState(saveEnabled)
+    val currentHandleSave by rememberUpdatedState(handleSave)
+    LaunchedEffect(saveEnabled, isSaving) {
+        ProfileEditSaveState.report(enabled = saveEnabled, saving = isSaving)
+    }
+    LaunchedEffect(Unit) {
+        ProfileEditSaveState.saveRequests.collect {
+            if (currentSaveEnabled) currentHandleSave()
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { ProfileEditSaveState.reset() }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -381,42 +398,46 @@ fun ProfileEditScreen(
         }
     }
 
-        val saveContentDescription = if (isSaving) {
-            stringResource(Res.string.profile_saving)
-        } else if (isNew) {
-            stringResource(Res.string.profile_create_profile)
-        } else {
-            stringResource(Res.string.collections_editor_save_changes)
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                // Mirrors ProfileHeaderIconButton over on the Profile hero: the native nav bar
-                // paints on top of this whole strip, so clearing at least the safe area, not
-                // just the header's own padding, keeps this visible.
-                .padding(top = platformPhysicalTopInset() + 4.dp, end = 18.dp)
-                .size(40.dp)
-                .clip(CircleShape)
-                // Fixed white/black regardless of the active theme's accent — this floats over
-                // whatever page content is behind it, so it needs guaranteed contrast rather
-                // than a theme color that can end up close to the page's own dark background.
-                .background(Color.White.copy(alpha = if (saveEnabled) 1f else 0.35f))
-                .then(if (saveEnabled) Modifier.clickable(onClick = handleSave) else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (isSaving) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    color = Color.Black,
-                    strokeWidth = 2.dp,
-                )
+        // On iOS, a native Liquid Glass button (ProfileEditSaveButton in ContentView.swift)
+        // takes over this role via ProfileEditSaveState — see the LaunchedEffects above.
+        if (!LocalUseNativeNavigation.current) {
+            val saveContentDescription = if (isSaving) {
+                stringResource(Res.string.profile_saving)
+            } else if (isNew) {
+                stringResource(Res.string.profile_create_profile)
             } else {
-                Icon(
-                    imageVector = Icons.Rounded.Save,
-                    contentDescription = saveContentDescription,
-                    tint = Color.Black,
-                    modifier = Modifier.size(20.dp),
-                )
+                stringResource(Res.string.collections_editor_save_changes)
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    // Mirrors ProfileHeaderIconButton over on the Profile hero: the native nav bar
+                    // paints on top of this whole strip, so clearing at least the safe area, not
+                    // just the header's own padding, keeps this visible.
+                    .padding(top = platformPhysicalTopInset() + 4.dp, end = 18.dp)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    // Fixed white/black regardless of the active theme's accent — this floats over
+                    // whatever page content is behind it, so it needs guaranteed contrast rather
+                    // than a theme color that can end up close to the page's own dark background.
+                    .background(Color.White.copy(alpha = if (saveEnabled) 1f else 0.35f))
+                    .then(if (saveEnabled) Modifier.clickable(onClick = handleSave) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color.Black,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.Save,
+                        contentDescription = saveContentDescription,
+                        tint = Color.Black,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }

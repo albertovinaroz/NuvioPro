@@ -1397,6 +1397,7 @@ private struct DetailDestinationView: View {
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
     @StateObject private var trailerMuteViewModel = HeroTrailerMuteViewModel()
+    @StateObject private var profileEditSaveViewModel = NativeProfileEditSaveViewModel()
 
     private var usesComposeNavigationHeader: Bool {
         wrapper.route is DetailRoute || wrapper.route is StreamRoute
@@ -1454,6 +1455,41 @@ private struct DetailDestinationView: View {
                 .transition(.opacity)
             }
         }
+        // A GeometryReader, not a fixed .padding(.top, ...): unlike HeroTrailerMuteButton's overlay
+        // (Details' transparent hero nav bar, where a small fixed offset happens to land right),
+        // ProfileEditRoute has a normal opaque nav bar, whose real height varies with the safe area
+        // (Dynamic Island vs not). Reading proxy.safeAreaInsets.top — which already folds in the
+        // visible nav bar's own height, not just the status bar — and centering on it is what
+        // actually lines this up with the back button on every device, instead of another guess.
+        //
+        // Also why this isn't a ToolbarItem despite that positioning it more simply: confirmed via
+        // logging that a Button, even with glassEffect(.interactive()) applied directly to it
+        // (LibraryHeaderGlassButtons' own recipe), never received a completed tap inside a
+        // ToolbarItem in this app — the automatic toolbar chrome appears to consume the gesture
+        // before forwarding it. Every other custom glass-interactive control here already avoids
+        // ToolbarItem for the same reason; this one now matches that pattern.
+        .overlay(alignment: .topTrailing) {
+            if wrapper.route is ProfileEditRoute {
+                GeometryReader { proxy in
+                    // proxy's own origin starts BELOW the reserved top strip (status bar + nav bar
+                    // combined, measured at runtime as safeAreaInsets.top=116) — right where the
+                    // profile card begins, not the true screen top. -top/2 overshot above the back
+                    // button (landing mid *status bar*, not mid nav bar): the 116pt strip is status
+                    // bar (~59pt) above nav bar (~57pt), and the back button centers only within
+                    // the nav bar's own share of it, i.e. roughly -57/2 from this view's origin.
+                    ProfileEditSaveButton(
+                        enabled: profileEditSaveViewModel.enabled,
+                        saving: profileEditSaveViewModel.saving
+                    ) {
+                        profileEditSaveViewModel.save()
+                    }
+                    .position(
+                        x: proxy.size.width - 18 - 22,
+                        y: -28
+                    )
+                }
+            }
+        }
         .animation(.easeInOut(duration: 0.22), value: trailerMuteViewModel.visible)
         .navigationTitle(wrapper.route.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
@@ -1479,7 +1515,12 @@ private struct DetailDestinationView: View {
                                 }
                             } label: {
                                 if let systemImageName = action.systemImageName {
-                                    Label(action.title, systemImage: systemImageName)
+                                    Label {
+                                        Text(action.title)
+                                    } icon: {
+                                        Image(systemName: systemImageName)
+                                            .foregroundStyle(.white)
+                                    }
                                 } else {
                                     Text(action.title)
                                 }
@@ -1492,6 +1533,10 @@ private struct DetailDestinationView: View {
                             .rotationEffect(.degrees(90))
                             .foregroundStyle(.white)
                     }
+                    // A Menu's presented item icons are tinted by the Menu's own .tint, not by
+                    // .foregroundStyle() inside each Label's icon closure — that's why the amber
+                    // accent color was showing through regardless of the per-icon style above.
+                    .tint(.white)
                 }
             }
         }
@@ -1511,10 +1556,16 @@ private struct DetailDestinationView: View {
             if wrapper.route is DetailRoute {
                 trailerMuteViewModel.startObserving()
             }
+            if wrapper.route is ProfileEditRoute {
+                profileEditSaveViewModel.startObserving()
+            }
         }
         .onDisappear {
             if wrapper.route is DetailRoute {
                 trailerMuteViewModel.stopObserving()
+            }
+            if wrapper.route is ProfileEditRoute {
+                profileEditSaveViewModel.stopObserving()
             }
         }
     }
@@ -1549,6 +1600,18 @@ private final class HeroTrailerMuteViewModel: ObservableObject {
 
     func stopObserving() {
         controller.stopObserving()
+        // Also hide immediately, rather than waiting on it: HeroTrailerAudioState.visible only
+        // flips false once the Compose hero's own DisposableEffect runs, which on a back-button
+        // pop lags behind the native transition by however long Compose takes to actually tear
+        // the view controller down. And forcing it off alone wasn't enough on its own — the
+        // overlay's .animation(value: visible) still animates THIS change too, so the button was
+        // fading out over its own 0.22s regardless, on top of/after the screen already sliding
+        // away. A disabled-animations transaction makes it vanish in the same instant instead.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            visible = false
+        }
     }
 
     func toggle() {
@@ -1571,6 +1634,28 @@ private final class NativeDownloadsButtonViewModel: ObservableObject {
 
     func stopObserving() {
         controller.stopObserving()
+    }
+}
+
+private final class NativeProfileEditSaveViewModel: ObservableObject {
+    @Published private(set) var enabled = false
+    @Published private(set) var saving = false
+
+    private let controller = NativeProfileEditSaveController()
+
+    func startObserving() {
+        controller.observeState { [weak self] enabled, saving in
+            self?.enabled = enabled.boolValue
+            self?.saving = saving.boolValue
+        }
+    }
+
+    func stopObserving() {
+        controller.stopObserving()
+    }
+
+    func save() {
+        controller.requestSave()
     }
 }
 
@@ -1662,7 +1747,7 @@ private struct LibraryHeaderGlassButtons: View {
             // happening in unrelated gestured content) but the container's proximity-based
             // fusion never actually merged the two circles into one surface at this size/gap —
             // this one is a single shape by construction, so there's no fusion threshold to miss.
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 glassButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
@@ -1670,7 +1755,7 @@ private struct LibraryHeaderGlassButtons: View {
             }
             .glassEffect(.clear.interactive(), in: Capsule())
         } else {
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 plainButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
@@ -1707,6 +1792,107 @@ private struct LibraryHeaderGlassButtons: View {
             .onTapGesture(perform: action)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(label)
+    }
+}
+
+/// A classic 3.5" floppy-disk silhouette — SF Symbols has no such glyph, and Compose's own
+/// Icons.Rounded.Save (used as ProfileEditScreen.kt's Android/pre-26 fallback) draws the same
+/// shape: a rounded square with one corner cut, plus a notch cut out of the shutter near the top.
+/// Filled with the even-odd rule so the shutter reads as a gap rather than a separate overlay.
+private struct FloppyDiskIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let corner = rect.width * 0.16
+        let notch = rect.width * 0.34
+
+        path.move(to: CGPoint(x: rect.minX + corner, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - notch, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + notch))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - corner))
+        path.addArc(
+            center: CGPoint(x: rect.maxX - corner, y: rect.maxY - corner),
+            radius: corner, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false
+        )
+        path.addLine(to: CGPoint(x: rect.minX + corner, y: rect.maxY))
+        path.addArc(
+            center: CGPoint(x: rect.minX + corner, y: rect.maxY - corner),
+            radius: corner, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false
+        )
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + corner))
+        path.addArc(
+            center: CGPoint(x: rect.minX + corner, y: rect.minY + corner),
+            radius: corner, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false
+        )
+        path.closeSubpath()
+
+        let shutterSize = CGSize(width: rect.width * 0.42, height: rect.height * 0.22)
+        let shutterRect = CGRect(
+            x: rect.midX - shutterSize.width / 2,
+            y: rect.minY + rect.height * 0.1,
+            width: shutterSize.width,
+            height: shutterSize.height
+        )
+        path.addRoundedRect(in: shutterRect, cornerSize: CGSize(width: 1.5, height: 1.5))
+
+        return path
+    }
+}
+
+/// Edit Profile's Save action — a topTrailing overlay (see DetailDestinationView), positioned via
+/// GeometryReader to land level with the back button, not a ToolbarItem: confirmed via logging that
+/// a Button here never received a completed tap inside a real ToolbarItem, glassEffect or not — the
+/// automatic toolbar chrome appears to consume the gesture before it reaches custom content. Uses
+/// LibraryHeaderGlassButtons' recipe — a real `Button` with `glassEffect(.interactive())` on the
+/// same subtree — which is what stays interactive for a custom glass control in this app.
+@available(iOS 16.0, *)
+private struct ProfileEditSaveButton: View {
+    let enabled: Bool
+    let saving: Bool
+    let action: () -> Void
+
+    private static let diameter: CGFloat = 44
+
+    @ViewBuilder
+    private var icon: some View {
+        if saving {
+            ProgressView()
+                .tint(.white)
+        } else {
+            // SF Symbols has no floppy-disk glyph (confirmed against the iOS 26 symbol catalog),
+            // so this is a small custom shape instead of a systemImage.
+            FloppyDiskIcon()
+                .fill(style: FillStyle(eoFill: true))
+                .foregroundStyle(.white)
+                .frame(width: 17, height: 17)
+        }
+    }
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            Button(action: action) {
+                icon
+                    .frame(width: Self.diameter, height: Self.diameter)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.clear.interactive(), in: Circle())
+            .frame(width: Self.diameter, height: Self.diameter)
+            .fixedSize()
+            .disabled(!enabled)
+            .opacity(enabled ? 1 : 0.35)
+        } else {
+            Button(action: action) {
+                icon
+                    .frame(width: Self.diameter, height: Self.diameter)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .background(Circle().fill(.ultraThinMaterial))
+            .frame(width: Self.diameter, height: Self.diameter)
+            .fixedSize()
+            .disabled(!enabled)
+            .opacity(enabled ? 1 : 0.35)
+        }
     }
 }
 
