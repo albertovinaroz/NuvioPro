@@ -238,6 +238,9 @@ internal class PlayerScreenRuntime(
     var trackPreferenceRestoreApplied by mutableStateOf(false)
     var subtitleDelayMs by mutableStateOf(0)
     var subtitleAutoSyncState by mutableStateOf(SubtitleAutoSyncUiState())
+    var showSubtitleSyncByEar by mutableStateOf(false)
+    var subtitleSyncHeardPositionMs by mutableStateOf<Long?>(null)
+    var subtitleSyncSawPositionMs by mutableStateOf<Long?>(null)
 
     /**
      * True while subtitles are showing only because [notifyRewindOccurred] or
