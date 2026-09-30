@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.4-b4",
+          "buildVersion": "167",
+          "date": "2026-09-30T10:57:55Z",
+          "localizedDescription": "# Nuvio Pro 0.5.4-b4\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n\n- feat(ios): native Liquid Glass Save button in Edit Profile @albertovinaroz  \n- fix(ios): white \"...\" menu icons, wider Library icon gap @albertovinaroz  \n\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.4-b4/nuvio-0.5.4-b4-pro-release.ipa",
+          "size": 69294545,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.4-b3",
           "buildVersion": "166",
           "date": "2026-09-30T05:39:29Z",
