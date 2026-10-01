@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.5-b2",
+          "buildVersion": "169",
+          "date": "2026-09-30T23:26:49Z",
+          "localizedDescription": "# Nuvio Pro 0.5.5-b2\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n\n- feat(i18n): add Bengali (বাংলা) language support and UI localization @TanvirSdq  \n- i18n(el): sync Greek translations and remove remaining English loanwords @nosvasedis  \n- fix: landscape clearlogo toggle, Simkl type hint, TMDB source priority, folder TMDB ID resolution @skoruppa  \n- fix(ui): hero section sometimes shifting @ThEgIGN  \n- fix(player): show the swipe-to-seek preview in the new player layout @deejay189393  \n- fix(debrid): select requested episode files @tapframe  \n- i18n(vi): update latest Vietnamese strings @blueocean2308  \n- i18n(sk): translation improvements and adjustments for Slovak language @mmsw91  \n- fix(mdblist): show newest library additions first @halibiram  \n\n### Pro\n\n- fix(ios): wider gap between Library's Downloads/Rated icons @albertovinaroz\n- fix(sync): adopt upstream's addon sync model — an empty server response now clears local addons instead of silently preserving stale cached ones @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.5-b2/nuvio-0.5.5-b2-pro-release.ipa",
+          "size": 69540893,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.4-b4",
           "buildVersion": "167",
           "date": "2026-09-30T10:57:55Z",
