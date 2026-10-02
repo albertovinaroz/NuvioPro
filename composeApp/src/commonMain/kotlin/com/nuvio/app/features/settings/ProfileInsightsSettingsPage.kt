@@ -78,10 +78,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -93,6 +92,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -106,6 +106,7 @@ import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.ThemeAccentRing
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
@@ -172,6 +173,10 @@ internal fun LazyListScope.profileInsightsContent(
     // duplicating those actions.
     hasNativeTrailingMenu: Boolean = false,
     onBack: (() -> Unit)? = null,
+    // The enclosing LazyColumn's own state — this whole page is one `item`, so while it's first
+    // (the normal case: it's the only item on the Profile page), firstVisibleItemScrollOffset is
+    // exactly how far the hero has scrolled past the top. Drives the hero backdrop's parallax.
+    listState: LazyListState? = null,
 ) {
     item {
         ProfileInsightsBody(
@@ -181,6 +186,7 @@ internal fun LazyListScope.profileInsightsContent(
             onPosterClick = onPosterClick,
             hasNativeTrailingMenu = hasNativeTrailingMenu,
             onBack = onBack,
+            listState = listState,
         )
     }
 }
@@ -193,6 +199,7 @@ private fun ProfileInsightsBody(
     onPosterClick: ((MetaPreview) -> Unit)?,
     hasNativeTrailingMenu: Boolean = false,
     onBack: (() -> Unit)? = null,
+    listState: LazyListState? = null,
 ) {
     val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
     val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
@@ -353,6 +360,12 @@ private fun ProfileInsightsBody(
         selectedInsightCollection = insightCollections[kind]
             ?.takeIf { collection -> collection.items.isNotEmpty() }
     }
+    // How far the hero (this whole body is one LazyColumn item) has scrolled past the top, in
+    // px — 0 once a different item becomes first (the hero isn't visible then either way, so the
+    // exact value stops mattering). Drives the backdrop's parallax in ProfileInsightsHeroCinematic.
+    val heroScrollOffsetPx = listState?.let { state ->
+        if (state.firstVisibleItemIndex == 0) state.firstVisibleItemScrollOffset.toFloat() else 0f
+    } ?: 0f
     Column(modifier = Modifier.fillMaxWidth()) {
         ProfileInsightsHero(
             profile = activeProfile,
@@ -366,6 +379,7 @@ private fun ProfileInsightsBody(
             onSwitchProfile = onSwitchProfile.takeUnless { isTablet },
             hasNativeTrailingMenu = hasNativeTrailingMenu,
             onBack = onBack.takeUnless { isTablet },
+            scrollOffsetPx = heroScrollOffsetPx,
         )
         Column(
             modifier = Modifier
@@ -497,6 +511,9 @@ private fun ProfileInsightsHero(
     onSwitchProfile: (() -> Unit)?,
     hasNativeTrailingMenu: Boolean = false,
     onBack: (() -> Unit)? = null,
+    // Only meaningful for the phone/cinematic path below — the bounded tablet card doesn't bleed
+    // under anything, so a parallax backdrop shift wouldn't read as depth there.
+    scrollOffsetPx: Float = 0f,
 ) {
     // The bled, edge-to-edge treatment below is tuned specifically for the phone/portrait path:
     // it deliberately reaches past the Settings scaffold's padding to the true screen edges and
@@ -525,6 +542,7 @@ private fun ProfileInsightsHero(
             onSwitchProfile = onSwitchProfile,
             hasNativeTrailingMenu = hasNativeTrailingMenu,
             onBack = onBack,
+            scrollOffsetPx = scrollOffsetPx,
         )
     }
 }
@@ -625,13 +643,13 @@ private fun ProfileInsightsHeroCinematic(
     onSwitchProfile: (() -> Unit)?,
     hasNativeTrailingMenu: Boolean = false,
     onBack: (() -> Unit)? = null,
+    scrollOffsetPx: Float = 0f,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
     val avatarImageUrl = remember(profile, avatarItem) {
         profile?.let { profileAvatarImageUrl(it, avatarItem) }
     }
-
     // The outer Box's size is fixed purely by fillMaxWidth+aspectRatio, using the page's normal
     // (un-bled) width — that's what gets reported to the list, so it doesn't push everything below
     // down just because the photo inside renders bigger. The inner BoxWithConstraints reads that
@@ -641,6 +659,17 @@ private fun ProfileInsightsHeroCinematic(
     // is purely a drawing-position trick — it never touches the reported layout size above).
     val bleedsUnderNativeNavBar = LocalUseNativeNavigation.current
     val floatingChromeTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp
+    // Subtle parallax: the backdrop photo trails the hero card's own scroll at a fraction of its
+    // speed, reading as depth rather than everything moving as one flat layer. Clamped well inside
+    // this image's existing bleed margin (it's already sized larger than the visible hero purely
+    // for the edge/status-bar bleed above) so panning it never reveals an edge or gap.
+    val density = LocalDensity.current
+    val maxParallaxPx = with(density) { 36.dp.toPx() }
+    val parallaxTranslationY = (scrollOffsetPx * 0.3f).coerceIn(0f, maxParallaxPx)
+    // The avatar starts at its full (larger) size and eases down toward its old, smaller size as
+    // the hero scrolls away — fully settled by 160px of scroll, same ballpark as the parallax above.
+    val avatarMinScale = 78f / 92f
+    val avatarScale = 1f - (scrollOffsetPx / 160f).coerceIn(0f, 1f) * (1f - avatarMinScale)
 
     Box(
         modifier = Modifier
@@ -658,7 +687,8 @@ private fun ProfileInsightsHeroCinematic(
                 modifier = Modifier
                     .requiredWidth(bleedWidth)
                     .requiredHeight(extendedHeight)
-                    .offset(x = -leftInset, y = -topExtension),
+                    .offset(x = -leftInset, y = -topExtension)
+                    .graphicsLayer { translationY = parallaxTranslationY },
             ) {
                 if (profile != null) {
                     ProfileBackgroundBackdrop(
@@ -715,6 +745,10 @@ private fun ProfileInsightsHeroCinematic(
                     avatarColor = accent,
                     avatarBackgroundColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
                     isTablet = false,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = avatarScale
+                        scaleY = avatarScale
+                    },
                 )
                 Text(
                     text = stringResource(Res.string.profile_insights_title, profileName),
@@ -811,39 +845,46 @@ private fun ProfileHeroAvatar(
     avatarColor: Color,
     avatarBackgroundColor: Color,
     isTablet: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    val size = if (isTablet) 92.dp else 78.dp
+    val size = 92.dp
     Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(
-                if (avatarImageUrl.isNullOrBlank()) {
-                    avatarColor.copy(alpha = 0.18f)
-                } else {
-                    avatarBackgroundColor
-                },
-            )
-            .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape),
+        modifier = modifier.size(size + 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (!avatarImageUrl.isNullOrBlank()) {
-            NuvioAsyncImage(
-                imageUrl = avatarImageUrl,
-                contentDescription = profileName,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop,
-                animateIfPossible = true,
-            )
-        } else {
-            Text(
-                text = profileName.take(1).uppercase(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-            )
+        ThemeAccentRing(modifier = Modifier.matchParentSize())
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(
+                    if (avatarImageUrl.isNullOrBlank()) {
+                        avatarColor.copy(alpha = 0.18f)
+                    } else {
+                        avatarBackgroundColor
+                    },
+                )
+                .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!avatarImageUrl.isNullOrBlank()) {
+                NuvioAsyncImage(
+                    imageUrl = avatarImageUrl,
+                    contentDescription = profileName,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    animateIfPossible = true,
+                )
+            } else {
+                Text(
+                    text = profileName.take(1).uppercase(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }

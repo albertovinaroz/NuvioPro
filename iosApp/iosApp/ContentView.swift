@@ -1170,6 +1170,10 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
 @available(iOS 16.0, *)
 struct AppGateComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
+    // Lets the parent capture a reference to the live Compose-rendered view, so it can snapshot
+    // and natively animate it the instant a profile tap signal arrives — see
+    // NativeProfileSelectionTransitionViewModel / performNativeProfileExitTransition below.
+    var onHostedViewReady: (UIView) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIViewController {
         let controller = MainViewControllerKt.AppGateViewController(
@@ -1190,6 +1194,7 @@ struct AppGateComposeView: UIViewControllerRepresentable {
         )
         controller.view.backgroundColor = .clear
         controller.view.isOpaque = false
+        onHostedViewReady(controller.view)
         return controller
     }
 
@@ -1656,6 +1661,56 @@ private final class NativeProfileEditSaveViewModel: ObservableObject {
 
     func save() {
         controller.requestSave()
+    }
+}
+
+/// Bridges ProfileSelectionTransitionState (Kotlin) to a native, Compose-independent exit
+/// animation for the profile-select screen — see performNativeProfileExitTransition. A one-shot
+/// event, not continuous state like the other ViewModels on this page, so this takes the handler
+/// at observe time instead of publishing @Published properties for a view to read.
+private final class NativeProfileSelectionTransitionViewModel: ObservableObject {
+    private let controller = NativeProfileSelectionTransitionController()
+
+    func startObserving(onTap: @escaping () -> Void) {
+        controller.observeState {
+            onTap()
+        }
+    }
+
+    func stopObserving() {
+        controller.stopObserving()
+    }
+}
+
+/// Bridges the gap between a profile tap and Compose's own exit transition actually becoming
+/// visible — see NativeProfileSelectionTransitionViewModel for why that gap exists. A short-lived
+/// freeze-frame stand-in, not an independent exit animation of its own: an earlier version faded
+/// *and* scaled/translated this snapshot over 300ms, which raced ahead of and fully masked
+/// Compose's real transition (contentFadeAlpha / profileOverlayState in AppGate.kt) — by the time
+/// that 300ms was up, Compose had already moved on to the next screen underneath, so removing the
+/// snapshot made the profile grid appear to simply vanish rather than animate out. This version
+/// holds the snapshot perfectly still (no transform) just long enough to cover that latency, then
+/// hands off with a brief crossfade to whatever Compose is rendering by then — which by ~90ms in
+/// should already be its own transition, mid-flight.
+private func performNativeProfileExitTransition(hostView: UIView) {
+    // afterScreenUpdates: false — captures exactly what's on screen *right now* (the profile grid,
+    // pre-transition), not a freshly re-rendered frame that might already reflect Compose's own
+    // state change if it's raced ahead by the time this runs.
+    guard let snapshot = hostView.snapshotView(afterScreenUpdates: false) else { return }
+    snapshot.frame = hostView.bounds
+    hostView.superview?.insertSubview(snapshot, aboveSubview: hostView)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+        UIView.animate(
+            withDuration: 0.12,
+            delay: 0,
+            options: [.curveEaseOut],
+            animations: {
+                snapshot.alpha = 0
+            },
+            completion: { _ in
+                snapshot.removeFromSuperview()
+            }
+        )
     }
 }
 
@@ -2206,6 +2261,8 @@ private struct NativeProfileSwitcherView: View {
 struct NativeNavContentView: View {
     @StateObject private var appCoordinator = AppNavigationCoordinator()
     @StateObject private var iconStore = NativeTabIconStore()
+    @StateObject private var profileTransitionViewModel = NativeProfileSelectionTransitionViewModel()
+    @State private var appGateHostedView: UIView?
 
     private var usesNativeTabBar: Bool {
         guard UIDevice.current.userInterfaceIdiom == .phone else {
@@ -2375,11 +2432,13 @@ struct NativeNavContentView: View {
             }
             .zIndex(0)
 
-            AppGateComposeView(appCoordinator: appCoordinator)
-                .ignoresSafeArea(.all)
-                .allowsHitTesting(!appCoordinator.isAppReady)
-                .accessibilityHidden(appCoordinator.isAppReady)
-                .zIndex(1)
+            AppGateComposeView(appCoordinator: appCoordinator) { view in
+                appGateHostedView = view
+            }
+            .ignoresSafeArea(.all)
+            .allowsHitTesting(!appCoordinator.isAppReady)
+            .accessibilityHidden(appCoordinator.isAppReady)
+            .zIndex(1)
         }
         .onReceive(
             NotificationCenter.default.publisher(
@@ -2395,6 +2454,15 @@ struct NativeNavContentView: View {
             )
         ) { _ in
             appCoordinator.reloadLiveTvTabVisibility()
+        }
+        .onAppear {
+            profileTransitionViewModel.startObserving {
+                guard let hostView = appGateHostedView else { return }
+                performNativeProfileExitTransition(hostView: hostView)
+            }
+        }
+        .onDisappear {
+            profileTransitionViewModel.stopObserving()
         }
     }
 }

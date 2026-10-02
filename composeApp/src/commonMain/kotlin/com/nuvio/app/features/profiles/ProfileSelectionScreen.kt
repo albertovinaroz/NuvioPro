@@ -69,6 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioToastHost
+import com.nuvio.app.core.ui.ThemeAccentRing
 import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.HapticsSettingsRepository
@@ -77,6 +78,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+
+// Matches the ring size drawn inside ProfileAvatarCard.
+private val PROFILE_AVATAR_RING_SIZE = 108.dp
 
 @Composable
 fun ProfileSelectionScreen(
@@ -212,12 +216,9 @@ fun ProfileSelectionScreen(
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 22.dp else 18.dp))
 
-              Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { alpha = contentFadeAlpha.value },
-                horizontalAlignment = Alignment.CenterHorizontally,
-              ) {
+                // Also not wrapped in `contentFadeAlpha`, same reasoning as the wordmark above —
+                // the "Who's watching?" title stays up through the tap→center transition instead
+                // of fading away with the avatar grid underneath it.
                 Text(
                     text = stringResource(Res.string.profile_who_is_watching),
                     style = MaterialTheme.typography.headlineLarge.copy(
@@ -234,6 +235,12 @@ fun ProfileSelectionScreen(
 
                 Spacer(modifier = Modifier.height(if (isTabletLayout) 28.dp else 48.dp))
 
+              Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = contentFadeAlpha.value },
+                horizontalAlignment = Alignment.CenterHorizontally,
+              ) {
                 val profiles = profileState.profiles
                 val items = profiles.size + if (isEditMode && profiles.size < MAX_PROFILES) 1 else 0
 
@@ -256,6 +263,7 @@ fun ProfileSelectionScreen(
                                         isEditMode = isEditMode,
                                         animDelay = currentIndex * 80,
                                         enabled = interactionEnabled,
+                                        showRing = profile.profileIndex == activeProfileIndex,
                                         onClick = { tapCenter ->
                                             onProfileClick(profile, tapCenter)
                                         },
@@ -292,6 +300,7 @@ fun ProfileSelectionScreen(
                                                 isEditMode = isEditMode,
                                                 animDelay = currentIndex * 80,
                                                 enabled = interactionEnabled,
+                                                showRing = profile.profileIndex == activeProfileIndex,
                                                 onClick = { tapCenter ->
                                                     onProfileClick(profile, tapCenter)
                                                 },
@@ -452,6 +461,7 @@ private fun ProfileAvatarCard(
     isEditMode: Boolean,
     animDelay: Int,
     enabled: Boolean,
+    showRing: Boolean,
     onClick: (Offset) -> Unit,
 ) {
     val avatarColor = remember(profile.avatarColorHex) {
@@ -545,6 +555,10 @@ private fun ProfileAvatarCard(
                         .clip(CircleShape)
                         .background(bgColor.copy(alpha = 0.2f)),
                 )
+            }
+
+            if (showRing) {
+                ThemeAccentRing(modifier = Modifier.size(PROFILE_AVATAR_RING_SIZE))
             }
 
             Box(

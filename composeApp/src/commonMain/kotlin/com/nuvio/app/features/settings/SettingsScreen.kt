@@ -844,6 +844,7 @@ private fun MobileSettingsScreen(
                     onPosterClick = onPosterClick,
                     hasNativeTrailingMenu = !showInternalHeader,
                     onBack = if (profileDrawsOwnChrome) onNavigateBack else null,
+                    listState = listState,
                 )
                 SettingsPage.SupportersContributors -> {
                     if (AppFeaturePolicy.supportersContributorsPageEnabled) {

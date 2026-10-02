@@ -35,6 +35,7 @@ import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.PlatformBackHandler
+import com.nuvio.app.core.ui.ProfileSelectionTransitionState
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.auth.AuthScreen
 import com.nuvio.app.features.membership.MemberAccessRepository
@@ -649,6 +650,11 @@ internal fun AppGate(
                             (autoSkipProfileSelection || profile.profileIndex != ProfileRepository.state.value.activeProfile?.profileIndex)
                         ) {
                             beginProfileTransition(profile, tapCenter)
+                            // Fired synchronously, same call as the state flip above — native
+                            // Swift can react to this on the next run loop tick, well before
+                            // Compose's own recompose -> relaunch-LaunchedEffect -> first-animation-
+                            // frame pipeline would otherwise produce a visible response.
+                            ProfileSelectionTransitionState.requestTransition()
                             skipProfileSelectionEnterAnimation = false
                             selectProfile(
                                 profile = profile,

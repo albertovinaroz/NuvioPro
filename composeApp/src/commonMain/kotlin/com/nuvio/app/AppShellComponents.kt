@@ -65,6 +65,7 @@ import com.nuvio.app.core.ui.DisintegrationRequest
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
+import com.nuvio.app.core.ui.ThemeAccentRing
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.cloud.CloudLibraryContentType
 import com.nuvio.app.features.cloud.CloudLibraryFile
@@ -631,6 +632,11 @@ internal fun AppLoadingContent(
                         translationY = emblemOffsetY.value
                     }
                 if (profile != null) {
+                    // Shares emblemModifier with the avatar below it, so the same
+                    // translation/scale/alpha driving the glide-to-center (and later the
+                    // shrink-to-tab-icon) motion applies to this ring too — it rides along with
+                    // the avatar instead of staying parked at the original tap position.
+                    ThemeAccentRing(modifier = emblemModifier.size(108.dp))
                     AppLoadingProfileAvatar(
                         profile = profile,
                         modifier = emblemModifier.size(96.dp),
