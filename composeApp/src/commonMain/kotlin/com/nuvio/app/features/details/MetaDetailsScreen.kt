@@ -1325,6 +1325,11 @@ fun MetaDetailsScreen(
                                                         onWatchedClick = toggleWatched,
                                                         onSaveClick = toggleSaved,
                                                         onSaveLongClick = openLibraryListPicker,
+                                                        onDownloadClick = onDownloadClick,
+                                                        onPlayFromStartClick = onPlayFromStartClick,
+                                                        onPlayExternallyClick = onPlayExternallyClick,
+                                                        userRating = titleUserRating,
+                                                        onRateClick = openTitleRating,
                                                     )
                                                 }
                                             } else {

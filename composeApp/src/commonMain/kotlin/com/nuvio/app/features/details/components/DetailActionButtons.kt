@@ -28,6 +28,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -61,7 +64,9 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.appIconPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
+import nuvio.composeapp.generated.resources.details_action_start_from_beginning
 import nuvio.composeapp.generated.resources.details_actions_menu_label
+import nuvio.composeapp.generated.resources.details_download_action
 import nuvio.composeapp.generated.resources.hero_add_to_library
 import nuvio.composeapp.generated.resources.hero_mark_unwatched
 import nuvio.composeapp.generated.resources.hero_mark_watched
@@ -69,6 +74,7 @@ import nuvio.composeapp.generated.resources.hero_remove_from_library
 import nuvio.composeapp.generated.resources.playback_unavailable
 import nuvio.composeapp.generated.resources.random_episode_title
 import nuvio.composeapp.generated.resources.shuffle_stop
+import nuvio.composeapp.generated.resources.streams_open_external_player
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -328,6 +334,14 @@ fun DetailActions(
     onWatchedClick: () -> Unit,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
+    // Pro-only extras, absent from upstream's call sites — kept optional so those keep compiling
+    // unchanged, and wired up from TabletDetailHero's actions slot so it has the same action set
+    // the phone action row already does, not just play/shuffle/watched/save.
+    onDownloadClick: (() -> Unit)? = null,
+    onPlayFromStartClick: (() -> Unit)? = null,
+    onPlayExternallyClick: (() -> Unit)? = null,
+    userRating: Int? = null,
+    onRateClick: (() -> Unit)? = null,
 ) {
     val shuffleAction = onShuffleClick?.let { onClick ->
         DetailSecondaryAction(
@@ -343,6 +357,33 @@ fun DetailActions(
         pinnedAction = shuffleAction?.takeIf { shuffleEnabled },
         secondaryActions = buildList {
             if (!shuffleEnabled) shuffleAction?.let(::add)
+            onDownloadClick?.let { download ->
+                add(
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.details_download_action),
+                        icon = Icons.Rounded.Download,
+                        onClick = download,
+                    ),
+                )
+            }
+            onPlayFromStartClick?.let { playFromStart ->
+                add(
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.details_action_start_from_beginning),
+                        icon = Icons.Rounded.Replay,
+                        onClick = playFromStart,
+                    ),
+                )
+            }
+            onPlayExternallyClick?.let { playExternally ->
+                add(
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.streams_open_external_player),
+                        icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                        onClick = playExternally,
+                    ),
+                )
+            }
             add(
                 DetailSecondaryAction(
                     label = stringResource(if (isWatched) Res.string.hero_mark_unwatched else Res.string.hero_mark_watched),
@@ -364,6 +405,8 @@ fun DetailActions(
         isTablet = isTablet,
         onPlayClick = onPlayClick,
         onPlayLongClick = onPlayLongClick,
+        userRating = userRating,
+        onRateClick = onRateClick,
     )
 }
 
