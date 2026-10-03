@@ -29,7 +29,7 @@ while IFS= read -r commit; do
     if [[ -z "$current_version" ]]; then
         current_version="$version"
         current_bump="$commit"
-    elif [[ "$version" != "$current_version" ]]; then
+    elif [[ "$version" != "$current_version" ]] && git rev-parse --verify --quiet "refs/tags/${version}" >/dev/null; then
         previous_version="$version"
         previous_bump="$commit"
         break
