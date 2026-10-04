@@ -53,7 +53,6 @@
 
     <string name="profile_insights_refresh">Refresh</string>
     <string name="profile_insights_refreshing">Refreshing…</string>
-    <string name="profile_insights_pull_to_refresh">Pull down to refresh from your account</string>
     <string name="profile_insights_updated_just_now">Updated just now</string>
     <string name="profile_insights_updated_minutes">Updated %1$d min ago</string>
     <string name="profile_insights_updated_hours">Updated %1$d h ago</string>

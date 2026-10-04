@@ -171,6 +171,8 @@ import org.jetbrains.compose.resources.stringResource
 
 private val profileInsightsLog = Logger.withTag("ProfileInsights")
 
+private const val ProfileInsightsItemKey = "profile-insights-body"
+
 internal fun LazyListScope.profileInsightsContent(
     isTablet: Boolean,
     onSwitchProfile: (() -> Unit)?,
@@ -186,7 +188,7 @@ internal fun LazyListScope.profileInsightsContent(
     // exactly how far the hero has scrolled past the top. Drives the hero backdrop's parallax.
     listState: LazyListState? = null,
 ) {
-    item {
+    item(key = ProfileInsightsItemKey) {
         ProfileInsightsBody(
             isTablet = isTablet,
             onSwitchProfile = onSwitchProfile,
@@ -391,7 +393,9 @@ private fun ProfileInsightsBody(
     // px — 0 once a different item becomes first (the hero isn't visible then either way, so the
     // exact value stops mattering). Drives the backdrop's parallax in ProfileInsightsHeroCinematic.
     val heroScrollOffsetPx = listState?.let { state ->
-        if (state.firstVisibleItemIndex == 0) state.firstVisibleItemScrollOffset.toFloat() else 0f
+        state.layoutInfo.visibleItemsInfo
+            .firstOrNull { it.key == ProfileInsightsItemKey }
+            ?.let { (-it.offset.toFloat()).coerceAtLeast(0f) }
     } ?: 0f
     Column(modifier = Modifier.fillMaxWidth()) {
         ProfileInsightsHero(
@@ -2843,7 +2847,7 @@ private fun ProfileInsightsRefreshStatusRow(
     }
     val statusText = when {
         isRefreshing -> stringResource(Res.string.profile_insights_refreshing)
-        refreshedAtEpochMs == null -> stringResource(Res.string.profile_insights_pull_to_refresh)
+        refreshedAtEpochMs == null -> ""
         else -> {
             val elapsedMinutes = ((now - refreshedAtEpochMs).coerceAtLeast(0L) / ProfileInsightsMinuteMs).toInt()
             when {
