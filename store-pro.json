@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.6-b3",
+          "buildVersion": "172",
+          "date": "2026-10-03T15:26:39Z",
+          "localizedDescription": "# Nuvio Pro 0.5.6-b3\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (NuvioMedia)\n\n- feat(details): use desktop hero layout on tablets @tapframe\n- feat(player): preload next episode sources and fix auto-play timeout blocking cached results @skoruppa\n- feat(settings): show restart prompt when layout direction changes @tapframe\n- fix(player): backport automatic skip notifications from Desktop @Laskco\n- fix(player): auto-play next episode on end after dismissing prompt @tapframe\n- fix(catalog): missing poster fallback in Catalog Screen @skoruppa\n- fix(ios): declare supported localizations @tapframe\n- i18n(vi): update latest Vietnamese strings @blueocean2308\n\n### Pro\n\n- feat(profiles): native exit transition on profile tap @albertovinaroz\n- feat(profiles): rotating theme-accent halo on avatars, hero scroll parallax @albertovinaroz\n- fix(details): restore full action row on the new tablet hero @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.6-b3/nuvio-0.5.6-b3-pro-release.ipa",
+          "size": 69600919,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.5-b2",
           "buildVersion": "169",
           "date": "2026-09-30T23:26:49Z",
