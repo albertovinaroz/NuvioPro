@@ -636,7 +636,7 @@ internal fun AppLoadingContent(
                     // translation/scale/alpha driving the glide-to-center (and later the
                     // shrink-to-tab-icon) motion applies to this ring too — it rides along with
                     // the avatar instead of staying parked at the original tap position.
-                    ThemeAccentRing(modifier = emblemModifier.size(108.dp))
+                    ThemeAccentRing(modifier = emblemModifier.size(108.dp), drawIn = true)
                     AppLoadingProfileAvatar(
                         profile = profile,
                         modifier = emblemModifier.size(96.dp),

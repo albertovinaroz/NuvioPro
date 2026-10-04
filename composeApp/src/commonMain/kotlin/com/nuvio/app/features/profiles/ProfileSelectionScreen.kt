@@ -109,6 +109,10 @@ fun ProfileSelectionScreen(
     // is verified the caller can still glide the transition emblem out from that exact spot.
     var pendingPinSelection by remember { mutableStateOf<Pair<NuvioProfile, Offset>?>(null) }
     var isEditMode by remember { mutableStateOf(false) }
+    // The profile currently held down. While a different profile is held, the active profile's
+    // resting ring is hidden so the exit snapshot taken on that tap never freezes it on screen.
+    var pressedProfileIndex by remember { mutableStateOf<Int?>(null) }
+    var activeRippleKey by remember { mutableStateOf(0) }
 
     val titleAlpha = remember { Animatable(0f) }
     val titleOffset = remember { Animatable(20f) }
@@ -133,7 +137,10 @@ fun ProfileSelectionScreen(
                 isEditMode = isEditMode,
                 activeProfileIndex = activeProfileIndex,
                 onEditProfile = onEditProfile,
-                onActiveProfileSelected = { scope.launch { showAlreadyActiveProfileToast(it) } },
+                onActiveProfileSelected = {
+                    activeRippleKey++
+                    scope.launch { showAlreadyActiveProfileToast(it) }
+                },
                 onPinRequired = { pendingPinSelection = it to tapCenter },
                 onProfileSelected = { onProfileSelected(it, tapCenter) },
             )
@@ -263,7 +270,12 @@ fun ProfileSelectionScreen(
                                         isEditMode = isEditMode,
                                         animDelay = currentIndex * 80,
                                         enabled = interactionEnabled,
-                                        showRing = profile.profileIndex == activeProfileIndex,
+                                        showRing = profile.profileIndex == activeProfileIndex &&
+                                            (pressedProfileIndex == null || pressedProfileIndex == activeProfileIndex),
+                                        rippleKey = if (profile.profileIndex == activeProfileIndex) activeRippleKey else 0,
+                                        onPressChange = { pressed ->
+                                            pressedProfileIndex = if (pressed) profile.profileIndex else null
+                                        },
                                         onClick = { tapCenter ->
                                             onProfileClick(profile, tapCenter)
                                         },
@@ -300,7 +312,12 @@ fun ProfileSelectionScreen(
                                                 isEditMode = isEditMode,
                                                 animDelay = currentIndex * 80,
                                                 enabled = interactionEnabled,
-                                                showRing = profile.profileIndex == activeProfileIndex,
+                                                showRing = profile.profileIndex == activeProfileIndex &&
+                                                    (pressedProfileIndex == null || pressedProfileIndex == activeProfileIndex),
+                                                rippleKey = if (profile.profileIndex == activeProfileIndex) activeRippleKey else 0,
+                                                onPressChange = { pressed ->
+                                                    pressedProfileIndex = if (pressed) profile.profileIndex else null
+                                                },
                                                 onClick = { tapCenter ->
                                                     onProfileClick(profile, tapCenter)
                                                 },
@@ -462,6 +479,8 @@ private fun ProfileAvatarCard(
     animDelay: Int,
     enabled: Boolean,
     showRing: Boolean,
+    rippleKey: Int,
+    onPressChange: (Boolean) -> Unit,
     onClick: (Offset) -> Unit,
 ) {
     val avatarColor = remember(profile.avatarColorHex) {
@@ -524,12 +543,16 @@ private fun ProfileAvatarCard(
                 if (!enabled) return@pointerInput
                 detectTapGestures(
                     onPress = {
+                        onPressChange(true)
                         pressScaleAnim.snapTo(0.95f)
                         tryAwaitRelease()
                         pressScaleAnim.animateTo(
                             1f,
                             spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
                         )
+                        // Held a moment past release: the exit snapshot is taken on the tap itself.
+                        delay(450)
+                        onPressChange(false)
                     },
                     onTap = { onClick(avatarCenterInWindow) },
                 )
@@ -558,7 +581,7 @@ private fun ProfileAvatarCard(
             }
 
             if (showRing) {
-                ThemeAccentRing(modifier = Modifier.size(PROFILE_AVATAR_RING_SIZE))
+                ThemeAccentRing(modifier = Modifier.size(PROFILE_AVATAR_RING_SIZE), rippleKey = rippleKey)
             }
 
             Box(
