@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.6-b4",
+          "buildVersion": "173",
+          "date": "2026-10-04T20:47:43Z",
+          "localizedDescription": "# Nuvio Pro 0.5.6-b4\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Upstream (luqmanfadlli's fork)\n\n- feat(profile,library): add manual refresh and surface load failures @luqmanfadlli\n- feat(settings): add Clear Metadata Cache to Advanced settings @luqmanfadlli\n- perf(profile,library): keep background metadata lookups within API limits @luqmanfadlli\n- fix(library): stop caching failed release lookups in the calendar @luqmanfadlli\n- fix(profile): declare watched duration refs before tracked title keys @luqmanfadlli\n- fix(settings): restore missing isIos import in AppearanceSettingsPage @luqmanfadlli\n- feat(visualsubtitlesync): sync subtitles by ear from the subtitle style panel @chrisk325\n- chore: fix typo @luqmanfadlli\n\n### Pro\n\n- feat(profiles): halo draws in clockwise on tap, then emits ripples @albertovinaroz\n- feat(details): explain missing ratings when no tracking service is connected @albertovinaroz\n- fix(profile): smoother hero avatar shrink on scroll @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.6-b4/nuvio-0.5.6-b4-pro-release.ipa",
+          "size": 69763869,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.6-b3",
           "buildVersion": "172",
           "date": "2026-10-03T15:26:39Z",
