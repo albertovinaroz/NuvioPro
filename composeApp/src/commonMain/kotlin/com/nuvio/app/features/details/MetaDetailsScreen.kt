@@ -1330,6 +1330,7 @@ fun MetaDetailsScreen(
                                                         onPlayExternallyClick = onPlayExternallyClick,
                                                         userRating = titleUserRating,
                                                         onRateClick = openTitleRating,
+                                                        showRatingHint = titleRatingTarget != null && !canRateTitle,
                                                     )
                                                 }
                                             } else {
@@ -1391,6 +1392,7 @@ fun MetaDetailsScreen(
                                     onWatchedClick = toggleWatched,
                                     userRating = titleUserRating,
                                     onRateClick = openTitleRating,
+                                    showRatingHint = titleRatingTarget != null && !canRateTitle,
                                     showManualPlayOption = showManualPlayOption,
                                     preferredEpisodeSeasonNumber = initialSeasonNumber ?: seriesAction?.seasonNumber,
                                     preferredEpisodeNumber = initialEpisodeNumber ?: seriesAction?.episodeNumber,
@@ -2182,6 +2184,7 @@ private fun LazyListScope.configuredMetaSectionItems(
     onWatchedClick: () -> Unit,
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
+    showRatingHint: Boolean = false,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -2269,6 +2272,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     onWatchedClick = onWatchedClick,
                     userRating = userRating,
                     onRateClick = onRateClick,
+                    showRatingHint = showRatingHint,
                     showManualPlayOption = showManualPlayOption,
                     preferredEpisodeSeasonNumber = preferredEpisodeSeasonNumber,
                     preferredEpisodeNumber = preferredEpisodeNumber,
@@ -2429,6 +2433,7 @@ private fun ConfiguredMetaSections(
     onWatchedClick: () -> Unit,
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
+    showRatingHint: Boolean = false,
     showManualPlayOption: Boolean,
     preferredEpisodeSeasonNumber: Int?,
     preferredEpisodeNumber: Int?,
@@ -2585,6 +2590,7 @@ private fun ConfiguredMetaSections(
                     onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                     userRating = userRating,
                     onRateClick = onRateClick,
+                    showRatingHint = showRatingHint,
                 )
             }
             MetaScreenSectionKey.OVERVIEW -> {

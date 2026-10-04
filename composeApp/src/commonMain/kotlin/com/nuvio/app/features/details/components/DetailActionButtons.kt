@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -75,6 +76,7 @@ import nuvio.composeapp.generated.resources.playback_unavailable
 import nuvio.composeapp.generated.resources.random_episode_title
 import nuvio.composeapp.generated.resources.shuffle_stop
 import nuvio.composeapp.generated.resources.streams_open_external_player
+import nuvio.composeapp.generated.resources.user_rating_no_provider
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -105,6 +107,7 @@ fun DetailActionButtons(
     iconActions: List<DetailSecondaryAction> = emptyList(),
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
+    showRatingHint: Boolean = false,
 ) {
     val playPainter = appIconPainter(AppIconResource.PlayerPlay)
     val buttonHeight = if (isTablet) 56.dp else 52.dp
@@ -176,6 +179,9 @@ fun DetailActionButtons(
                     onClick = rate,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
+            }
+            if (showRatingHint && onRateClick == null) {
+                RatingsUnavailableBanner(modifier = Modifier.align(Alignment.CenterHorizontally))
             }
             return@Column
         }
@@ -316,6 +322,25 @@ fun DetailActionButtons(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
+        if (showRatingHint && onRateClick == null) {
+            RatingsUnavailableBanner(modifier = Modifier.align(Alignment.CenterHorizontally))
+        }
+    }
+}
+
+@Composable
+private fun RatingsUnavailableBanner(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+    ) {
+        Text(
+            text = stringResource(Res.string.user_rating_no_provider),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -342,6 +367,7 @@ fun DetailActions(
     onPlayExternallyClick: (() -> Unit)? = null,
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
+    showRatingHint: Boolean = false,
 ) {
     val shuffleAction = onShuffleClick?.let { onClick ->
         DetailSecondaryAction(
@@ -407,6 +433,7 @@ fun DetailActions(
         onPlayLongClick = onPlayLongClick,
         userRating = userRating,
         onRateClick = onRateClick,
+        showRatingHint = showRatingHint,
     )
 }
 

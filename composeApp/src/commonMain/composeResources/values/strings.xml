@@ -2680,7 +2680,7 @@
     <string name="user_rating_removed">Rating removed from %1$s</string>
     <string name="user_rating_sync_failed">Couldn\'t sync rating to %1$s</string>
     <string name="user_rating_last_failed">Last change didn\'t reach %1$s. Try again.</string>
-    <string name="user_rating_no_provider">Turn on at least one service to save ratings</string>
+    <string name="user_rating_no_provider">Turn on at least one tracking service to save ratings</string>
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
     <string name="series_status_current">Current</string>
