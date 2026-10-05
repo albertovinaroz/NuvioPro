@@ -1,0 +1,632 @@
+import SwiftUI
+import UIKit
+
+// The expanded `morphed` tab bar, built on UISegmentedControl: outside UITabBar it's the only
+// public UIKit control that gets iOS 26's Liquid Glass lens (the magnifying, crisp selection bubble
+// that follows a press-and-drag). The control's own labels are hidden and our tab items are drawn
+// into each segment instead; a second, accent-colored copy of every item is masked to the lens each
+// frame so whatever sits under it reads in the accent color, as on the system bar.
+//
+// Technique adapted from FabBar (MIT, github.com/ryanashcraft/FabBar). It reaches into the
+// control's private view hierarchy ("UISegment", "_UILiquidLensView"), so a future iOS release may
+// change it; every lookup degrades gracefully (labels show, accent masking snaps) rather than crash.
+
+@available(iOS 26.0, *)
+struct NuvioSegmentedTabBarItem {
+    let title: String
+    let baseImage: UIImage
+    let accentImage: UIImage
+    /// False for images that carry their own colors (the profile avatar, a gradient-tinted icon).
+    let tintsBaseImage: Bool
+    let tintsAccentImage: Bool
+}
+
+@available(iOS 26.0, *)
+struct NuvioSegmentedTabBar: UIViewRepresentable {
+    static let barHeight: CGFloat = 62
+
+    let items: [NuvioSegmentedTabBarItem]
+    /// Changes whenever item content does; avoids rebuilding segment views on every SwiftUI update.
+    let contentKey: String
+    let selectedIndex: Int
+    let isExpanded: Bool
+    let accentColor: UIColor
+    let hapticsEnabled: () -> Bool
+    let onSelect: (Int) -> Void
+    let onReselect: (Int) -> Void
+    let onLongPress: (Int) -> Void
+    let onCollapsedTap: () -> Void
+
+    func makeUIView(context: Context) -> NuvioSegmentedTabBarView {
+        let view = NuvioSegmentedTabBarView()
+        apply(to: view)
+        return view
+    }
+
+    func updateUIView(_ view: NuvioSegmentedTabBarView, context: Context) {
+        apply(to: view)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: NuvioSegmentedTabBarView, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? 360, height: Self.barHeight)
+    }
+
+    private func apply(to view: NuvioSegmentedTabBarView) {
+        let control = view.segmentedControl
+        control.hapticsEnabled = hapticsEnabled
+        control.onSelect = onSelect
+        control.onReselect = onReselect
+        control.onLongPress = onLongPress
+        control.activeTintColor = accentColor
+        if view.appliedContentKey != contentKey {
+            view.appliedContentKey = contentKey
+            control.setItems(items)
+        }
+        if !control.isTrackingTouch, control.selectedSegmentIndex != selectedIndex {
+            control.selectedSegmentIndex = selectedIndex
+        }
+        view.onCollapsedTap = onCollapsedTap
+        view.onCollapsedLongPress = { onLongPress(selectedIndex) }
+        if items.indices.contains(selectedIndex) {
+            let item = items[selectedIndex]
+            view.setCollapsedIcon(item.accentImage, tinted: item.tintsAccentImage, tint: accentColor)
+        }
+        view.setExpanded(isExpanded)
+    }
+}
+
+@available(iOS 26.0, *)
+final class NuvioSegmentedTabBarView: UIView {
+    /// Collapsed pill size, matching the SwiftUI pill it replaces (24pt icon plus its padding).
+    static let collapsedSize = CGSize(width: 56, height: 48)
+    /// The expanded bar sits this far in from the pill's leading edge on each side.
+    private static let expandedInset: CGFloat = 4
+
+    let segmentedControl = NuvioTabSegmentedControl(items: nil)
+    var appliedContentKey: String?
+    var onCollapsedTap: () -> Void = {}
+    var onCollapsedLongPress: () -> Void = {}
+
+    private let glassView: UIVisualEffectView
+    private let collapsedIcon = UIImageView()
+    private var isExpanded = true
+    private var hasLaidOut = false
+    private var leadingConstraint: NSLayoutConstraint!
+    private var widthConstraint: NSLayoutConstraint!
+    private var heightConstraint: NSLayoutConstraint!
+    private var controlWidthConstraint: NSLayoutConstraint!
+    private lazy var collapsedTap = UITapGestureRecognizer(target: self, action: #selector(handleCollapsedTap))
+    private lazy var collapsedLongPress: UILongPressGestureRecognizer = {
+        let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleCollapsedLongPress(_:)))
+        recognizer.minimumPressDuration = 0.45
+        return recognizer
+    }()
+
+    override init(frame: CGRect) {
+        let glass = UIGlassEffect()
+        glass.isInteractive = true
+        glassView = UIVisualEffectView(effect: glass)
+        super.init(frame: frame)
+        backgroundColor = .clear
+
+        addSubview(glassView)
+        glassView.translatesAutoresizingMaskIntoConstraints = false
+        glassView.contentView.clipsToBounds = true
+        glassView.contentView.addSubview(segmentedControl)
+        segmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        glassView.contentView.addSubview(collapsedIcon)
+        collapsedIcon.translatesAutoresizingMaskIntoConstraints = false
+        collapsedIcon.contentMode = .scaleAspectFit
+        collapsedIcon.alpha = 0
+
+        leadingConstraint = glassView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.expandedInset)
+        widthConstraint = glassView.widthAnchor.constraint(equalToConstant: 300)
+        heightConstraint = glassView.heightAnchor.constraint(equalToConstant: NuvioSegmentedTabBar.barHeight)
+        // Fixed to the full bar width (not the glass's), so the items don't squash while the glass
+        // shrinks into the pill — they just fade out under it.
+        controlWidthConstraint = segmentedControl.widthAnchor.constraint(equalToConstant: 296)
+
+        let padding: CGFloat = 2
+        NSLayoutConstraint.activate([
+            leadingConstraint,
+            widthConstraint,
+            heightConstraint,
+            glassView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            segmentedControl.leadingAnchor.constraint(equalTo: glassView.contentView.leadingAnchor, constant: padding),
+            controlWidthConstraint,
+            segmentedControl.topAnchor.constraint(equalTo: glassView.contentView.topAnchor, constant: padding),
+            // UISegmentedControl's internal padding sits a point low; this re-centers the items.
+            segmentedControl.heightAnchor.constraint(equalToConstant: NuvioSegmentedTabBar.barHeight - padding * 2 - 1),
+            collapsedIcon.centerXAnchor.constraint(equalTo: glassView.contentView.centerXAnchor),
+            collapsedIcon.centerYAnchor.constraint(equalTo: glassView.contentView.centerYAnchor),
+            collapsedIcon.widthAnchor.constraint(equalToConstant: 24),
+            collapsedIcon.heightAnchor.constraint(equalToConstant: 24),
+        ])
+
+        glassView.addGestureRecognizer(collapsedTap)
+        glassView.addGestureRecognizer(collapsedLongPress)
+        collapsedTap.isEnabled = false
+        collapsedLongPress.isEnabled = false
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setCollapsedIcon(_ image: UIImage, tinted: Bool, tint: UIColor) {
+        collapsedIcon.image = tinted ? image.withRenderingMode(.alwaysTemplate) : image.withRenderingMode(.alwaysOriginal)
+        collapsedIcon.tintColor = tint
+    }
+
+    func setExpanded(_ expanded: Bool) {
+        guard expanded != isExpanded else { return }
+        isExpanded = expanded
+        guard hasLaidOut, window != nil else {
+            applyState()
+            return
+        }
+        layoutIfNeeded()
+        // One spring drives the glass's own frame, so the Liquid Glass capsule itself morphs
+        // between bar and pill — the same continuous reshape the system tab bar does.
+        UIView.animate(
+            withDuration: 0.5,
+            delay: 0,
+            usingSpringWithDamping: 0.82,
+            initialSpringVelocity: 0,
+            options: [.beginFromCurrentState, .allowUserInteraction]
+        ) {
+            self.applyState()
+            self.layoutIfNeeded()
+        }
+    }
+
+    private func applyState() {
+        let fullWidth = max(bounds.width - Self.expandedInset * 2, Self.collapsedSize.width)
+        leadingConstraint.constant = isExpanded ? Self.expandedInset : 0
+        widthConstraint.constant = isExpanded ? fullWidth : Self.collapsedSize.width
+        heightConstraint.constant = isExpanded ? NuvioSegmentedTabBar.barHeight : Self.collapsedSize.height
+        controlWidthConstraint.constant = fullWidth - 4
+        segmentedControl.alpha = isExpanded ? 1 : 0
+        collapsedIcon.alpha = isExpanded ? 0 : 1
+        segmentedControl.isUserInteractionEnabled = isExpanded
+        collapsedTap.isEnabled = !isExpanded
+        collapsedLongPress.isEnabled = !isExpanded
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        glassView.cornerConfiguration = .capsule()
+        let fullWidth = max(bounds.width - Self.expandedInset * 2, Self.collapsedSize.width)
+        if !hasLaidOut || (isExpanded && widthConstraint.constant != fullWidth) || controlWidthConstraint.constant != fullWidth - 4 {
+            hasLaidOut = bounds.width > 0
+            applyState()
+        }
+    }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        // Only the glass itself is touchable; the empty space beside the collapsed pill isn't.
+        glassView.frame.contains(point)
+    }
+
+    @objc private func handleCollapsedTap() {
+        onCollapsedTap()
+    }
+
+    @objc private func handleCollapsedLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began else { return }
+        onCollapsedLongPress()
+    }
+}
+
+@available(iOS 26.0, *)
+final class NuvioTabSegmentedControl: UISegmentedControl {
+    var hapticsEnabled: () -> Bool = { true }
+    var onSelect: (Int) -> Void = { _ in }
+    var onReselect: (Int) -> Void = { _ in }
+    var onLongPress: (Int) -> Void = { _ in }
+
+    var activeTintColor: UIColor = .tintColor {
+        didSet {
+            guard activeTintColor != oldValue else { return }
+            accentViews.forEach { $0.tintColor = activeTintColor }
+        }
+    }
+
+    /// True between touch down and touch up/cancel, so external selection updates don't fight it.
+    private(set) var isTrackingTouch = false
+
+    private static let baseViewTag = 8_801
+    private static let accentViewTag = 8_802
+    private var baseViews: [NuvioTabItemContentView] = []
+    private var accentViews: [NuvioTabItemContentView] = []
+    private var originalIndex: Int?
+    private weak var cachedLensView: UIView?
+    private var displayLink: CADisplayLink?
+    private var displayLinkProxy: NuvioDisplayLinkProxy?
+    private var lastLensRect: CGRect = .zero
+    private var stableFrames = 0
+
+    private let feedback: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        return generator
+    }()
+
+    override init(items: [Any]?) {
+        super.init(items: items)
+        accessibilityTraits = .tabBar
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.45
+        addGestureRecognizer(longPress)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setItems(_ items: [NuvioSegmentedTabBarItem]) {
+        let keepIndex = selectedSegmentIndex
+        if numberOfSegments != items.count {
+            removeAllSegments()
+            for (index, item) in items.enumerated() {
+                insertSegment(withTitle: item.title, at: index, animated: false)
+            }
+        } else {
+            for (index, item) in items.enumerated() {
+                setTitle(item.title, forSegmentAt: index)
+            }
+        }
+        if keepIndex >= 0, keepIndex < numberOfSegments {
+            selectedSegmentIndex = keepIndex
+        }
+
+        for segment in segmentViews() {
+            segment.viewWithTag(Self.baseViewTag)?.removeFromSuperview()
+            segment.viewWithTag(Self.accentViewTag)?.removeFromSuperview()
+        }
+        cachedLensView = nil
+        baseViews = items.map {
+            let view = NuvioTabItemContentView(title: $0.title, image: $0.baseImage, tintsImage: $0.tintsBaseImage)
+            view.tintColor = .white
+            view.drawsLegibilityShadow = true
+            return view
+        }
+        accentViews = items.map {
+            let view = NuvioTabItemContentView(title: $0.title, image: $0.accentImage, tintsImage: $0.tintsAccentImage)
+            view.tintColor = activeTintColor
+            return view
+        }
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        for subview in subviews where subview is UIImageView {
+            subview.alpha = 0
+        }
+        hideLabels(in: self)
+        injectItemViews()
+        wakeDisplayLink()
+    }
+
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        hideLabels(in: subview)
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            startDisplayLink()
+        } else {
+            displayLink?.invalidate()
+            displayLink = nil
+            displayLinkProxy = nil
+        }
+    }
+
+    // MARK: Segment content
+
+    private func segmentViews() -> [UIView] {
+        var found: [UIView] = []
+        func search(_ view: UIView) {
+            for subview in view.subviews {
+                if String(describing: type(of: subview)) == "UISegment" {
+                    found.append(subview)
+                } else {
+                    search(subview)
+                }
+            }
+        }
+        search(self)
+        return found.sorted { $0.frame.minX < $1.frame.minX }
+    }
+
+    private func hideLabels(in view: UIView) {
+        if let label = view as? UILabel,
+           label.superview?.tag != Self.baseViewTag,
+           label.superview?.tag != Self.accentViewTag {
+            label.isHidden = true
+        }
+        view.subviews.forEach(hideLabels(in:))
+    }
+
+    private func injectItemViews() {
+        let segments = segmentViews()
+        guard segments.count == baseViews.count, segments.count == accentViews.count else { return }
+        for (index, segment) in segments.enumerated() {
+            if segment.viewWithTag(Self.baseViewTag) == nil {
+                attach(baseViews[index], tag: Self.baseViewTag, to: segment)
+            }
+            if segment.viewWithTag(Self.accentViewTag) == nil {
+                let accent = accentViews[index]
+                attach(accent, tag: Self.accentViewTag, to: segment)
+                let mask = CAShapeLayer()
+                mask.path = UIBezierPath(rect: .zero).cgPath
+                accent.layer.mask = mask
+            }
+        }
+    }
+
+    private func attach(_ view: NuvioTabItemContentView, tag: Int, to segment: UIView) {
+        view.tag = tag
+        view.translatesAutoresizingMaskIntoConstraints = false
+        segment.addSubview(view)
+        let size = view.intrinsicContentSize
+        NSLayoutConstraint.activate([
+            view.centerXAnchor.constraint(equalTo: segment.centerXAnchor),
+            view.centerYAnchor.constraint(equalTo: segment.centerYAnchor),
+            view.widthAnchor.constraint(equalToConstant: size.width),
+            view.heightAnchor.constraint(equalToConstant: size.height),
+        ])
+    }
+
+    // MARK: Accent masking to the lens
+
+    private func startDisplayLink() {
+        guard displayLink == nil else { return }
+        let proxy = NuvioDisplayLinkProxy(control: self)
+        displayLinkProxy = proxy
+        let link = CADisplayLink(target: proxy, selector: #selector(NuvioDisplayLinkProxy.tick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    private func wakeDisplayLink() {
+        displayLink?.isPaused = false
+        stableFrames = 0
+    }
+
+    private func lensRect() -> CGRect {
+        if cachedLensView == nil {
+            cachedLensView = findLensView()
+        }
+        let selfLayer = layer.presentation() ?? layer
+        if let lens = cachedLensView {
+            let lensLayer = lens.layer.presentation() ?? lens.layer
+            return selfLayer.convert(lensLayer.bounds, from: lensLayer)
+        }
+        let segments = segmentViews()
+        guard selectedSegmentIndex >= 0, selectedSegmentIndex < segments.count else { return .zero }
+        return segments[selectedSegmentIndex].frame
+    }
+
+    private func findLensView() -> UIView? {
+        func search(_ view: UIView) -> UIView? {
+            for subview in view.subviews {
+                if String(describing: type(of: subview)) == "_UILiquidLensView" { return subview }
+                if let found = search(subview) { return found }
+            }
+            return nil
+        }
+        if let lens = search(self) { return lens }
+        // Fallback: the lens is the segments container's sibling that has its own subviews.
+        guard let container = segmentViews().first?.superview, let wrapper = container.superview else { return nil }
+        return wrapper.subviews.first { $0 !== container && !$0.subviews.isEmpty }
+    }
+
+    fileprivate func updateAccentMasks() {
+        let rect = lensRect()
+        if rect == lastLensRect {
+            stableFrames += 1
+            if stableFrames >= 3 {
+                displayLink?.isPaused = true
+                return
+            }
+        } else {
+            stableFrames = 0
+            lastLensRect = rect
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let selfLayer = layer.presentation() ?? layer
+        for (base, accent) in zip(baseViews, accentViews) {
+            let accentLayer = accent.layer.presentation() ?? accent.layer
+            let frameInControl = selfLayer.convert(accentLayer.bounds, from: accentLayer)
+            let local = rect.offsetBy(dx: -frameInControl.minX, dy: -frameInControl.minY)
+            let capsule = UIBezierPath(roundedRect: local, cornerRadius: rect.height / 2)
+
+            let accentMask = (accent.layer.mask as? CAShapeLayer) ?? CAShapeLayer()
+            accentMask.path = capsule.cgPath
+            accent.layer.mask = accentMask
+
+            if rect.intersects(frameInControl) {
+                let baseMask = (base.layer.mask as? CAShapeLayer) ?? CAShapeLayer()
+                let path = UIBezierPath(rect: base.bounds)
+                path.append(capsule)
+                baseMask.fillRule = .evenOdd
+                baseMask.path = path.cgPath
+                base.layer.mask = baseMask
+            } else {
+                base.layer.mask = nil
+            }
+        }
+        CATransaction.commit()
+    }
+
+    // MARK: Touch handling
+
+    private func segmentIndex(at point: CGPoint) -> Int {
+        guard numberOfSegments > 0 else { return 0 }
+        let width = bounds.width / CGFloat(numberOfSegments)
+        return min(max(Int(point.x / width), 0), numberOfSegments - 1)
+    }
+
+    private var movesLensOnTouchDown: Bool {
+        !traitCollection.preferredContentSizeCategory.isAccessibilityCategory
+    }
+
+    private func tick() {
+        guard hapticsEnabled() else { return }
+        feedback.impactOccurred()
+        feedback.prepare()
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        isTrackingTouch = true
+        wakeDisplayLink()
+        if let touch = touches.first, movesLensOnTouchDown {
+            originalIndex = selectedSegmentIndex
+            selectedSegmentIndex = segmentIndex(at: touch.location(in: self))
+            tick()
+        }
+        super.touchesBegan(touches, with: event)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        wakeDisplayLink()
+        if let touch = touches.first, movesLensOnTouchDown {
+            let index = segmentIndex(at: touch.location(in: self))
+            if index != selectedSegmentIndex {
+                selectedSegmentIndex = index
+                tick()
+            }
+        }
+        super.touchesMoved(touches, with: event)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        wakeDisplayLink()
+        if movesLensOnTouchDown, let originalIndex {
+            if selectedSegmentIndex != originalIndex {
+                onSelect(selectedSegmentIndex)
+            } else {
+                onReselect(selectedSegmentIndex)
+            }
+        }
+        originalIndex = nil
+        isTrackingTouch = false
+        super.touchesEnded(touches, with: event)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        wakeDisplayLink()
+        if movesLensOnTouchDown, let originalIndex {
+            selectedSegmentIndex = originalIndex
+        }
+        originalIndex = nil
+        isTrackingTouch = false
+        super.touchesCancelled(touches, with: event)
+    }
+
+    @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+        guard recognizer.state == .began else { return }
+        onLongPress(segmentIndex(at: recognizer.location(in: self)))
+    }
+}
+
+/// Weak proxy so the display link doesn't retain the control.
+@available(iOS 26.0, *)
+@MainActor
+private final class NuvioDisplayLinkProxy: NSObject {
+    weak var control: NuvioTabSegmentedControl?
+
+    init(control: NuvioTabSegmentedControl) {
+        self.control = control
+    }
+
+    @objc func tick(_ link: CADisplayLink) {
+        guard let control else {
+            link.invalidate()
+            return
+        }
+        control.updateAccentMasks()
+    }
+}
+
+/// One tab item (icon over title), drawn rather than laid out so it stays crisp at any scale.
+@available(iOS 26.0, *)
+final class NuvioTabItemContentView: UIView {
+    private let title: String
+    private let image: UIImage
+    private let tintsImage: Bool
+    var drawsLegibilityShadow = false
+
+    private static let iconSize: CGFloat = 24
+    private static let iconArea: CGFloat = 28
+    private let font = UIFont.systemFont(ofSize: 11, weight: .medium)
+
+    init(title: String, image: UIImage, tintsImage: Bool) {
+        self.title = title
+        self.image = image
+        self.tintsImage = tintsImage
+        super.init(frame: .zero)
+        isOpaque = false
+        isUserInteractionEnabled = false
+        contentMode = .redraw
+    }
+
+    required init?(coder: NSCoder) {
+        title = ""
+        image = UIImage()
+        tintsImage = true
+        super.init(coder: coder)
+        // Unarchived copies (the accessibility segment popover) defer to the native labels.
+        isHidden = true
+    }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        setNeedsDisplay()
+    }
+
+    override var intrinsicContentSize: CGSize {
+        let text = (title as NSString).size(withAttributes: [.font: font])
+        return CGSize(width: ceil(max(Self.iconSize, text.width)) + 4, height: Self.iconArea + ceil(text.height))
+    }
+
+    override func draw(_ rect: CGRect) {
+        guard let context = UIGraphicsGetCurrentContext() else { return }
+        let color = tintColor ?? .white
+        if drawsLegibilityShadow {
+            context.setShadow(offset: .zero, blur: 3, color: UIColor.black.withAlphaComponent(0.35).cgColor)
+        }
+
+        let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
+        let iconSize = aspect >= 1
+            ? CGSize(width: Self.iconSize, height: Self.iconSize / aspect)
+            : CGSize(width: Self.iconSize * aspect, height: Self.iconSize)
+        let iconRect = CGRect(
+            x: (bounds.width - iconSize.width) / 2,
+            y: (Self.iconArea - iconSize.height) / 2 - 1,
+            width: iconSize.width,
+            height: iconSize.height
+        )
+        if tintsImage {
+            color.setFill()
+            image.withRenderingMode(.alwaysTemplate).withTintColor(color).draw(in: iconRect)
+        } else {
+            image.draw(in: iconRect)
+        }
+
+        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let textSize = (title as NSString).size(withAttributes: attributes)
+        (title as NSString).draw(
+            at: CGPoint(x: (bounds.width - textSize.width) / 2, y: Self.iconArea - 1),
+            withAttributes: attributes
+        )
+    }
+}

@@ -160,14 +160,43 @@ struct NuvioGlassTabBar: View {
            let frame = tabFrames[hovered] {
             let midXs = tabFrames.values.map(\.midX)
             let clampedX = min(max(x, midXs.min() ?? x), midXs.max() ?? x)
-            Capsule()
-                .fill(iconStore.accentStyle(opacity: 0.18))
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5))
+            // Its own Liquid Glass, outside the bar's GlassEffectContainer so it refracts the bar
+            // and content beneath it instead of merging into the bar's shape — the same lens the
+            // system tab bar shows while dragging, lightly tinted with the theme accent.
+            Color.clear
                 .frame(width: frame.width + 12, height: frame.height + 8)
+                .glassEffect(
+                    .clear
+                        .tint(Color(uiColor: iconStore.accentColor).opacity(0.14))
+                        .interactive(),
+                    in: Capsule()
+                )
+                .scaleEffect(1.12)
                 .position(x: clampedX, y: frame.midY)
+                .allowsHitTesting(false)
+            // Glass blurs whatever is under it, so the hovered tab is redrawn crisp on top of the
+            // lens (as the system bar does) instead of being seen through it.
+            lensContent(for: hovered)
+                .scaleEffect(1.12)
+                .position(x: frame.midX, y: frame.midY)
                 .allowsHitTesting(false)
                 .transition(.scale(scale: 0.85).combined(with: .opacity))
                 .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.8), value: clampedX)
+        }
+    }
+
+    @ViewBuilder
+    private func lensContent(for tab: NuvioAppTab) -> some View {
+        if verticalSizeClass == .compact {
+            HStack(spacing: 6) {
+                icon(for: tab, selected: true)
+                label(for: tab, selected: true)
+            }
+        } else {
+            VStack(spacing: 3) {
+                icon(for: tab, selected: true)
+                label(for: tab, selected: true)
+            }
         }
     }
 
@@ -179,7 +208,31 @@ struct NuvioGlassTabBar: View {
         return items
     }
 
+    // Portrait uses one UISegmentedControl-based bar for both shapes: it carries the native Liquid
+    // Glass lens when expanded, and its single glass view springs between bar and pill so the
+    // collapse/expand is a true glass morph. Landscape keeps the SwiftUI bar.
+    private var usesNativeSegmentedBar: Bool {
+        verticalSizeClass != .compact && expandedMetrics == nil
+    }
+
     var body: some View {
+        Group {
+            if usesNativeSegmentedBar {
+                segmentedBar
+                    .padding(.horizontal, 16)
+            } else {
+                pillBar
+                    .frame(maxWidth: .infinity, alignment: isExpanded ? .center : .leading)
+                    .padding(.horizontal, isExpanded ? 20 : 16)
+                    .animation(.smooth(duration: 0.32), value: isExpanded)
+            }
+        }
+        .padding(.bottom, bottomInset)
+        .ignoresSafeArea(.container, edges: .bottom)
+        .animation(.smooth(duration: 0.22), value: selectedTab)
+    }
+
+    private var pillBar: some View {
         GlassEffectContainer(spacing: 0) {
             Group {
                 if let mirroredItems, let expandedMetrics {
@@ -211,14 +264,51 @@ struct NuvioGlassTabBar: View {
         .coordinateSpace(name: Self.tabBarCoordinateSpaceName)
         .onPreferenceChange(TabFramePreferenceKey.self) { tabFrames = $0 }
         .simultaneousGesture(dragAcrossTabsGesture)
-        .frame(maxWidth: .infinity, alignment: isExpanded ? .center : .leading)
-        .padding(.horizontal, isExpanded ? 20 : 16)
-        .padding(.bottom, bottomInset)
-        .ignoresSafeArea(.container, edges: .bottom)
-        // This pill is the only tab bar instrument in `morphed` — the real one stays hidden — so
-        // it must stay tappable/accessible in both its expanded and collapsed shapes.
-        .animation(.smooth(duration: 0.32), value: isExpanded)
-        .animation(.smooth(duration: 0.22), value: selectedTab)
+    }
+
+    private var segmentedBar: some View {
+        let tabs = appCoordinator.availableTabs
+        let singleAccent = iconStore.accentColors.count <= 1
+        let items = tabs.map { tab in
+            NuvioSegmentedTabBarItem(
+                title: appCoordinator.title(for: tab),
+                baseImage: iconStore.image(for: tab, selected: false),
+                accentImage: iconStore.image(for: tab, selected: true),
+                tintsBaseImage: tab != .settings,
+                tintsAccentImage: tab != .settings && singleAccent
+            )
+        }
+        let contentKey = tabs.map { "\($0.rawValue):\(appCoordinator.title(for: $0))" }.joined(separator: "|")
+            + "#\(iconStore.revision)"
+        return NuvioSegmentedTabBar(
+            items: items,
+            contentKey: contentKey,
+            selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
+            isExpanded: isExpanded,
+            accentColor: iconStore.accentColor,
+            hapticsEnabled: { Self.tapHapticsEnabled },
+            onSelect: { index in
+                guard tabs.indices.contains(index) else { return }
+                appCoordinator.selectedTab = tabs[index]
+            },
+            onReselect: { index in
+                guard tabs.indices.contains(index) else { return }
+                // Matches the system tab bar's reselect convention (scroll to top).
+                NativeTabBridgeKt.nativeTabSelect(tabName: tabs[index].rawValue)
+            },
+            onLongPress: { index in
+                guard tabs.indices.contains(index), tabs[index] == .settings, appCoordinator.isAppReady else { return }
+                appCoordinator.isProfileSwitcherPresented = true
+            },
+            onCollapsedTap: {
+                if Self.tapHapticsEnabled {
+                    Self.tapFeedback.impactOccurred()
+                    Self.tapFeedback.prepare()
+                }
+                appCoordinator.requestTabBarVisible(true)
+            }
+        )
+        .frame(height: NuvioSegmentedTabBar.barHeight)
     }
 
     private func item(for tab: NuvioAppTab) -> some View {
