@@ -115,6 +115,7 @@ struct NuvioGlassTabBar: View {
     private static let tabBarCoordinateSpaceName = "nuvio.tabbar.row"
     @State private var tabFrames: [NuvioAppTab: CGRect] = [:]
     @State private var dragActiveTab: NuvioAppTab?
+    @State private var dragLocationX: CGFloat?
 
     private struct TabFramePreferenceKey: PreferenceKey {
         static var defaultValue: [NuvioAppTab: CGRect] = [:]
@@ -124,23 +125,50 @@ struct NuvioGlassTabBar: View {
     }
 
     private var dragAcrossTabsGesture: some Gesture {
+        // Like the system bar: a lens follows the finger and the tab under it is only selected on
+        // release, so dragging across doesn't load every screen it passes over.
         DragGesture(minimumDistance: 8, coordinateSpace: .named(Self.tabBarCoordinateSpaceName))
             .onChanged { value in
-                guard isExpanded else { return }
-                guard let hitTab = tabFrames.first(where: { $0.value.contains(value.location) })?.key,
-                      hitTab != selectedTab else { return }
-                if dragActiveTab != hitTab {
-                    dragActiveTab = hitTab
-                    if Self.tapHapticsEnabled {
-                        Self.tapFeedback.impactOccurred()
-                        Self.tapFeedback.prepare()
-                    }
-                    appCoordinator.selectedTab = hitTab
+                guard isExpanded, !tabFrames.isEmpty else { return }
+                dragLocationX = value.location.x
+                guard let hitTab = tab(nearestTo: value.location.x), dragActiveTab != hitTab else { return }
+                dragActiveTab = hitTab
+                if Self.tapHapticsEnabled {
+                    Self.tapFeedback.impactOccurred()
+                    Self.tapFeedback.prepare()
                 }
             }
             .onEnded { _ in
-                dragActiveTab = nil
+                if let target = dragActiveTab, target != selectedTab {
+                    appCoordinator.selectedTab = target
+                }
+                withAnimation(.smooth(duration: 0.22)) {
+                    dragActiveTab = nil
+                    dragLocationX = nil
+                }
             }
+    }
+
+    private func tab(nearestTo x: CGFloat) -> NuvioAppTab? {
+        tabFrames.min { abs($0.value.midX - x) < abs($1.value.midX - x) }?.key
+    }
+
+    @ViewBuilder
+    private var dragLens: some View {
+        if let x = dragLocationX,
+           let hovered = dragActiveTab,
+           let frame = tabFrames[hovered] {
+            let midXs = tabFrames.values.map(\.midX)
+            let clampedX = min(max(x, midXs.min() ?? x), midXs.max() ?? x)
+            Capsule()
+                .fill(iconStore.accentStyle(opacity: 0.18))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5))
+                .frame(width: frame.width + 12, height: frame.height + 8)
+                .position(x: clampedX, y: frame.midY)
+                .allowsHitTesting(false)
+                .transition(.scale(scale: 0.85).combined(with: .opacity))
+                .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.8), value: clampedX)
+        }
     }
 
     private var mirroredItems: [NuvioTabBarItemMetrics]? {
@@ -179,6 +207,7 @@ struct NuvioGlassTabBar: View {
             .glassEffect(.regular.interactive(), in: Capsule())
             .glassEffectID(Self.barGlassID, in: glassNamespace)
         }
+        .overlay { dragLens }
         .coordinateSpace(name: Self.tabBarCoordinateSpaceName)
         .onPreferenceChange(TabFramePreferenceKey.self) { tabFrames = $0 }
         .simultaneousGesture(dragAcrossTabsGesture)
@@ -216,7 +245,7 @@ struct NuvioGlassTabBar: View {
         .frame(maxWidth: isExpanded && verticalSizeClass != .compact ? .infinity : nil)
         .contentShape(Capsule())
         .background {
-            if selected && isExpanded {
+            if selected && isExpanded && dragLocationX == nil {
                 Capsule()
                     .fill(iconStore.accentStyle(opacity: 0.12))
             }
