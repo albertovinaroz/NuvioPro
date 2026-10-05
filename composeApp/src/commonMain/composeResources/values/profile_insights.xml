@@ -28,9 +28,10 @@
     <string name="profile_insights_stat_library">Library</string>
     <string name="profile_insights_stat_library_caption">Titles saved to your library</string>
     <string name="profile_insights_stat_time">Watch Time</string>
+    <string name="profile_insights_empty">Start watching to see your stats here</string>
     <string name="profile_insights_stat_time_caption">Approximate time tracked, from title runtimes</string>
     <string name="profile_insights_stat_upcoming">Upcoming</string>
-    <string name="profile_insights_stat_upcoming_caption">Saved titles with upcoming release dates</string>
+    <string name="profile_insights_stat_upcoming_caption">Episodes airing in the next 7 days</string>
 
     <string name="profile_insights_collection_count">%1$d titles</string>
     <string name="profile_insights_days_hours">%1$dd %2$dh</string>

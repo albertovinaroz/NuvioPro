@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +24,9 @@ import com.nuvio.app.features.membership.resolveProfileBackground
 fun ProfileBackgroundBackdrop(
     profile: NuvioProfile?,
     modifier: Modifier = Modifier,
+    // When set and the profile has no background image, the mesh and an added top tint use this
+    // color instead of avatarColorHex — e.g. the picked avatar's own background color.
+    fallbackColor: Color? = null,
 ) {
     val memberAccess by remember {
         MemberAccessRepository.ensureStarted()
@@ -64,9 +68,20 @@ fun ProfileBackgroundBackdrop(
 
         if (backgroundModel == null) {
             ProfileMeshBackground(
-                profileColor = profileColor,
+                profileColor = fallbackColor ?: profileColor,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (fallbackColor != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(fallbackColor.copy(alpha = 0.32f), Color.Transparent),
+                            ),
+                        ),
+                )
+            }
         } else {
             AsyncImage(
                 model = backgroundModel,

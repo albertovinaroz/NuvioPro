@@ -51,8 +51,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -71,7 +69,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -86,6 +83,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
@@ -436,12 +434,24 @@ private fun ProfileInsightsBody(
                 isRefreshing = isRefreshing,
                 onRefresh = ProfileInsightsRefresher::refresh,
             )
-            ProfileWatchTimeRow(stats = stats)
-            SettingsSection(
-                title = null,
-                isTablet = isTablet,
-            ) {
-                ProfileTasteCard(stats = stats)
+            if (stats.hasNoActivity()) {
+                Text(
+                    text = stringResource(Res.string.profile_insights_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                )
+            } else {
+                ProfileWatchTimeRow(stats = stats)
+                SettingsSection(
+                    title = null,
+                    isTablet = isTablet,
+                ) {
+                    ProfileTasteCard(stats = stats)
+                }
             }
         }
     }
@@ -731,6 +741,7 @@ private fun ProfileInsightsHeroCinematic(
                     ProfileBackgroundBackdrop(
                         profile = profile,
                         modifier = Modifier.matchParentSize(),
+                        fallbackColor = avatarItem?.bgColor?.let(::parseHexColor) ?: accent,
                     )
                 } else {
                     Box(
@@ -752,10 +763,13 @@ private fun ProfileInsightsHeroCinematic(
                         .matchParentSize()
                         .background(
                             Brush.verticalGradient(
+                                // Ends on the page's own background so the hero blends into the
+                                // content below instead of leaving a black-on-grey seam — most
+                                // visible on a profile with no backdrop photo of its own.
                                 colors = listOf(
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.20f),
-                                    Color.Black.copy(alpha = 0.88f),
+                                    MaterialTheme.colorScheme.background,
                                 ),
                                 startY = 0f,
                                 endY = Float.POSITIVE_INFINITY,
@@ -983,9 +997,39 @@ private fun ProfileMetricPillRow(
         // after .horizontalScroll() resizes the viewport, it doesn't add space inside the
         // scrollable content, so it was leaving the first pill flush against (and clipped by) the
         // true edge.
+        // Edges fade out (only on a side that can still scroll) instead of overlaying chevrons,
+        // which were drawn on top of the clipped pill's label.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val fadePx = ProfileMetricPillEdgeFade.toPx().coerceAtMost(size.width / 2f)
+                    if (scrollState.canScrollBackward) {
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, Color.Black),
+                                startX = 0f,
+                                endX = fadePx,
+                            ),
+                            size = Size(fadePx, size.height),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                    if (scrollState.canScrollForward) {
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                startX = size.width - fadePx,
+                                endX = size.width,
+                            ),
+                            topLeft = Offset(size.width - fadePx, 0f),
+                            size = Size(fadePx, size.height),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                }
                 .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
@@ -1001,30 +1045,10 @@ private fun ProfileMetricPillRow(
             Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
         }
 
-        if (scrollState.canScrollBackward) {
-            Icon(
-                imageVector = Icons.Rounded.ChevronLeft,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .offset(x = (-6).dp)
-                    .size(20.dp),
-            )
-        }
-        if (scrollState.canScrollForward) {
-            Icon(
-                imageVector = Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(x = 6.dp)
-                    .size(20.dp),
-            )
-        }
     }
 }
+
+private val ProfileMetricPillEdgeFade = 40.dp
 
 private data class ProfileMetricPillSpec(
     val value: String,
@@ -1279,6 +1303,14 @@ private fun ProfileInsightPosterTile(
 }
 
 @OptIn(ExperimentalLayoutApi::class)
+private fun ProfileInsightsStats.hasNoActivity(): Boolean =
+    continueCount == 0 &&
+        watchedMovieCount == 0 &&
+        completedCount == 0 &&
+        ongoingSeriesCount == 0 &&
+        episodesWatchedCount == 0 &&
+        trackedDurationMs == 0L
+
 @Composable
 private fun ProfileTasteCard(stats: ProfileInsightsStats) {
     Column(
@@ -2812,25 +2844,6 @@ private object ProfileInsightsRefresher {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ProfileInsightsPullToRefresh(
-    enabled: Boolean,
-    content: @Composable () -> Unit,
-) {
-    if (enabled) {
-        val isRefreshing by ProfileInsightsRefresher.isRefreshing.collectAsStateWithLifecycle()
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = ProfileInsightsRefresher::refresh,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            content()
-        }
-    } else {
-        content()
-    }
-}
-
 @Composable
 private fun ProfileInsightsRefreshStatusRow(
     refreshedAtEpochMs: Long?,
