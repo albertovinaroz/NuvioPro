@@ -230,7 +230,14 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         didSet {
             guard activeTintColor != oldValue else { return }
             accentViews.forEach { $0.tintColor = activeTintColor }
+            applySelectionTint()
         }
+    }
+
+    /// The resting selection indicator: lighter than the system's default gray, washed with the
+    /// theme accent so the current tab reads as part of the theme.
+    private func applySelectionTint() {
+        selectedSegmentTintColor = activeTintColor.withAlphaComponent(0.22)
     }
 
     /// True between touch down and touch up/cancel, so external selection updates don't fight it.
@@ -256,6 +263,7 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
     override init(items: [Any]?) {
         super.init(items: items)
         accessibilityTraits = .tabBar
+        applySelectionTint()
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPress.minimumPressDuration = 0.45
         addGestureRecognizer(longPress)
