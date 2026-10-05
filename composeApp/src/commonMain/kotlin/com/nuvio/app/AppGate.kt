@@ -65,6 +65,7 @@ private enum class AppGateScreen {
 // off — shortening it regressed into exactly that cut-off-mid-bounce glitch once before.
 private const val ProfileTransitionMinDurationWithOriginMs = 650L
 private const val ProfileTransitionMinDurationMs = 1000L
+private const val ProfileSelectionMainContentPremountDelayMs = 1_000L
 
 @Composable
 internal fun AppGate(
@@ -277,6 +278,19 @@ internal fun AppGate(
                 mainContentStarted = false
                 appGateController?.reportMainContentReady(false)
                 onMainContentMountChanged?.invoke(false)
+            }
+            AppGateScreen.ProfileSelection.name -> {
+                // On a cold start the main app isn't mounted yet, and mounting it (every native
+                // tab's Compose host at once) on the profile tap stalled the main thread right as
+                // the exit animation should start. Mounting it underneath the picker instead —
+                // the same state Settings > Switch Profile already runs in — leaves that tap with
+                // only a content reload to do. Held back until the cards' entrance has played so
+                // the mount doesn't stall that instead.
+                if (!mainContentStarted && profileState.profiles.isNotEmpty()) {
+                    kotlinx.coroutines.delay(ProfileSelectionMainContentPremountDelayMs)
+                    mainContentStarted = true
+                }
+                onMainContentMountChanged?.invoke(mainContentStarted)
             }
             else -> onMainContentMountChanged?.invoke(mainContentStarted)
         }
