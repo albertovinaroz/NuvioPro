@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.6-b5",
+          "buildVersion": "174",
+          "date": "2026-10-05T12:32:37Z",
+          "localizedDescription": "# Nuvio Pro 0.5.6-b5\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n\n- feat(ios): theme halo on the active profile and animated avatars in the profile switcher @albertovinaroz\n- feat(profile): empty state, smoother hero blend and avatar-tinted backdrop @albertovinaroz\n- feat(settings): hint when Tab Layout is on with no tab groups @albertovinaroz\n- perf(app-gate): faster profile pick on cold start @albertovinaroz\n- fix(library): Upcoming only shows the active profile's episodes @albertovinaroz\n- fix(library): Saved/Cloud row no longer jumps when switching @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.6-b5/nuvio-0.5.6-b5-pro-release.ipa",
+          "size": 69715226,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.6-b4",
           "buildVersion": "173",
           "date": "2026-10-04T20:47:43Z",
