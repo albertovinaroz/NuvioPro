@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -156,6 +157,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -985,7 +987,11 @@ private fun LibrarySourceSwitch(
     trailingActions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        // Held at an IconButton's height so the row doesn't shrink (and everything below it jump
+        // up) in Cloud mode, which shows no trailing actions.
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -3194,7 +3200,13 @@ internal suspend fun warmLibraryReleaseSchedule(items: List<LibraryItem>) {
  * read from the same release-calendar cache the Library calendar shows, so both always agree.
  */
 internal fun libraryUpcomingEpisodesFlow(days: Int = 7): Flow<List<LibraryUpcomingEpisode>> =
-    LibraryReleaseCalendarCache.state.map { state -> state.events.upcomingEpisodes(days) }
+    combine(LibraryReleaseCalendarCache.state, ProfileRepository.state) { state, profiles ->
+        // The in-memory cache is shared across profiles and isn't rebuilt for an empty library, so
+        // it can still hold the previous profile's episodes; only trust it for the active profile.
+        val activeIndex = profiles.activeProfile?.profileIndex ?: return@combine emptyList()
+        if (state.cacheKey?.startsWith("$activeIndex:") != true) return@combine emptyList()
+        state.events.upcomingEpisodes(days)
+    }
 
 private fun List<LibraryCalendarEvent>.upcomingEpisodes(days: Int): List<LibraryUpcomingEpisode> {
     val today = parseLibraryCalendarDate(CurrentDateProvider.todayIsoDate()) ?: return emptyList()
