@@ -979,6 +979,7 @@
     <string name="settings_meta_tab_group_format">ٹیب گروپ %1$d</string>
     <string name="settings_meta_tab_layout">ٹیب لے آؤٹ</string>
     <string name="settings_meta_tab_layout_description">TV ایپ کی طرح حصوں کو Tabs میں گروپ کریں۔ ہر Tab Group میں زیادہ سے زیادہ 3 حصے شامل کریں۔</string>
+    <string name="settings_meta_tab_layout_hint">آن ہے، لیکن ابھی کوئی ٹیب نہیں۔ نیچے حصوں کے لیے ٹیب گروپ منتخب کریں؛ ایک ہی گروپ کے حصے ٹیبز کے طور پر دکھائے جاتے ہیں۔</string>
     <string name="settings_meta_trailers">ٹریلرز</string>
     <string name="settings_meta_trailers_description">ٹریلرز کی قطار اور پلے بیک شارٹ کٹس۔</string>
     <string name="settings_notifications_disabled_in_app">Nuvio میں نوٹیفکیشنز اس وقت غیر فعال ہیں۔</string>

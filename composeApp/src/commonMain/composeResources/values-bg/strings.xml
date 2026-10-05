@@ -941,6 +941,7 @@
     <string name="settings_meta_tab_group_format">Група раздели %1$d</string>
     <string name="settings_meta_tab_layout">Оформление на разделите</string>
     <string name="settings_meta_tab_layout_description">Групирай секции в раздели като телевизионното приложение. Задайте до 3 секции на група раздели.</string>
+    <string name="settings_meta_tab_layout_hint">Включено, но още няма раздели. Изберете група раздели за секциите в „Секции“ по-долу; секциите в една група се показват като раздели.</string>
     <string name="settings_meta_trailers">Трейлъри</string>
     <string name="settings_meta_trailers_description">Ред с трейлъри и преки пътища за възпроизвеждане.</string>
     <string name="settings_notifications_disabled_in_app">Известията в момента са деактивирани в Nuvio.</string>

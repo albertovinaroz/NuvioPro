@@ -864,6 +864,7 @@
     <string name="settings_meta_tab_group_format">Sekme grubu %1$d</string>
     <string name="settings_meta_tab_layout">Sekme düzeni</string>
     <string name="settings_meta_tab_layout_description">Bölümleri TV uygulamasındaki gibi sekmelerde grupla. Her sekme grubuna en fazla 3 bölüm ata.</string>
+    <string name="settings_meta_tab_layout_hint">Açık, ancak henüz sekme yok. Aşağıdaki bölümler için bir sekme grubu seçin; aynı gruptaki bölümler sekme olarak gösterilir.</string>
     <string name="settings_meta_trailers">Fragmanlar</string>
     <string name="settings_meta_trailers_description">Fragman alanı ve oynatma kısayolları.</string>
     <string name="settings_notifications_disabled_in_app">Nuvio'da bildirimler şu anda kapalı.</string>

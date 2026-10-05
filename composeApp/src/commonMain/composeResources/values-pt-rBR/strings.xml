@@ -670,6 +670,7 @@
     <string name="settings_meta_tab_group_format">Grupo de Aba %1$d</string>
     <string name="settings_meta_tab_layout">Layout de Abas</string>
     <string name="settings_meta_tab_layout_description">Agrupe seções em abas como no app de TV. Atribua até 3 seções por grupo de abas.</string>
+    <string name="settings_meta_tab_layout_hint">Ativado, mas ainda sem abas. Escolha um grupo de abas para as seções abaixo; seções do mesmo grupo aparecem como abas.</string>
     <string name="settings_meta_trailers">Trailers</string>
     <string name="settings_meta_trailers_description">Rail de trailer e atalhos de reprodução.</string>
     <string name="settings_notifications_disabled_in_app">Notificações estão atualmente desativadas no Nuvio.</string>

@@ -941,6 +941,7 @@
     <string name="settings_meta_tab_group_format">Группа вкладок %1$d</string>
     <string name="settings_meta_tab_layout">Макет вкладок</string>
     <string name="settings_meta_tab_layout_description">Группируйте разделы по вкладкам, как в приложении «ТВ». Назначьте до 3 разделов на группу вкладок.</string>
+    <string name="settings_meta_tab_layout_hint">Включено, но вкладок пока нет. Выберите группу вкладок для разделов ниже; разделы одной группы отображаются как вкладки.</string>
     <string name="settings_meta_trailers">Трейлеры</string>
     <string name="settings_meta_trailers_description">Полка трейлеров и быстрый запуск воспроизведения.</string>
     <string name="settings_notifications_disabled_in_app">Уведомления в настоящее время отключены в Nuvio.</string>

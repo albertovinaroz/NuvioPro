@@ -877,6 +877,7 @@
     <string name="settings_meta_tab_group_format">مجموعة التبويب %1$d</string>
     <string name="settings_meta_tab_layout">تخطيط علامات التبويب</string>
     <string name="settings_meta_tab_layout_description">جمّع الأقسام ضمن علامات تبويب مثل تطبيق التلفاز. يمكنك تعيين ما يصل إلى 3 أقسام لكل مجموعة تبويب.</string>
+    <string name="settings_meta_tab_layout_hint">مفعّل، لكن لا توجد علامات تبويب بعد. اختر مجموعة تبويب للأقسام في «الأقسام» أدناه؛ الأقسام في المجموعة نفسها تظهر كعلامات تبويب.</string>
     <string name="settings_meta_trailers">الإعلانات</string>
     <string name="settings_meta_trailers_description">صف الإعلانات واختصارات تشغيلها.</string>
     <string name="settings_notifications_disabled_in_app">الإشعارات معطلة حاليًا في Nuvio.</string>

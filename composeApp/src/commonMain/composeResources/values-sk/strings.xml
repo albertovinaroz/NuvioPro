@@ -762,6 +762,7 @@
     <string name="settings_meta_tab_group_format">Skupina záložiek %1$d</string>
     <string name="settings_meta_tab_layout">Rozloženie záložiek</string>
     <string name="settings_meta_tab_layout_description">Zoskupiť sekcie do záložiek ako v TV aplikácii. Priradiť až 3 sekcie na skupinu záložiek.</string>
+    <string name="settings_meta_tab_layout_hint">Zapnuté, ale zatiaľ bez kariet. Nižšie vyberte sekciám skupinu kariet; sekcie v rovnakej skupine sa zobrazia ako karty.</string>
     <string name="settings_meta_trailers">Trailery</string>
     <string name="settings_meta_trailers_description">Rad trailerov a skratky prehrávania.</string>
     <string name="settings_notifications_disabled_in_app">Oznámenia sú momentálne vypnuté v Nuvio.</string>

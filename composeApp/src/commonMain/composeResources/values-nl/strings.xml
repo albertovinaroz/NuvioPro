@@ -941,6 +941,7 @@
     <string name="settings_meta_tab_group_format">Tabbladgroep %1$d</string>
     <string name="settings_meta_tab_layout">Tabbladindeling</string>
     <string name="settings_meta_tab_layout_description">Groepeer secties in tabbladen zoals de tv-app. Wijs maximaal 3 secties per tabbladgroep toe.</string>
+    <string name="settings_meta_tab_layout_hint">Aan, maar nog geen tabbladen. Kies hieronder een tabgroep voor secties; secties in dezelfde groep worden als tabbladen getoond.</string>
     <string name="settings_meta_trailers">Trailers</string>
     <string name="settings_meta_trailers_description">Trailerrij en snelkoppelingen voor afspelen.</string>
     <string name="settings_notifications_disabled_in_app">Meldingen zijn momenteel uitgeschakeld in Nuvio.</string>

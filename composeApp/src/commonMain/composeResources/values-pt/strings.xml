@@ -764,6 +764,7 @@
     <string name="settings_meta_tab_group_format">Grupo de separadores %1$d</string>
     <string name="settings_meta_tab_layout">Esquema de separadores</string>
     <string name="settings_meta_tab_layout_description">Agrupa as secções em separadores como na app para TV. Atribui até 3 secções por grupo.</string>
+    <string name="settings_meta_tab_layout_hint">Ativado, mas ainda sem separadores. Escolha um grupo de separadores para as secções abaixo; as secções do mesmo grupo aparecem como separadores.</string>
     <string name="settings_meta_trailers">Trailers</string>
     <string name="settings_meta_trailers_description">Linha de trailers e atalhos de reprodução.</string>
     <string name="settings_notifications_disabled_in_app">As notificações estão atualmente desativadas no Nuvio.</string>

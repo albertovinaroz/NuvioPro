@@ -442,6 +442,7 @@
   <string name="settings_meta_tab_group_format">Gruppo schede %1$d</string>
   <string name="settings_meta_tab_layout">Layout a schede</string>
   <string name="settings_meta_tab_layout_description">Raggruppa le sezioni in schede (tab) come nell'app TV. Assegna fino a 3 sezioni per ogni gruppo.</string>
+  <string name="settings_meta_tab_layout_hint">Attivo, ma ancora nessuna scheda. Scegli un gruppo di schede per le sezioni qui sotto; le sezioni dello stesso gruppo vengono mostrate come schede.</string>
   <string name="settings_meta_trailers">Trailer</string>
   <string name="settings_meta_trailers_description">Riga dei trailer e scorciatoie di riproduzione.</string>
   <string name="settings_notifications_disabled_in_app">Le notifiche sono attualmente disabilitate in Nuvio.</string>

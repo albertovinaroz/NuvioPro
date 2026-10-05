@@ -774,6 +774,7 @@
     <string name="settings_meta_tab_group_format">タブグループ %1$d</string>
     <string name="settings_meta_tab_layout">タブレイアウト</string>
     <string name="settings_meta_tab_layout_description">TVアプリのようにセクションをタブにグループ化します。タブグループごとに最大3つのセクションを割り当てられます。</string>
+    <string name="settings_meta_tab_layout_hint">オンですが、まだタブはありません。下のセクションでタブグループを選ぶと、同じグループのセクションがタブとして表示されます。</string>
     <string name="settings_meta_trailers">予告編</string>
     <string name="settings_meta_trailers_description">予告編レールと再生ショートカット</string>
     <string name="settings_notifications_disabled_in_app">Nuvioで通知が無効になっています。</string>

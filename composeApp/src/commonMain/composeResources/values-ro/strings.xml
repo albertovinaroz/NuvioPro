@@ -800,6 +800,7 @@
     <string name="settings_meta_tab_group_format">Grup de file %1$d</string>
     <string name="settings_meta_tab_layout">Aspect file</string>
     <string name="settings_meta_tab_layout_description">Grupează secțiunile în file ca în aplicația TV. Alocă până la 3 secțiuni per grup de file.</string>
+    <string name="settings_meta_tab_layout_hint">Activat, dar încă fără file. Alege un grup de file pentru secțiunile de mai jos; secțiunile din același grup apar ca file.</string>
     <string name="settings_meta_trailers">Trailere</string>
     <string name="settings_meta_trailers_description">Rând cu trailere și scurtături de redare.</string>
     <string name="settings_notifications_disabled_in_app">Notificările sunt în prezent dezactivate în Nuvio.</string>

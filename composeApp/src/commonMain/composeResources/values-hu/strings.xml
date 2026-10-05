@@ -660,6 +660,7 @@
     <string name="settings_meta_tab_group_format">%1$d. l csoport</string>
     <string name="settings_meta_tab_layout">Lapfüles elrendezés</string>
     <string name="settings_meta_tab_layout_description">Szekciók csoportosítása lapfülekre, a TV alkalmazáshoz hasonlóan. Lapfülcsoportonként legfeljebb 3 szekció rendelhető hozzá.</string>
+    <string name="settings_meta_tab_layout_hint">Bekapcsolva, de még nincsenek fülek. Lent válassz fülcsoportot a szakaszokhoz; az azonos csoportba tartozó szakaszok fülekként jelennek meg.</string>
     <string name="settings_meta_trailers">Előzetesek</string>
     <string name="settings_meta_trailers_description">Előzetesek sora és lejátszási parancsikonok.</string>
     <string name="settings_notifications_disabled_in_app">Az értesítések jelenleg ki vannak kapcsolva a Nuvióban.</string>

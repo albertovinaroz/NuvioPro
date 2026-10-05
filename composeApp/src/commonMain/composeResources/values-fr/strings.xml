@@ -792,6 +792,7 @@
     <string name="settings_meta_tab_group_format">Groupe d’onglets %1$d</string>
     <string name="settings_meta_tab_layout">Disposition des onglets</string>
     <string name="settings_meta_tab_layout_description">Regroupe les sections en onglets comme dans l’application TV. Assigne jusqu’à 3 sections par groupe d’onglets.</string>
+    <string name="settings_meta_tab_layout_hint">Activé, mais aucun onglet pour l’instant. Choisissez un groupe d’onglets pour les sections ci-dessous ; les sections d’un même groupe s’affichent en onglets.</string>
     <string name="settings_meta_trailers">Bandes-annonces</string>
     <string name="settings_meta_trailers_description">Rayon de bandes-annonces et raccourcis de lecture.</string>
     <string name="settings_notifications_disabled_in_app">Les notifications sont actuellement désactivées dans Nuvio.</string>

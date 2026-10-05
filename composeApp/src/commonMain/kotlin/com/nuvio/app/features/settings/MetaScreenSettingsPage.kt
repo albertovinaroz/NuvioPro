@@ -122,6 +122,7 @@ import nuvio.composeapp.generated.resources.settings_meta_section_sections
 import nuvio.composeapp.generated.resources.settings_meta_tab_group_format
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout_description
+import nuvio.composeapp.generated.resources.settings_meta_tab_layout_hint
 import nuvio.composeapp.generated.resources.settings_meta_trailers
 import nuvio.composeapp.generated.resources.settings_meta_trailers_description
 import org.jetbrains.compose.resources.StringResource
@@ -216,7 +217,11 @@ internal fun LazyListScope.metaScreenSettingsContent(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_meta_tab_layout),
-                    description = stringResource(Res.string.settings_meta_tab_layout_description),
+                    description = if (uiState.tabLayout && uiState.items.none { it.tabGroup != null }) {
+                        stringResource(Res.string.settings_meta_tab_layout_hint)
+                    } else {
+                        stringResource(Res.string.settings_meta_tab_layout_description)
+                    },
                     checked = uiState.tabLayout,
                     isTablet = isTablet,
                     onCheckedChange = { MetaScreenSettingsRepository.setTabLayout(it) },

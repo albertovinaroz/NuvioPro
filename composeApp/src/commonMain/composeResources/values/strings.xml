@@ -1152,6 +1152,7 @@
     <string name="settings_meta_section_sections">SECTIONS</string>
     <string name="settings_meta_tab_group_format">Tab Group %1$d</string>
     <string name="settings_meta_tab_layout">Tab Layout</string>
+    <string name="settings_meta_tab_layout_hint">On, but no tabs yet. Pick a tab group for sections in Sections below; sections in the same group show as tabs.</string>
     <string name="settings_meta_tab_layout_description">Group sections into tabs like the TV app. Assign up to 3 sections per tab group.</string>
     <string name="settings_meta_trailers">Trailers</string>
     <string name="settings_meta_trailers_description">Trailer rail and playback shortcuts.</string>

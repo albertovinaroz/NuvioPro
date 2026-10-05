@@ -969,6 +969,7 @@
     <string name="settings_meta_tab_group_format">Grupo de pestañas %1$d</string>
     <string name="settings_meta_tab_layout">Diseño de pestañas</string>
     <string name="settings_meta_tab_layout_description">Agrupa secciones en pestañas como en la app de TV. Asigna hasta 3 secciones por grupo de pestañas.</string>
+    <string name="settings_meta_tab_layout_hint">Activado, pero aún no hay pestañas. Elige un grupo de pestañas para las secciones de abajo; las secciones del mismo grupo se muestran como pestañas.</string>
     <string name="settings_meta_trailers">Tráilers</string>
     <string name="settings_meta_trailers_description">Carril de tráilers y atajos de reproducción.</string>
     <string name="settings_notifications_disabled_in_app">Las notificaciones están actualmente desactivadas en Nuvio.</string>

@@ -577,6 +577,7 @@
     <string name="settings_meta_tab_group_format">Ομάδα καρτελών %1$d</string>
     <string name="settings_meta_tab_layout">Διάταξη καρτελών</string>
     <string name="settings_meta_tab_layout_description">Ομαδοποίηση ενοτήτων σε καρτέλες όπως η εφαρμογή TV. Αντιστοιχίστε έως 3 ενότητες ανά ομάδα καρτελών.</string>
+    <string name="settings_meta_tab_layout_hint">Ενεργό, αλλά δεν υπάρχουν ακόμη καρτέλες. Επιλέξτε ομάδα καρτελών για τις ενότητες παρακάτω· οι ενότητες της ίδιας ομάδας εμφανίζονται ως καρτέλες.</string>
     <string name="settings_meta_trailers">Τρέιλερ</string>
     <string name="settings_meta_trailers_description">Ράγα τρέιλερ και συντομεύσεις αναπαραγωγής.</string>
     <string name="settings_notifications_disabled_in_app">Οι ειδοποιήσεις είναι απενεργοποιημένες αυτή τη στιγμή στο Nuvio.</string>

@@ -1671,6 +1671,7 @@ Du bruker denne funksjonen helt på eget ansvar. P2P kan deaktiveres når som he
     <string name="settings_meta_tab_group_format">Fanegruppe %1$d</string>
     <string name="settings_meta_tab_layout">Faneoppsett</string>
     <string name="settings_meta_tab_layout_description">Grupper seksjoner i faner som TV-appen.</string>
+    <string name="settings_meta_tab_layout_hint">På, men ingen faner ennå. Velg en fanegruppe for seksjonene nedenfor; seksjoner i samme gruppe vises som faner.</string>
     <string name="settings_meta_trailers">Trailere</string>
     <string name="settings_meta_trailers_description">Trailer-rad og avspillings-snarveier.</string>
     <string name="settings_nav_bar_glow">Glassglød</string>

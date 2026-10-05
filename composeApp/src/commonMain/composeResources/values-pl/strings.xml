@@ -724,6 +724,7 @@
     <string name="settings_meta_tab_group_format">Grupa kart %1$d</string>
     <string name="settings_meta_tab_layout">Układ kart</string>
     <string name="settings_meta_tab_layout_description">Grupuj sekcje w karty jak w aplikacji TV. Przypisz do 3 sekcji na grupę kart.</string>
+    <string name="settings_meta_tab_layout_hint">Włączone, ale nie ma jeszcze kart. Wybierz grupę kart dla sekcji poniżej; sekcje z tej samej grupy pojawią się jako karty.</string>
     <string name="settings_meta_trailers">Zwiastuny</string>
     <string name="settings_meta_trailers_description">Wiersz zwiastunów i skróty odtwarzania.</string>
     <string name="settings_notifications_disabled_in_app">Powiadomienia są obecnie wyłączone w Nuvio.</string>

@@ -579,6 +579,7 @@
     <string name="settings_meta_tab_group_format">Tab-Gruppe %1$d</string>
     <string name="settings_meta_tab_layout">Tab-Layout</string>
     <string name="settings_meta_tab_layout_description">Abschnitte wie in der TV-App in Tabs gruppieren. Weise bis zu 3 Abschnitte pro Tab-Gruppe zu.</string>
+    <string name="settings_meta_tab_layout_hint">Aktiviert, aber noch keine Tabs. Wähle unten unter „Bereiche“ eine Tab-Gruppe für Bereiche; Bereiche derselben Gruppe werden als Tabs angezeigt.</string>
     <string name="settings_meta_trailers">Trailer</string>
     <string name="settings_meta_trailers_description">Trailer-Reihe und Wiedergabe-Verknüpfungen.</string>
     <string name="settings_notifications_disabled_in_app">Benachrichtigungen sind in Nuvio derzeit deaktiviert.</string>

@@ -981,6 +981,7 @@
     <string name="settings_meta_tab_group_format">ট্যাব গ্রুপ %1$d</string>
     <string name="settings_meta_tab_layout">ট্যাব লেআউট</string>
     <string name="settings_meta_tab_layout_description">টিভি অ্যাপের মতো ট্যাবে সেকশনগুলিকে গোষ্ঠীভুক্ত করুন। ট্যাব গ্রুপ প্রতি 3টি সেকশন পর্যন্ত বরাদ্দ করুন।</string>
+    <string name="settings_meta_tab_layout_hint">চালু আছে, তবে এখনো কোনো ট্যাব নেই। নিচের সেকশনগুলোতে একটি ট্যাব গ্রুপ বেছে নিন; একই গ্রুপের সেকশনগুলো ট্যাব হিসেবে দেখাবে।</string>
     <string name="settings_meta_trailers">ট্রেলার</string>
     <string name="settings_meta_trailers_description">ট্রেলার রেল এবং প্লেব্যাক শর্টকাট।</string>
     <string name="settings_notifications_disabled_in_app">Nuvio-তে বর্তমানে নোটিফিকেশন নিষ্ক্রিয় করা হয়েছে।</string>

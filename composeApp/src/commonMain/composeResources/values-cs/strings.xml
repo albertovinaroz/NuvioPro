@@ -774,6 +774,7 @@
     <string name="settings_meta_tab_group_format">Skupina karet %1$d</string>
     <string name="settings_meta_tab_layout">Rozvržení karet</string>
     <string name="settings_meta_tab_layout_description">Seskupte sekce do karet jako v aplikaci TV. Každé skupině karet přiřaďte až 3 sekce.</string>
+    <string name="settings_meta_tab_layout_hint">Zapnuto, ale zatím bez karet. V části Sekce níže vyberte sekcím skupinu karet; sekce ve stejné skupině se zobrazí jako karty.</string>
     <string name="settings_meta_trailers">Trailery</string>
     <string name="settings_meta_trailers_description">Pruh s trailery a zástupci pro přehrávání.</string>
     <string name="settings_notifications_disabled_in_app">Oznámení jsou momentálně v Nuvio zakázána.</string>

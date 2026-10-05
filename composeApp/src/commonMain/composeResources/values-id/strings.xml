@@ -703,6 +703,7 @@
     <string name="settings_meta_tab_group_format">Grup Tab %1$d</string>
     <string name="settings_meta_tab_layout">Tata Letak Tab</string>
     <string name="settings_meta_tab_layout_description">Kelompokkan bagian ke dalam tab seperti aplikasi TV. Tetapkan hingga 3 bagian per grup tab.</string>
+    <string name="settings_meta_tab_layout_hint">Aktif, tetapi belum ada tab. Pilih grup tab untuk bagian di bawah; bagian dalam grup yang sama ditampilkan sebagai tab.</string>
     <string name="settings_meta_trailers">Trailer</string>
     <string name="settings_meta_trailers_description">Baris trailer dan pintasan pemutaran.</string>
     <string name="settings_notifications_disabled_in_app">Notifikasi saat ini dinonaktifkan di Nuvio.</string>

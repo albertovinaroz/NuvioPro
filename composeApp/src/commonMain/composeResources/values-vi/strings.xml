@@ -981,6 +981,7 @@
     <string name="settings_meta_tab_group_format">Nhóm thẻ %1$d</string>
     <string name="settings_meta_tab_layout">Bố cục thẻ</string>
     <string name="settings_meta_tab_layout_description">Nhóm các mục thành từng thẻ như trên ứng dụng TV. Gán tối đa 3 mục cho mỗi thẻ</string>
+    <string name="settings_meta_tab_layout_hint">Đã bật nhưng chưa có tab nào. Hãy chọn nhóm tab cho các mục bên dưới; các mục cùng nhóm sẽ hiển thị dạng tab.</string>
     <string name="settings_meta_trailers">Trailer</string>
     <string name="settings_meta_trailers_description">Thanh trailer và phím tắt phát lại</string>
     <string name="settings_notifications_disabled_in_app">Thông báo hiện đang bị tắt trên Nuvio</string>
