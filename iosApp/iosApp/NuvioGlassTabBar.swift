@@ -208,11 +208,11 @@ struct NuvioGlassTabBar: View {
         return items
     }
 
-    // Portrait uses one UISegmentedControl-based bar for both shapes: it carries the native Liquid
-    // Glass lens when expanded, and its single glass view springs between bar and pill so the
-    // collapse/expand is a true glass morph. Landscape keeps the SwiftUI bar.
+    // One UISegmentedControl-based bar for both shapes and both orientations: it carries the native
+    // Liquid Glass lens when expanded, and its single glass view springs between bar and pill so the
+    // collapse/expand is a true glass morph. The SwiftUI bar below remains only for mirrored metrics.
     private var usesNativeSegmentedBar: Bool {
-        verticalSizeClass != .compact && expandedMetrics == nil
+        expandedMetrics == nil
     }
 
     var body: some View {
@@ -266,6 +266,10 @@ struct NuvioGlassTabBar: View {
         .simultaneousGesture(dragAcrossTabsGesture)
     }
 
+    private var isCompactHeight: Bool {
+        verticalSizeClass == .compact
+    }
+
     private var segmentedBar: some View {
         let tabs = appCoordinator.availableTabs
         let singleAccent = iconStore.accentColors.count <= 1
@@ -279,12 +283,13 @@ struct NuvioGlassTabBar: View {
             )
         }
         let contentKey = tabs.map { "\($0.rawValue):\(appCoordinator.title(for: $0))" }.joined(separator: "|")
-            + "#\(iconStore.revision)"
+            + "#\(iconStore.revision)#\(isCompactHeight)"
         return NuvioSegmentedTabBar(
             items: items,
             contentKey: contentKey,
             selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
             isExpanded: isExpanded,
+            isCompact: isCompactHeight,
             accentColor: iconStore.accentColor,
             hapticsEnabled: { Self.tapHapticsEnabled },
             onSelect: { index in
@@ -308,7 +313,7 @@ struct NuvioGlassTabBar: View {
                 appCoordinator.requestTabBarVisible(true)
             }
         )
-        .frame(height: NuvioSegmentedTabBar.barHeight)
+        .frame(height: NuvioSegmentedTabBar.height(compact: isCompactHeight))
     }
 
     private func item(for tab: NuvioAppTab) -> some View {

@@ -24,12 +24,19 @@ struct NuvioSegmentedTabBarItem {
 @available(iOS 26.0, *)
 struct NuvioSegmentedTabBar: UIViewRepresentable {
     static let barHeight: CGFloat = 62
+    /// Landscape (compact height): icon and title side by side in a lower bar.
+    static let compactBarHeight: CGFloat = 44
+
+    static func height(compact: Bool) -> CGFloat {
+        compact ? compactBarHeight : barHeight
+    }
 
     let items: [NuvioSegmentedTabBarItem]
     /// Changes whenever item content does; avoids rebuilding segment views on every SwiftUI update.
     let contentKey: String
     let selectedIndex: Int
     let isExpanded: Bool
+    let isCompact: Bool
     let accentColor: UIColor
     let hapticsEnabled: () -> Bool
     let onSelect: (Int) -> Void
@@ -48,7 +55,7 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: NuvioSegmentedTabBarView, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? 360, height: Self.barHeight)
+        CGSize(width: proposal.width ?? 360, height: Self.height(compact: isCompact))
     }
 
     private func apply(to view: NuvioSegmentedTabBarView) {
@@ -58,9 +65,10 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
         control.onReselect = onReselect
         control.onLongPress = onLongPress
         control.activeTintColor = accentColor
+        view.setCompact(isCompact)
         if view.appliedContentKey != contentKey {
             view.appliedContentKey = contentKey
-            control.setItems(items)
+            control.setItems(items, horizontal: isCompact)
         }
         if !control.isTrackingTouch, control.selectedSegmentIndex != selectedIndex {
             control.selectedSegmentIndex = selectedIndex
@@ -78,7 +86,9 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
 @available(iOS 26.0, *)
 final class NuvioSegmentedTabBarView: UIView {
     /// Collapsed pill size, matching the SwiftUI pill it replaces (24pt icon plus its padding).
-    static let collapsedSize = CGSize(width: 56, height: 48)
+    private var collapsedSize: CGSize {
+        isCompact ? CGSize(width: 56, height: 40) : CGSize(width: 56, height: 48)
+    }
     /// The expanded bar sits this far in from the pill's leading edge on each side.
     private static let expandedInset: CGFloat = 4
 
@@ -90,11 +100,13 @@ final class NuvioSegmentedTabBarView: UIView {
     private let glassView: UIVisualEffectView
     private let collapsedIcon = UIImageView()
     private var isExpanded = true
+    private var isCompact = false
     private var hasLaidOut = false
     private var leadingConstraint: NSLayoutConstraint!
     private var widthConstraint: NSLayoutConstraint!
     private var heightConstraint: NSLayoutConstraint!
     private var controlWidthConstraint: NSLayoutConstraint!
+    private var controlHeightConstraint: NSLayoutConstraint!
     private lazy var collapsedTap = UITapGestureRecognizer(target: self, action: #selector(handleCollapsedTap))
     private lazy var collapsedLongPress: UILongPressGestureRecognizer = {
         let recognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleCollapsedLongPress(_:)))
@@ -125,6 +137,7 @@ final class NuvioSegmentedTabBarView: UIView {
         // Fixed to the full bar width (not the glass's), so the items don't squash while the glass
         // shrinks into the pill — they just fade out under it.
         controlWidthConstraint = segmentedControl.widthAnchor.constraint(equalToConstant: 296)
+        controlHeightConstraint = segmentedControl.heightAnchor.constraint(equalToConstant: NuvioSegmentedTabBar.barHeight - 5)
 
         let padding: CGFloat = 2
         NSLayoutConstraint.activate([
@@ -135,8 +148,9 @@ final class NuvioSegmentedTabBarView: UIView {
             segmentedControl.leadingAnchor.constraint(equalTo: glassView.contentView.leadingAnchor, constant: padding),
             controlWidthConstraint,
             segmentedControl.topAnchor.constraint(equalTo: glassView.contentView.topAnchor, constant: padding),
-            // UISegmentedControl's internal padding sits a point low; this re-centers the items.
-            segmentedControl.heightAnchor.constraint(equalToConstant: NuvioSegmentedTabBar.barHeight - padding * 2 - 1),
+            // Bar height minus padding and one point: UISegmentedControl's internal padding sits a
+            // point low, and this re-centers the items.
+            controlHeightConstraint,
             collapsedIcon.centerXAnchor.constraint(equalTo: glassView.contentView.centerXAnchor),
             collapsedIcon.centerYAnchor.constraint(equalTo: glassView.contentView.centerYAnchor),
             collapsedIcon.widthAnchor.constraint(equalToConstant: 24),
@@ -157,6 +171,20 @@ final class NuvioSegmentedTabBarView: UIView {
     func setCollapsedIcon(_ image: UIImage, tinted: Bool, tint: UIColor) {
         collapsedIcon.image = tinted ? image.withRenderingMode(.alwaysTemplate) : image.withRenderingMode(.alwaysOriginal)
         collapsedIcon.tintColor = tint
+    }
+
+    func setCompact(_ compact: Bool) {
+        guard compact != isCompact else { return }
+        isCompact = compact
+        applyState()
+    }
+
+    /// Portrait spans the available width; landscape hugs its items, centered, like the bar it replaces.
+    private var expandedFrame: (leading: CGFloat, width: CGFloat) {
+        let available = max(bounds.width - Self.expandedInset * 2, collapsedSize.width)
+        guard isCompact else { return (Self.expandedInset, available) }
+        let width = min(available, max(segmentedControl.preferredCompactWidth, collapsedSize.width))
+        return ((bounds.width - width) / 2, width)
     }
 
     func setExpanded(_ expanded: Bool) {
@@ -182,11 +210,13 @@ final class NuvioSegmentedTabBarView: UIView {
     }
 
     private func applyState() {
-        let fullWidth = max(bounds.width - Self.expandedInset * 2, Self.collapsedSize.width)
-        leadingConstraint.constant = isExpanded ? Self.expandedInset : 0
-        widthConstraint.constant = isExpanded ? fullWidth : Self.collapsedSize.width
-        heightConstraint.constant = isExpanded ? NuvioSegmentedTabBar.barHeight : Self.collapsedSize.height
-        controlWidthConstraint.constant = fullWidth - 4
+        let expanded = expandedFrame
+        let barHeight = NuvioSegmentedTabBar.height(compact: isCompact)
+        leadingConstraint.constant = isExpanded ? expanded.leading : 0
+        widthConstraint.constant = isExpanded ? expanded.width : collapsedSize.width
+        heightConstraint.constant = isExpanded ? barHeight : collapsedSize.height
+        controlWidthConstraint.constant = expanded.width - 4
+        controlHeightConstraint.constant = barHeight - 5
         segmentedControl.alpha = isExpanded ? 1 : 0
         collapsedIcon.alpha = isExpanded ? 0 : 1
         segmentedControl.isUserInteractionEnabled = isExpanded
@@ -197,8 +227,10 @@ final class NuvioSegmentedTabBarView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         glassView.cornerConfiguration = .capsule()
-        let fullWidth = max(bounds.width - Self.expandedInset * 2, Self.collapsedSize.width)
-        if !hasLaidOut || (isExpanded && widthConstraint.constant != fullWidth) || controlWidthConstraint.constant != fullWidth - 4 {
+        let expanded = expandedFrame
+        if !hasLaidOut
+            || (isExpanded && (widthConstraint.constant != expanded.width || leadingConstraint.constant != expanded.leading))
+            || controlWidthConstraint.constant != expanded.width - 4 {
             hasLaidOut = bounds.width > 0
             applyState()
         }
@@ -274,7 +306,13 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func setItems(_ items: [NuvioSegmentedTabBarItem]) {
+    /// Width that fits every item side by side in landscape, all segments equal like the control lays them out.
+    var preferredCompactWidth: CGFloat {
+        let widest = baseViews.map(\.intrinsicContentSize.width).max() ?? 60
+        return CGFloat(numberOfSegments) * (widest + 24) + 4
+    }
+
+    func setItems(_ items: [NuvioSegmentedTabBarItem], horizontal: Bool) {
         let keepIndex = selectedSegmentIndex
         if numberOfSegments != items.count {
             removeAllSegments()
@@ -296,13 +334,13 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         }
         cachedLensView = nil
         baseViews = items.map {
-            let view = NuvioTabItemContentView(title: $0.title, image: $0.baseImage, tintsImage: $0.tintsBaseImage)
+            let view = NuvioTabItemContentView(title: $0.title, image: $0.baseImage, tintsImage: $0.tintsBaseImage, horizontal: horizontal)
             view.tintColor = .white
             view.drawsLegibilityShadow = true
             return view
         }
         accentViews = items.map {
-            let view = NuvioTabItemContentView(title: $0.title, image: $0.accentImage, tintsImage: $0.tintsAccentImage)
+            let view = NuvioTabItemContentView(title: $0.title, image: $0.accentImage, tintsImage: $0.tintsAccentImage, horizontal: horizontal)
             view.tintColor = activeTintColor
             return view
         }
@@ -571,16 +609,18 @@ final class NuvioTabItemContentView: UIView {
     private let title: String
     private let image: UIImage
     private let tintsImage: Bool
+    private let horizontal: Bool
     var drawsLegibilityShadow = false
 
     private static let iconSize: CGFloat = 24
     private static let iconArea: CGFloat = 28
     private let font = UIFont.systemFont(ofSize: 11, weight: .medium)
 
-    init(title: String, image: UIImage, tintsImage: Bool) {
+    init(title: String, image: UIImage, tintsImage: Bool, horizontal: Bool = false) {
         self.title = title
         self.image = image
         self.tintsImage = tintsImage
+        self.horizontal = horizontal
         super.init(frame: .zero)
         isOpaque = false
         isUserInteractionEnabled = false
@@ -591,6 +631,7 @@ final class NuvioTabItemContentView: UIView {
         title = ""
         image = UIImage()
         tintsImage = true
+        horizontal = false
         super.init(coder: coder)
         // Unarchived copies (the accessibility segment popover) defer to the native labels.
         isHidden = true
@@ -601,8 +642,16 @@ final class NuvioTabItemContentView: UIView {
         setNeedsDisplay()
     }
 
+    private static let horizontalGap: CGFloat = 6
+
     override var intrinsicContentSize: CGSize {
         let text = (title as NSString).size(withAttributes: [.font: font])
+        if horizontal {
+            return CGSize(
+                width: Self.iconSize + Self.horizontalGap + ceil(text.width) + 4,
+                height: max(Self.iconSize, ceil(text.height)) + 4
+            )
+        }
         return CGSize(width: ceil(max(Self.iconSize, text.width)) + 4, height: Self.iconArea + ceil(text.height))
     }
 
@@ -617,24 +666,40 @@ final class NuvioTabItemContentView: UIView {
         let iconSize = aspect >= 1
             ? CGSize(width: Self.iconSize, height: Self.iconSize / aspect)
             : CGSize(width: Self.iconSize * aspect, height: Self.iconSize)
-        let iconRect = CGRect(
-            x: (bounds.width - iconSize.width) / 2,
-            y: (Self.iconArea - iconSize.height) / 2 - 1,
-            width: iconSize.width,
-            height: iconSize.height
-        )
+        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let textSize = (title as NSString).size(withAttributes: attributes)
+
+        let iconRect: CGRect
+        let textOrigin: CGPoint
+        if horizontal {
+            let contentWidth = Self.iconSize + Self.horizontalGap + textSize.width
+            let startX = (bounds.width - contentWidth) / 2
+            iconRect = CGRect(
+                x: startX + (Self.iconSize - iconSize.width) / 2,
+                y: (bounds.height - iconSize.height) / 2,
+                width: iconSize.width,
+                height: iconSize.height
+            )
+            textOrigin = CGPoint(
+                x: startX + Self.iconSize + Self.horizontalGap,
+                y: (bounds.height - textSize.height) / 2
+            )
+        } else {
+            iconRect = CGRect(
+                x: (bounds.width - iconSize.width) / 2,
+                y: (Self.iconArea - iconSize.height) / 2 - 1,
+                width: iconSize.width,
+                height: iconSize.height
+            )
+            textOrigin = CGPoint(x: (bounds.width - textSize.width) / 2, y: Self.iconArea - 1)
+        }
+
         if tintsImage {
             color.setFill()
             image.withRenderingMode(.alwaysTemplate).withTintColor(color).draw(in: iconRect)
         } else {
             image.draw(in: iconRect)
         }
-
-        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
-        let textSize = (title as NSString).size(withAttributes: attributes)
-        (title as NSString).draw(
-            at: CGPoint(x: (bounds.width - textSize.width) / 2, y: Self.iconArea - 1),
-            withAttributes: attributes
-        )
+        (title as NSString).draw(at: textOrigin, withAttributes: attributes)
     }
 }
