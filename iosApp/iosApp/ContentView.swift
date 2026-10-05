@@ -1,4 +1,5 @@
 import Combine
+import ImageIO
 import SwiftUI
 import UIKit
 import ComposeApp
@@ -2104,25 +2105,22 @@ private struct NativeProfileAvatarView: View {
         ZStack {
             Circle().fill(Color(uiColor: profile.avatarBackgroundColor))
             if let avatarURL = profile.avatarURL {
-                AsyncImage(url: avatarURL) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        initial
-                    }
-                }
+                // Not AsyncImage: it only ever shows an animated avatar's first frame.
+                initial
+                NativeAnimatedAvatarImage(url: avatarURL)
             } else {
                 initial
             }
         }
         .clipShape(Circle())
         .overlay {
-            Circle().strokeBorder(
-                Color(uiColor: profile.avatarColor).opacity(profile.active ? 1 : 0.45),
-                lineWidth: profile.active ? 2.5 : 1.5
-            )
+            // The active profile is marked by NativeActiveProfileRing instead.
+            if !profile.active {
+                Circle().strokeBorder(
+                    Color(uiColor: profile.avatarColor).opacity(0.45),
+                    lineWidth: 1.5
+                )
+            }
         }
     }
 
@@ -2133,18 +2131,138 @@ private struct NativeProfileAvatarView: View {
     }
 }
 
+/// Loads an avatar into a UIImageView so animated GIF/WebP avatars actually play, decoding every
+/// frame downsampled to avatar size to keep memory low.
+@available(iOS 16.0, *)
+private struct NativeAnimatedAvatarImage: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> UIImageView {
+        let view = UIImageView()
+        view.contentMode = .scaleAspectFill
+        view.clipsToBounds = true
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentHuggingPriority(.defaultLow, for: .vertical)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        context.coordinator.load(url, into: view)
+        return view
+    }
+
+    func updateUIView(_ uiView: UIImageView, context: Context) {
+        if context.coordinator.url != url {
+            context.coordinator.load(url, into: uiView)
+        }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UIImageView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    static func dismantleUIView(_ uiView: UIImageView, coordinator: Coordinator) {
+        coordinator.task?.cancel()
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var url: URL?
+        var task: URLSessionDataTask?
+
+        func load(_ url: URL, into view: UIImageView) {
+            self.url = url
+            task?.cancel()
+            view.image = nil
+            task = URLSession.shared.dataTask(with: url) { [weak self, weak view] data, _, _ in
+                guard let data else { return }
+                let image = NuvioAnimatedImageDecoder.image(from: data, maxPixelSize: 160)
+                DispatchQueue.main.async {
+                    guard let self, let view, self.url == url else { return }
+                    view.image = image
+                }
+            }
+            task?.resume()
+        }
+    }
+}
+
+private enum NuvioAnimatedImageDecoder {
+    static func image(from data: Data, maxPixelSize: Int) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return UIImage(data: data)
+        }
+        let count = CGImageSourceGetCount(source)
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard count > 1 else {
+            return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+                .map { UIImage(cgImage: $0) } ?? UIImage(data: data)
+        }
+        var frames: [UIImage] = []
+        var duration: Double = 0
+        for index in 0..<count {
+            guard let frame = CGImageSourceCreateThumbnailAtIndex(source, index, options as CFDictionary) else {
+                continue
+            }
+            frames.append(UIImage(cgImage: frame))
+            duration += frameDelay(source: source, index: index)
+        }
+        guard !frames.isEmpty else { return UIImage(data: data) }
+        return UIImage.animatedImage(with: frames, duration: duration)
+    }
+
+    private static func frameDelay(source: CGImageSource, index: Int) -> Double {
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any]
+        let container = (properties?[kCGImagePropertyGIFDictionary]
+            ?? properties?[kCGImagePropertyWebPDictionary]) as? [CFString: Any]
+        let delay = (container?[kCGImagePropertyGIFUnclampedDelayTime] as? Double)
+            ?? (container?[kCGImagePropertyWebPUnclampedDelayTime] as? Double)
+            ?? (container?[kCGImagePropertyGIFDelayTime] as? Double)
+            ?? (container?[kCGImagePropertyWebPDelayTime] as? Double)
+            ?? 0.1
+        // Browsers treat near-zero delays as 0.1s; matching that keeps fast GIFs from racing.
+        return delay < 0.02 ? 0.1 : delay
+    }
+}
+
+/// The rotating theme-accent ring that marks the active profile, matching the Compose halo
+/// (ThemeAccentRing) used on the profile picker and in Profile.
+private struct NativeActiveProfileRing: View {
+    let colors: [Color]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        let stops = colors.count > 1 ? colors + [colors[0]] : [colors.first ?? .white, colors.first ?? .white]
+        Circle()
+            .strokeBorder(AngularGradient(colors: stops, center: .center), lineWidth: 2)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 3.2).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
 @available(iOS 26.0, *)
 private struct NativeProfileSwitcherView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: NativeProfileSwitcherViewModel
     let title: String
     let addProfileTitle: String
+    let accentColors: [Color]
     let onManageProfiles: () -> Void
 
     init(
         controller: NativeProfileSwitcherController,
         title: String,
         addProfileTitle: String,
+        accentColors: [Color],
         onManageProfiles: @escaping () -> Void
     ) {
         _model = StateObject(
@@ -2152,6 +2270,7 @@ private struct NativeProfileSwitcherView: View {
         )
         self.title = title
         self.addProfileTitle = addProfileTitle
+        self.accentColors = accentColors
         self.onManageProfiles = onManageProfiles
     }
 
@@ -2168,8 +2287,15 @@ private struct NativeProfileSwitcherView: View {
                                 model.choose(profile, onComplete: dismiss.callAsFunction)
                             } label: {
                                 VStack(spacing: 6) {
-                                    NativeProfileAvatarView(profile: profile)
-                                        .frame(width: 52, height: 52)
+                                    ZStack {
+                                        if profile.active {
+                                            NativeActiveProfileRing(colors: accentColors)
+                                                .frame(width: 60, height: 60)
+                                        }
+                                        NativeProfileAvatarView(profile: profile)
+                                            .frame(width: 52, height: 52)
+                                    }
+                                        .frame(width: 60, height: 60)
                                         .overlay(alignment: .bottomTrailing) {
                                             if profile.pinEnabled {
                                                 Image(systemName: "lock.fill")
@@ -2363,6 +2489,10 @@ struct NativeNavContentView: View {
                             controller: appCoordinator.profileSwitcherController,
                             title: appCoordinator.localizedSwitchProfileTitle,
                             addProfileTitle: appCoordinator.localizedAddProfileTitle,
+                            accentColors: (iconStore.accentColors.isEmpty
+                                ? [iconStore.accentColor]
+                                : iconStore.accentColors
+                            ).map { Color(uiColor: $0) },
                             onManageProfiles: appCoordinator.openProfileManagement
                         )
                     }
