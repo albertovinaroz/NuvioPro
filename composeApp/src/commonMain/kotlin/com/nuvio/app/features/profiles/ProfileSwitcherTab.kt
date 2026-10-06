@@ -1,5 +1,7 @@
 package com.nuvio.app.features.profiles
 
+import androidx.compose.runtime.DisposableEffect
+import com.nuvio.app.core.ui.LocalOverlayTouchCapture
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -169,6 +171,12 @@ fun ProfileSwitcherTab(
         if (profile != null) {
             chooseProfile(profile)
         }
+    }
+
+    val overlayTouchCapture = LocalOverlayTouchCapture.current
+    if (overlayTouchCapture != null) {
+        LaunchedEffect(popupVisible) { overlayTouchCapture(popupVisible) }
+        DisposableEffect(Unit) { onDispose { overlayTouchCapture(false) } }
     }
 
     // Popup entrance/exit animation

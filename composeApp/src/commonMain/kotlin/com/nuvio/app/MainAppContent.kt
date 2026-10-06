@@ -574,6 +574,16 @@ internal fun MainAppContent(
         }
     }
 
+    if (useNativeNavigation && ownsAppRuntime) {
+        LaunchedEffect(Unit) {
+            NativeTabBridge.profileSelectionRequests.collect { profileIndex ->
+                ProfileRepository.state.value.profiles
+                    .firstOrNull { it.profileIndex == profileIndex }
+                    ?.let(onNavigationProfileSelected)
+            }
+        }
+    }
+
     fun selectTabFromSettingsRoute(tab: AppScreenTab) {
         if (useNativeNavigation) {
             if (tab == AppScreenTab.Settings) {
@@ -2005,6 +2015,7 @@ internal fun MainAppContent(
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     SettingsRouteNavigationBar(
                         isTabletLayout = useTabletFloatingTabBar || maxWidth >= 768.dp,
+                        useNativeNavigation = useNativeNavigation,
                         showLiveTv = showLiveTvInNavigation,
                         hazeState = settingsRouteBarHazeState,
                         onTabSelected = ::selectTabFromSettingsRoute,

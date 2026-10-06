@@ -100,6 +100,36 @@ fun AppGateViewController(
     view.backgroundColor = UIColor.clearColor
 }
 
+/**
+ * The floating tab bar drawn once above every tab (see [FloatingTabBarOverlay]). Transparent: the
+ * Swift host lays a native blur behind it at [onGlassBounds] and passes touches through elsewhere.
+ */
+@Suppress("unused")
+@OptIn(ExperimentalComposeUiApi::class)
+fun FloatingTabBarViewController(
+    appGateController: AppGateController,
+    useTabletFloatingTabBar: Boolean,
+    onSelectTab: (String) -> Unit,
+    onGlassBounds: (Float, Float, Float, Float) -> Unit,
+    onCapturesAllTouches: (Boolean) -> Unit,
+): UIViewController = ComposeUIViewController(
+    configure = {
+        onFocusBehavior = OnFocusBehavior.DoNothing
+        opaque = false
+    },
+    content = {
+        FloatingTabBarOverlay(
+            appGateController = appGateController,
+            useTabletFloatingTabBar = useTabletFloatingTabBar,
+            onSelectTab = { tab -> onSelectTab(tab.name) },
+            onGlassBounds = onGlassBounds,
+            onCapturesAllTouches = onCapturesAllTouches,
+        )
+    },
+).apply {
+    view.backgroundColor = UIColor.clearColor
+}
+
 private fun nuvioComposeViewController(
     content: @androidx.compose.runtime.Composable () -> Unit,
 ): UIViewController = ComposeUIViewController(

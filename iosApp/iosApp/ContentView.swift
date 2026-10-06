@@ -2443,6 +2443,22 @@ struct NativeNavContentView: View {
                 }
             }
         }
+        .overlay {
+            // One Compose floating bar above every tab's stack (see FloatingTabBarOverlayView), so
+            // settings pages push and pop beneath it instead of each carrying its own copy.
+            let barVisible = appCoordinator.isAppReady &&
+                appCoordinator.isMainContentVisible &&
+                appCoordinator.isSelectedTabAtRoot
+            FloatingTabBarOverlayView(
+                appCoordinator: appCoordinator,
+                usesTabletFloatingTabBar: usesTabletFloatingTabBar
+            )
+            .ignoresSafeArea(.all)
+            .opacity(barVisible ? 1 : 0)
+            .allowsHitTesting(barVisible)
+            .accessibilityHidden(!barVisible)
+            .animation(.easeInOut(duration: 0.2), value: barVisible)
+        }
         .onAppear {
             mountedLegacyTabs.insert(appCoordinator.selectedTab)
         }

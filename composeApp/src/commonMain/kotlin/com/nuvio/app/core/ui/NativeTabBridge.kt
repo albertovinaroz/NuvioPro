@@ -45,6 +45,15 @@ internal object NativeTabBridge {
     private val _activeTab = MutableStateFlow(NativeNavigationTab.Home)
     val activeTab: StateFlow<NativeNavigationTab> = _activeTab.asStateFlow()
 
+    // Profile picks made from the shared floating tab bar overlay, which has no app runtime of its
+    // own — the scene that owns it (Home) carries out the switch.
+    private val _profileSelectionRequests = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val profileSelectionRequests: SharedFlow<Int> = _profileSelectionRequests.asSharedFlow()
+
+    fun requestProfileSelection(profileIndex: Int) {
+        _profileSelectionRequests.tryEmit(profileIndex)
+    }
+
     fun markActiveTab(tab: NativeNavigationTab) {
         _activeTab.value = tab
     }

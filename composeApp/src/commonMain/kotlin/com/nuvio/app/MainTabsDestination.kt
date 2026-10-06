@@ -32,7 +32,7 @@ import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationBar
-import com.nuvio.app.navigation.LocalUseNativeNavigation
+import com.nuvio.app.core.ui.SharedNuvioNavBarScrollState
 import com.nuvio.app.core.ui.FloatingNavigationItem
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
@@ -95,16 +95,16 @@ internal fun MainTabsDestination(
             liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady
         }
         val tabsRouteActive = rootRouteActive
-        val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val navBarPosition by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
         val floatingBarOnTop = navBarStyleSetting != NavBarStyle.CLASSIC && navBarPosition == NavBarPosition.TOP
-        // With native navigation each root tab is its own Compose scene with its own copy of the
-        // bar, all kept alive. One pill is shared across them so a tab switch hands the animation
-        // over seamlessly, and only the copy on screen does the follow-on expand.
-        val isOnScreenTab = !useNativeNavigation || highlightedTab == selectedTab
+        // The bottom floating bar is then drawn once, by FloatingTabBarOverlay above every scene.
+        val overlayHostsFloatingBar = useNativeNavigation && !useNativeBottomTabs &&
+            floatingTabBarOverlayShowsBar(navBarStyleSetting, navBarPosition)
+        val ownNavBarScrollState = rememberNuvioNavBarScrollState()
+        val navBarScrollState = if (overlayHostsFloatingBar) SharedNuvioNavBarScrollState else ownNavBarScrollState
         val floatingNavigationItems = mainFloatingNavigationItems(
             highlightedTab = highlightedTab,
             showLiveTv = showLiveTvInNavigation,
@@ -177,7 +177,7 @@ internal fun MainTabsDestination(
                     )
                 }
 
-                if (tabsRouteActive && !useNativeBottomTabs && navBarStyleSetting != NavBarStyle.CLASSIC) {
+                if (tabsRouteActive && !useNativeBottomTabs && navBarStyleSetting != NavBarStyle.CLASSIC && !overlayHostsFloatingBar) {
                     when (navBarStyleSetting) {
                         NavBarStyle.EXPANDED -> navBarScrollState.expand()
                         NavBarStyle.COMPACT -> navBarScrollState.collapse()
@@ -201,8 +201,7 @@ internal fun MainTabsDestination(
                         showLabels = !isIos,
                         // A tab tap always leaves the bar expanded, rather than in whatever state
                         // the previous tab's scroll left it.
-                        expandOnSelect = navBarStyleSetting == NavBarStyle.ADAPTIVE && isOnScreenTab,
-                        sharedMotionKey = if (useNativeNavigation) "main_tabs" else null,
+                        expandOnSelect = navBarStyleSetting == NavBarStyle.ADAPTIVE,
                     )
                 }
             }
@@ -333,7 +332,7 @@ internal fun MainClassicNavigationBar(
  * there). Shared by the tabs bar and the settings-route bar so the two never drift apart.
  */
 @Composable
-private fun phoneFloatingNavigationBarPadding(): PaddingValues {
+internal fun phoneFloatingNavigationBarPadding(): PaddingValues {
     if (!isIos) return floatingNavigationBarPadding()
     val base = floatingNavigationBarPadding().calculateBottomPadding()
     return PaddingValues(bottom = (base - 18.dp).coerceAtLeast(0.dp))
@@ -342,6 +341,7 @@ private fun phoneFloatingNavigationBarPadding(): PaddingValues {
 @Composable
 internal fun BoxScope.SettingsRouteNavigationBar(
     isTabletLayout: Boolean,
+    useNativeNavigation: Boolean,
     showLiveTv: Boolean,
     hazeState: HazeState?,
     onTabSelected: (AppScreenTab) -> Unit,
@@ -396,6 +396,8 @@ internal fun BoxScope.SettingsRouteNavigationBar(
         else -> {
             val onTop = position == NavBarPosition.TOP
             SideEffect { onBottomOverlayChanged(if (onTop) 0.dp else 72.dp) }
+            // Native navigation draws this one bar above every screen instead (FloatingTabBarOverlay).
+            if (useNativeNavigation && floatingTabBarOverlayShowsBar(style, position)) return
             FloatingNavigationBar(
                 items = mainFloatingNavigationItems(
                     highlightedTab = highlightedTab,
@@ -423,9 +425,6 @@ internal fun BoxScope.SettingsRouteNavigationBar(
                 glowEnabled = glowEnabled,
                 inlineLabels = isTabletLayout,
                 showLabels = !isIos,
-                // Same pill as the root tabs' bar, so leaving or returning to a settings page
-                // carries the selection animation over instead of restarting it.
-                sharedMotionKey = if (LocalUseNativeNavigation.current) "main_tabs" else null,
             )
         }
     }

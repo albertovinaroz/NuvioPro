@@ -34,7 +34,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -45,6 +49,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
+import com.nuvio.app.core.ui.glass.FrostedGlassBar
 import com.nuvio.app.core.ui.glass.GlassBarSurface
 import com.nuvio.app.core.ui.jelly.JellyMotion
 import com.nuvio.app.core.ui.jelly.JellySelectionSource
@@ -79,6 +84,13 @@ internal val LocalNuvioTabletNavLayout = staticCompositionLocalOf { false }
 
 internal expect val floatingNavigationGlowSupported: Boolean
 
+/**
+ * Set when the bar lives in a pass-through overlay that only takes touches over the bar itself:
+ * anything drawn bigger than the bar from inside it (the profile switcher's popup) reports while
+ * it's up, so the overlay takes touches everywhere until it goes away.
+ */
+val LocalOverlayTouchCapture = staticCompositionLocalOf<((Boolean) -> Unit)?> { null }
+
 /** The jelly track's spring stiffness (see JellyMotion: 240 / 0.9), shared so the bar's own expand/zoom settle in step with it. */
 private const val JellyTrackStiffness = 240f / 0.9f
 private const val ExpandOnSelectDelayMs = 180L
@@ -106,6 +118,13 @@ internal fun FloatingNavigationBar(
     expandOnSelect: Boolean = false,
     /** Bars drawn by separate Compose scenes under the same key share one pill (see [SharedJellyMotions]). */
     sharedMotionKey: String? = null,
+    /**
+     * A native blur view behind this (transparent) Compose canvas frosts the backdrop instead of
+     * haze; [onGlassBoundsChanged] reports the glass's on-screen bounds, in window pixels and with
+     * every zoom/jelly transform applied, each frame they change so that view can track it.
+     */
+    nativeBackdrop: Boolean = false,
+    onGlassBoundsChanged: ((Rect) -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
     val showGlow = !floatingNavigationGlowSupported || glowEnabled
@@ -147,6 +166,8 @@ internal fun FloatingNavigationBar(
             JellyMotion(visualSelectedIndex, items.size)
         }
     }
+    // Not state: only the draw pass that reports the glass bounds reads it.
+    val glassCoordinates = remember { object { var value: LayoutCoordinates? = null } }
     val currentItems by rememberUpdatedState(items)
     val currentIsRtl by rememberUpdatedState(isRtl)
     val density = LocalDensity.current
@@ -254,13 +275,32 @@ internal fun FloatingNavigationBar(
                     ) {
                         Box(
                             Modifier.matchParentSize()
+                                .then(
+                                    if (onGlassBoundsChanged != null) {
+                                        Modifier.onPlaced { glassCoordinates.value = it }
+                                    } else {
+                                        Modifier
+                                    },
+                                )
                                 .clip(RoundedCornerShape(50))
                                 .drawWithContent {
                                     drawContent()
                                     drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
+                                    if (onGlassBoundsChanged != null) {
+                                        // Read here so a zoom (an ancestor layer, which alone
+                                        // wouldn't redraw this) still re-reports the bounds.
+                                        expansionState.value
+                                        glassCoordinates.value
+                                            ?.takeIf { it.isAttached }
+                                            ?.let { onGlassBoundsChanged(it.boundsInWindow()) }
+                                    }
                                 },
                         ) {
-                            GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
+                            if (nativeBackdrop) {
+                                FrostedGlassBar(null, Modifier.matchParentSize(), glowStrength, hazedFillAlpha = 0.12f, backdropProvided = true)
+                            } else {
+                                GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
+                            }
                         }
                         Box(
                             Modifier.matchParentSize().drawWithContent {

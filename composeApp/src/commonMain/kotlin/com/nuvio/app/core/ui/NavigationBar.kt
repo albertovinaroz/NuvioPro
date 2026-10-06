@@ -49,6 +49,12 @@ import org.jetbrains.compose.resources.painterResource
  * Tracks scroll direction and exposes a label visibility fraction (1 = fully visible, 0 = hidden).
  */
 @Stable
+/**
+ * With native navigation every root tab is its own Compose scene, but the floating bar is a single
+ * overlay above them all: this one scroll state is shared so the visible tab's scrolling drives it.
+ */
+internal val SharedNuvioNavBarScrollState = NuvioNavBarScrollState()
+
 class NuvioNavBarScrollState {
     /** 1f = labels fully visible (expanded), 0f = labels hidden (collapsed, icons only) */
     var labelVisibility by mutableFloatStateOf(1f)
