@@ -1378,7 +1378,7 @@
     <string name="settings_appearance_section_streams">STREAMEK</string>
     <string name="compose_settings_root_advanced_description">Indítási és profil működés</string>
     <string name="compose_settings_root_advanced_section">HALADÓ</string>
-    <string name="compose_settings_root_streams_description">Stream találatok megjelenítése és jelvény URL szabályok.</string>
+    <string name="compose_settings_root_streams_description">Stream találatok megjelenítése és jelvény URL szabályok</string>
     <string name="settings_advanced_section_startup">INDÍTÁS</string>
     <string name="settings_advanced_section_cache">GYORSÍTÓTÁR</string>
     <string name="settings_advanced_remember_last_profile">Utolsó profil megjegyzése</string>
@@ -1982,7 +1982,7 @@
     <string name="compose_settings_page_privacy_policy">Adatvédelmi irányelvek</string>
     <string name="compose_settings_page_tracking">Aktivitáskövetés</string>
     <string name="compose_settings_root_privacy_policy_description">Tudd meg, hogyan kezeli a Nuvio az adataidat</string>
-    <string name="compose_settings_root_tracking_description">Csatlakoztasd a követési szolgáltatásokat, és válaszd ki, melyik működtesse a Könyvtárat és a Nézés folytatását.</string>
+    <string name="compose_settings_root_tracking_description">Csatlakoztasd a követési szolgáltatásokat, és válaszd ki, melyik működtesse a Könyvtárat és a Nézés folytatását</string>
     <string name="settings_licenses_attributions_simkl_title">Simkl</string>
     <string name="settings_licenses_attributions_simkl_body">A Nuvio a Simkl szolgáltatását használja a fiók hitelesítéséhez, a lejátszási listákhoz, a megtekintési előzményekhez, a lejátszási állapothoz és a scrobblinghoz. A filmek, sorozatok és animék követési adatait a Simkl biztosítja. A Nuvio nem áll kapcsolatban a Simkl-lel, és az nem támogatja közvetlenül.</string>
     <string name="compose_tracking_list_picker_loading">Listák betöltése...</string>

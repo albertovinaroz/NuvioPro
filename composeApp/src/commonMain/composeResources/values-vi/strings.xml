@@ -525,14 +525,14 @@
     <string name="compose_settings_root_about_section">GIỚI THIỆU</string>
     <string name="compose_settings_root_account_description">Tài khoản và trạng thái đồng bộ</string>
     <string name="compose_settings_root_account_section">TÀI KHOẢN</string>
-    <string name="compose_settings_root_advanced_description">Cài đặt khi khởi động và quản lý hồ sơ.</string>
+    <string name="compose_settings_root_advanced_description">Cài đặt khi khởi động và quản lý hồ sơ</string>
     <string name="compose_settings_root_advanced_section">NÂNG CAO</string>
     <string name="compose_settings_root_appearance_description">Trang chủ, luồng, bộ sưu tập và trang chi tiết</string>
     <string name="compose_settings_root_check_updates_description">Tải xuống phiên bản mới nhất</string>
     <string name="compose_settings_root_check_updates_title">Kiểm tra cập nhật</string>
-    <string name="compose_settings_root_content_discovery_description">Quản lý các tiện ích và nguồn khám phá.</string>
+    <string name="compose_settings_root_content_discovery_description">Quản lý các tiện ích và nguồn khám phá</string>
     <string name="compose_settings_root_content_discovery_description_appstore">Quản lý các tiện ích và chọn những gì xuất hiện trong Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">Quản lý các phim điện ảnh và tập phim đã tải xuống của bạn.</string>
+    <string name="compose_settings_root_downloads_description">Quản lý các phim điện ảnh và tập phim đã tải xuống của bạn</string>
     <string name="compose_settings_root_downloads_description_appstore">Quản lý những gì bạn đã lưu trên thiết bị này.</string>
     <string name="compose_settings_root_downloads_title">Tải xuống</string>
     <string name="compose_settings_root_general_section">CHUNG</string>
@@ -543,7 +543,7 @@
     <string name="compose_settings_root_switch_profile_description">Chuyển sang hồ sơ khác</string>
     <string name="compose_settings_root_switch_profile_title">Chuyển hồ sơ</string>
     <string name="compose_settings_root_trakt_description">Mở màn hình kết nối Trakt</string>
-    <string name="compose_settings_root_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ nào được dùng cho Thư viện và Tiếp tục xem.</string>
+    <string name="compose_settings_root_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ nào được dùng cho Thư viện và Tiếp tục xem</string>
     <string name="settings_search_empty">Không tìm thấy cài đặt nào.</string>
     <string name="settings_search_placeholder">Tìm cài đặt...</string>
     <string name="settings_search_results_section">KẾT QUẢ</string>

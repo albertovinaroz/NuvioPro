@@ -261,14 +261,14 @@
     <string name="compose_settings_root_about_section">אודות</string>
     <string name="compose_settings_root_account_description">חשבון וסטטוס סנכרון</string>
     <string name="compose_settings_root_account_section">חשבון</string>
-    <string name="compose_settings_root_advanced_description">התנהגות הפעלה ופרופיל.</string>
+    <string name="compose_settings_root_advanced_description">התנהגות הפעלה ופרופיל</string>
     <string name="compose_settings_root_advanced_section">מתקדם</string>
     <string name="compose_settings_root_appearance_description">בית, Streams, אוספים ועמודי פרטים</string>
     <string name="compose_settings_root_check_updates_description">הורד את הגרסה האחרונה</string>
     <string name="compose_settings_root_check_updates_title">בדיקת עדכונים</string>
-    <string name="compose_settings_root_content_discovery_description">נהל תוספים ומקורות גילוי.</string>
+    <string name="compose_settings_root_content_discovery_description">נהל תוספים ומקורות גילוי</string>
     <string name="compose_settings_root_content_discovery_description_appstore">נהל תוספים ובחר מה יופיע ב-Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">נהל את הסרטים והפרקים שהורדת.</string>
+    <string name="compose_settings_root_downloads_description">נהל את הסרטים והפרקים שהורדת</string>
     <string name="compose_settings_root_downloads_description_appstore">נהל את מה ששמרת במכשיר זה.</string>
     <string name="compose_settings_root_downloads_title">הורדות</string>
     <string name="compose_settings_root_general_section">כללי</string>
