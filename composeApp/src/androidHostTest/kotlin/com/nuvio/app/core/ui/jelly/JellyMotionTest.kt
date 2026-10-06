@@ -7,6 +7,23 @@ import kotlin.test.assertTrue
 
 class JellyMotionTest {
     @Test
+    fun `bars sharing a motion advance it by real time however many tick it`() {
+        val single = JellyMotion(0, 4).apply { resize(320f, 64f, 4); select(3) }
+        val shared = JellyMotion(0, 4).apply { resize(320f, 64f, 4); select(3) }
+        val frameNanos = 1_000_000_000L / 60
+        for (frame in 0..12) {
+            val now = 5_000_000_000L + frame * frameNanos
+            single.tick(now)
+            // Two scenes' frame clocks reporting the same vsync, then a straggler from the past.
+            shared.tick(now)
+            shared.tick(now)
+            shared.tick(now - frameNanos / 2)
+        }
+        assertEquals(single.frame.position, shared.frame.position, 0.00001f)
+        assertTrue(single.frame.position > 0f && single.frame.position < 3f)
+    }
+
+    @Test
     fun `matches upstream pointer and release frames at 60 and 120 Hz`() {
         val references = mapOf(
             60 to listOf(

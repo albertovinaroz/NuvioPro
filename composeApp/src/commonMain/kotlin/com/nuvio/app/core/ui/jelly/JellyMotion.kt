@@ -27,6 +27,21 @@ internal object JellySelectionSource {
     var lastDragCommit: Int? = null
 }
 
+/**
+ * One [JellyMotion] per key for bars that are "the same" bar drawn by separate Compose scenes —
+ * on iOS every root tab is its own scene with its own copy of the floating bar, and a tap swaps
+ * which copy is on screen mid-animation. Sharing the motion lets the incoming copy carry on from
+ * exactly where the outgoing one left off, instead of replaying the pill from the old tab.
+ */
+internal object SharedJellyMotions {
+    private val motions = mutableMapOf<String, JellyMotion>()
+
+    fun obtain(key: String, index: Int, count: Int): JellyMotion =
+        motions.getOrPut("$key/$count") { JellyMotion(index, count) }
+}
+
+private const val NoFrame = Long.MIN_VALUE
+
 @Stable
 internal class JellyMotion(initialIndex: Int, count: Int) {
     private val position = JellySpring(initialIndex.coerceAtLeast(0).toDouble(), 1000.0, 1.0)
@@ -56,6 +71,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
     private var tabCount = count
     private val maxIndex get() = (tabCount - 1).coerceAtLeast(0)
     private val tabWidth get() = ((width - 8) / tabCount.coerceAtLeast(1)).coerceAtLeast(0.0)
+    private var lastFrameNanos = NoFrame
 
     var dragging = false
         private set
@@ -80,6 +96,15 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         pressTarget = 0.0
         shapeTarget = 1.0
         running = true
+    }
+
+    /**
+     * Follows a selection that landed from outside the gesture (app state, or another scene's copy
+     * of a shared bar), without cutting short a press or drag that's still in progress.
+     */
+    fun sync(index: Int) {
+        if (dragging) return
+        select(index)
     }
 
     fun snap(index: Int) {
@@ -141,6 +166,18 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         select(selectedIndex)
     }
 
+    /**
+     * Steps the motion to [frameTimeNanos]. Every scene drawing a shared motion drives it from its
+     * own frame clock, so a frame time it has already been stepped to is skipped — it advances by
+     * real elapsed time however many bars are ticking it.
+     */
+    fun tick(frameTimeNanos: Long) {
+        val last = lastFrameNanos
+        if (last != NoFrame && frameTimeNanos <= last) return
+        lastFrameNanos = frameTimeNanos
+        if (last != NoFrame) advance((frameTimeNanos - last) / 1_000_000_000.0)
+    }
+
     fun advance(seconds: Double) {
         val delta = seconds.coerceIn(0.0, 0.064)
         target = target.coerceIn(0.0, maxIndex.toDouble())
@@ -167,6 +204,8 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
             !press.isAtRest(0.0) || !scaleX.isAtRest(1.0) || !scaleY.isAtRest(1.0) ||
             !panel.isAtRest(0.0) || !trackY.isAtRest(0.0) || !trackX.isAtRest(1.0) ||
             !trackPress.isAtRest(1.0) || !glow.isAtRest(0.0)
+        // The next animation measures its first step from its own first frame, not from this one.
+        if (!running) lastFrameNanos = NoFrame
     }
 
     private fun indexAt(x: Double): Int = floor((x - 4) / tabWidth).toInt().coerceIn(0, maxIndex)

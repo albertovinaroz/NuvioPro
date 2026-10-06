@@ -100,6 +100,10 @@ internal fun MainTabsDestination(
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val navBarPosition by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
         val floatingBarOnTop = navBarStyleSetting != NavBarStyle.CLASSIC && navBarPosition == NavBarPosition.TOP
+        // With native navigation each root tab is its own Compose scene with its own copy of the
+        // bar, all kept alive. One pill is shared across them so a tab switch hands the animation
+        // over seamlessly, and only the copy on screen does the follow-on expand.
+        val isOnScreenTab = !useNativeNavigation || highlightedTab == selectedTab
         val floatingNavigationItems = mainFloatingNavigationItems(
             highlightedTab = highlightedTab,
             showLiveTv = showLiveTvInNavigation,
@@ -168,6 +172,7 @@ internal fun MainTabsDestination(
                         compactSize = true,
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
+                        sharedMotionKey = if (useNativeNavigation) "main_tabs_top" else null,
                     )
                 }
 
@@ -195,7 +200,8 @@ internal fun MainTabsDestination(
                         showLabels = !isIos,
                         // A tab tap always leaves the bar expanded, rather than in whatever state
                         // the previous tab's scroll left it.
-                        expandOnSelect = navBarStyleSetting == NavBarStyle.ADAPTIVE,
+                        expandOnSelect = navBarStyleSetting == NavBarStyle.ADAPTIVE && isOnScreenTab,
+                        sharedMotionKey = if (useNativeNavigation) "main_tabs" else null,
                     )
                 }
             }

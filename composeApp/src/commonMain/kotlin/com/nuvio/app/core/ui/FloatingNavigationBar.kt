@@ -10,14 +10,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -35,17 +34,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import com.nuvio.app.core.ui.glass.GlassBarSurface
 import com.nuvio.app.core.ui.jelly.JellyMotion
 import com.nuvio.app.core.ui.jelly.JellySelectionSource
 import com.nuvio.app.core.ui.jelly.JellyTabRow
 import com.nuvio.app.core.ui.jelly.JellyTabTargets
+import com.nuvio.app.core.ui.jelly.SharedJellyMotions
 import com.nuvio.app.core.ui.jelly.drawJellyGlow
 import com.nuvio.app.core.ui.jelly.drawJellyPill
 import com.nuvio.app.core.ui.jelly.jellyPillPath
@@ -99,6 +104,8 @@ internal fun FloatingNavigationBar(
     inlineLabels: Boolean = false,
     showLabels: Boolean = true,
     expandOnSelect: Boolean = false,
+    /** Bars drawn by separate Compose scenes under the same key share one pill (see [SharedJellyMotions]). */
+    sharedMotionKey: String? = null,
 ) {
     if (items.isEmpty()) return
     val showGlow = !floatingNavigationGlowSupported || glowEnabled
@@ -113,7 +120,9 @@ internal fun FloatingNavigationBar(
     // How expanded the bar is (scroll-driven); labels follow it unless they're switched off, in
     // which case the bar still widens/narrows but stays icon-only and icon-height.
     val targetExpansion = scrollState?.labelVisibility ?: 1f
-    val expansion by animateFloatAsState(
+    // Read only from layout/draw below (and via labelFraction, only when labels are shown), so the
+    // expand/zoom doesn't recompose the whole bar — both tab rows included — on every frame.
+    val expansionState = animateFloatAsState(
         targetValue = targetExpansion,
         // Expanding springs slightly past full width for a "zoom in" pop; collapsing stays a plain
         // tween — an undershoot below 0 would shrink label slots to negative heights.
@@ -124,40 +133,34 @@ internal fun FloatingNavigationBar(
         },
         label = "jelly_labels",
     )
-    val labelFraction = if (showLabels) expansion.coerceIn(0f, 1f) else 0f
-    // The bar's size follows the same animated value as its width, so expanding reads as one
-    // continuous zoom-in (with the spring's slight overshoot as the pop) instead of a separate scale
-    // animation that had to snap down first and settled on its own, out of step with the width.
-    val zoom = CollapsedZoom + (1f - CollapsedZoom) * expansion.coerceAtLeast(0f)
+    val labelFraction by remember(showLabels, expansionState) {
+        derivedStateOf { if (showLabels) expansionState.value.coerceIn(0f, 1f) else 0f }
+    }
     val layoutDirection = LocalLayoutDirection.current
     val isRtl = layoutDirection == LayoutDirection.Rtl
     val selectedIndex = items.indexOfFirst { it.selected }
     val visualSelectedIndex = visualNavIndex(selectedIndex, items.size, isRtl)
-    val motion = remember(items.size, isRtl) { JellyMotion(visualSelectedIndex, items.size) }
+    val motion = remember(items.size, isRtl, sharedMotionKey) {
+        if (sharedMotionKey != null) {
+            SharedJellyMotions.obtain("$sharedMotionKey/$isRtl", visualSelectedIndex, items.size)
+        } else {
+            JellyMotion(visualSelectedIndex, items.size)
+        }
+    }
     val currentItems by rememberUpdatedState(items)
     val currentIsRtl by rememberUpdatedState(isRtl)
     val density = LocalDensity.current
-    val trackHeight = if (inlineLabels) 48.dp + 4.dp * labelFraction
-    else 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
-    val horizontalPadding = 58.dp - 30.dp * expansion
-    // Inline (tablet) pill: expanded fits icon + label per tab, compact shrinks to icon-only
-    // slots instead of keeping most of the expanded width.
-    val inlineMaxWidth = run {
-        val compactWidth = 64.dp * items.size + 8.dp
-        val expandedWidth = 640.dp
-        compactWidth + (expandedWidth - compactWidth) * expansion
-    }
 
     SideEffect {
         if (visualSelectedIndex >= 0 && JellySelectionSource.lastDragCommit == visualSelectedIndex) {
             motion.snap(visualSelectedIndex)
         }
     }
-    LaunchedEffect(visualSelectedIndex, items.size) {
+    LaunchedEffect(visualSelectedIndex, items.size, motion) {
         if (JellySelectionSource.lastDragCommit == visualSelectedIndex) {
             motion.snap(visualSelectedIndex)
         } else {
-            motion.select(visualSelectedIndex)
+            motion.sync(visualSelectedIndex)
         }
         if (expandOnSelect && scrollState != null && scrollState.labelVisibility < 1f) {
             // Lets the pill's selection pop play first, then expands/zooms the bar as a follow-on
@@ -166,30 +169,51 @@ internal fun FloatingNavigationBar(
             scrollState.expand()
         }
     }
-    LaunchedEffect(motion.running) {
-        if (!motion.running) return@LaunchedEffect
-        var previous = withFrameNanos { it }
-        while (motion.running) {
-            withFrameNanos { now ->
-                motion.advance((now - previous) / 1_000_000_000.0)
-                previous = now
-            }
-        }
+    LaunchedEffect(motion, motion.running) {
+        while (motion.running) withFrameNanos(motion::tick)
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(contentPadding)
-            .padding(horizontal = horizontalPadding),
+            .layout { measurable, constraints ->
+                val horizontal = (58.dp - 30.dp * expansionState.value).roundToPx().coerceAtLeast(0) * 2
+                val placeable = measurable.measure(constraints.offset(horizontal = -horizontal))
+                val width = constraints.constrainWidth(placeable.width + horizontal)
+                layout(width, constraints.constrainHeight(placeable.height)) {
+                    placeable.place((width - placeable.width) / 2, 0)
+                }
+            },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = if (inlineLabels) inlineMaxWidth else 400.dp)
-                .fillMaxWidth()
-                .height(trackHeight)
+                .layout { measurable, constraints ->
+                    val expansion = expansionState.value
+                    val maxWidth = if (inlineLabels) {
+                        // Inline (tablet) pill: expanded fits icon + label per tab, compact shrinks
+                        // to icon-only slots instead of keeping most of the expanded width.
+                        val compactWidth = 64.dp * items.size + 8.dp
+                        compactWidth + (640.dp - compactWidth) * expansion
+                    } else {
+                        400.dp
+                    }.roundToPx()
+                    val fraction = if (showLabels) expansion.coerceIn(0f, 1f) else 0f
+                    val trackHeight = if (inlineLabels) 48.dp + 4.dp * fraction
+                    else 48.dp + (if (compactSize) 8.dp else 16.dp) * fraction
+                    val width = constraints.constrainWidth(
+                        if (constraints.hasBoundedWidth) minOf(constraints.maxWidth, maxWidth) else maxWidth,
+                    )
+                    val height = constraints.constrainHeight(trackHeight.roundToPx())
+                    val placeable = measurable.measure(Constraints.fixed(width, height))
+                    layout(width, height) { placeable.place(0, 0) }
+                }
                 .graphicsLayer {
+                    // The bar's size follows the same animated value as its width, so expanding
+                    // reads as one continuous zoom-in (with the spring's slight overshoot as the
+                    // pop) instead of a separate scale animation, out of step with the width.
+                    val zoom = CollapsedZoom + (1f - CollapsedZoom) * expansionState.value.coerceAtLeast(0f)
                     scaleX = zoom
                     scaleY = zoom
                     transformOrigin = TransformOrigin(0.5f, 1f)
@@ -314,7 +338,10 @@ internal suspend fun PointerInputScope.detectJellyTabGestures(
                     // and handles the click itself. Finish the motion toward it rather than letting
                     // the cancel below snap the pill back to the old tab until the new selection
                     // lands (late on iOS, via the native tab bridge) — the back-and-forth flicker.
-                    if (!change.pressed) {
+                    // A long press (the profile tab's switcher) isn't a selection, so it still
+                    // falls through to the cancel and returns to the selected tab.
+                    val isTap = change.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis
+                    if (!change.pressed && isTap) {
                         motion.finish()
                         finished = true
                     }
