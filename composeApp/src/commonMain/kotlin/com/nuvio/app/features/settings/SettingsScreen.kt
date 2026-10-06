@@ -1,12 +1,6 @@
 package com.nuvio.app.features.settings
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.Alignment
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
@@ -64,6 +58,7 @@ import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.NuvioCompactTitleBar
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
@@ -1022,9 +1017,10 @@ private fun MobileSettingsScreen(
             }
         }
         if (showInternalHeader && page == SettingsPage.Root) {
-            SettingsRootCompactTitleBar(
+            NuvioCompactTitleBar(
                 title = stringResource(page.titleRes),
                 listState = listState,
+                largeTitleKey = SettingsRootLargeTitleKey,
             )
         }
         }
@@ -1033,61 +1029,6 @@ private fun MobileSettingsScreen(
 }
 
 private const val SettingsRootLargeTitleKey = "settings_root_large_title"
-
-/**
- * The compact bar iOS Settings shows once its large title scrolls up under the status bar: a soft
- * fade of the page background with the title small and centered, fading in as the large one leaves.
- */
-@Composable
-private fun SettingsRootCompactTitleBar(title: String, listState: LazyListState) {
-    val tokens = MaterialTheme.nuvio
-    val density = LocalDensity.current
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val barHeight = statusBarTop + 44.dp
-    val barHeightPx = with(density) { barHeight.toPx() }
-    val fadePx = with(density) { 20.dp.toPx() }
-    // 0 → the large title is still below the bar; 1 → it has slid fully beneath it. Fades in over
-    // the last `fadePx` of the large title's bottom edge approaching the bar's.
-    val titleProgress by remember(listState, barHeightPx, fadePx) {
-        derivedStateOf {
-            val titleItem = listState.layoutInfo.visibleItemsInfo
-                .firstOrNull { it.key == SettingsRootLargeTitleKey }
-            if (titleItem == null) {
-                if (listState.firstVisibleItemIndex > 0) 1f else 0f
-            } else {
-                val titleBottom = (titleItem.offset + titleItem.size).toFloat()
-                ((barHeightPx + fadePx - titleBottom) / fadePx).coerceIn(0f, 1f)
-            }
-        }
-    }
-    val background = tokens.colors.background
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(barHeight + 18.dp)
-            .graphicsLayer { alpha = titleProgress }
-            .background(
-                Brush.verticalGradient(
-                    0f to background,
-                    0.62f to background.copy(alpha = 0.94f),
-                    1f to background.copy(alpha = 0f),
-                ),
-            ),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
-            color = tokens.colors.textPrimary,
-            maxLines = 1,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = statusBarTop)
-                .height(44.dp)
-                .wrapContentHeight(Alignment.CenterVertically)
-                .graphicsLayer { translationY = (1f - titleProgress) * 6.dp.toPx() },
-        )
-    }
-}
 
 @Composable
 private fun rememberSettingsRootSearchRevealConnection(
