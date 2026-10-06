@@ -1,5 +1,32 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.NuvioAsyncImage
+import com.nuvio.app.core.ui.ThemeAccentRing
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.profiles.AvatarRepository
+import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.profiles.parseHexColor
+import com.nuvio.app.features.profiles.profileAvatarImageUrl
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,7 +43,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.Tune
@@ -72,6 +98,7 @@ import nuvio.composeapp.generated.resources.about_licenses_attributions_subtitle
 import org.jetbrains.compose.resources.stringResource
 
 private const val PRIVACY_POLICY_URL = "https://nuvio.tv/privacy-policy"
+private val RootSectionExtraGap = 12.dp
 
 internal fun LazyListScope.settingsRootContent(
     isTablet: Boolean,
@@ -96,23 +123,37 @@ internal fun LazyListScope.settingsRootContent(
     showAdvancedSection: Boolean = true,
     showSupportersContributorsPage: Boolean = true,
 ) {
+    // Every card after the first gets one more list gap above it, so the root page separates its
+    // groups the way iOS Settings does; sub-pages keep the standard spacing.
+    var isFirstSection = true
+    fun nextSectionModifier(): Modifier {
+        val modifier = if (isFirstSection) Modifier else Modifier.padding(top = RootSectionExtraGap)
+        isFirstSection = false
+        return modifier
+    }
     if (showAccountSection) {
+        if (onSwitchProfileClick != null) {
+            val sectionModifier1 = nextSectionModifier()
+            item {
+                SettingsSection(
+                    title = null,
+                    isTablet = isTablet,
+                    modifier = sectionModifier1,
+                ) {
+                    SettingsGroup(isTablet = isTablet) {
+                        SettingsProfileCardRow(isTablet = isTablet, onClick = onSwitchProfileClick)
+                    }
+                }
+            }
+        }
+        val sectionModifier2 = nextSectionModifier()
         item {
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
+                modifier = sectionModifier2,
             ) {
                 SettingsGroup(isTablet = isTablet) {
-                    if (onSwitchProfileClick != null) {
-                        SettingsNavigationRow(
-                            title = stringResource(Res.string.compose_settings_root_profile_title),
-                            description = stringResource(Res.string.compose_settings_root_profile_description),
-                            icon = Icons.Rounded.People,
-                            isTablet = isTablet,
-                            onClick = onSwitchProfileClick,
-                        )
-                        SettingsGroupDivider(isTablet = isTablet)
-                    }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_account),
                         description = stringResource(Res.string.compose_settings_root_account_description),
@@ -133,10 +174,12 @@ internal fun LazyListScope.settingsRootContent(
         }
     }
     if (showGeneralSection) {
+        val sectionModifier3 = nextSectionModifier()
         item {
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
+                modifier = sectionModifier3,
             ) {
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
@@ -191,11 +234,13 @@ internal fun LazyListScope.settingsRootContent(
         }
     }
     if (showAboutSection) {
+        val sectionModifier4 = nextSectionModifier()
         item {
             val uriHandler = LocalUriHandler.current
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
+                modifier = sectionModifier4,
             ) {
                 SettingsGroup(isTablet = isTablet) {
                     if (showSupportersContributorsPage) {
@@ -256,10 +301,12 @@ internal fun LazyListScope.settingsRootContent(
         }
     }
     if (showAdvancedSection) {
+        val sectionModifier5 = nextSectionModifier()
         item {
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
+                modifier = sectionModifier5,
             ) {
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
@@ -307,5 +354,90 @@ internal fun LazyListScope.settingsRootContent(
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+/**
+ * The active profile as its own card at the top of Settings — avatar, name and a one-line summary,
+ * like the account card heading the iOS Settings app — in place of a plain "Profile" row.
+ */
+@Composable
+private fun SettingsProfileCardRow(isTablet: Boolean, onClick: () -> Unit) {
+    val tokens = MaterialTheme.nuvio
+    val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
+    val profile = profileState.activeProfile
+    val avatars by AvatarRepository.avatars.collectAsStateWithLifecycle()
+    val avatarItem = remember(profile?.avatarId, avatars) {
+        profile?.avatarId?.let { id -> avatars.find { it.id == id } }
+    }
+    val avatarImageUrl = remember(profile, avatarItem) { profile?.let { profileAvatarImageUrl(it, avatarItem) } }
+    val avatarColor = remember(profile?.avatarColorHex) {
+        profile?.avatarColorHex?.let(::parseHexColor)
+    } ?: tokens.colors.accent
+    val avatarBackground = avatarItem?.bgColor?.let(::parseHexColor) ?: avatarColor
+    val name = profile?.name?.takeIf { it.isNotBlank() }
+        ?: stringResource(Res.string.compose_settings_root_profile_title)
+    val avatarSize = if (isTablet) 64.dp else 58.dp
+    val ringSize = avatarSize + 8.dp
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = if (isTablet) 20.dp else 16.dp, vertical = if (isTablet) 16.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.size(ringSize), contentAlignment = Alignment.Center) {
+        ThemeAccentRing(modifier = Modifier.matchParentSize())
+        Box(
+            modifier = Modifier
+                .size(avatarSize)
+                .clip(CircleShape)
+                .background(if (avatarImageUrl != null) avatarBackground else avatarColor.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (avatarImageUrl != null) {
+                NuvioAsyncImage(
+                    imageUrl = avatarImageUrl,
+                    contentDescription = name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    animateIfPossible = true,
+                )
+            } else {
+                Text(
+                    text = name.take(1).uppercase(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = avatarColor,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleLarge,
+                color = tokens.colors.textPrimary,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(Res.string.compose_settings_root_profile_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = tokens.colors.textMuted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = tokens.colors.textMuted,
+            modifier = Modifier.size(if (isTablet) 22.dp else 20.dp),
+        )
     }
 }

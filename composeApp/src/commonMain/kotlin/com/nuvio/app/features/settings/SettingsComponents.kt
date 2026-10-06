@@ -234,11 +234,12 @@ internal fun SettingsSection(
     // Sub-pages that pass a real title (e.g. "CREDENTIALS", "LOCALIZATION") are unaffected.
     title: String?,
     isTablet: Boolean,
+    modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
-    Column {
+    Column(modifier = modifier) {
         if (title != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

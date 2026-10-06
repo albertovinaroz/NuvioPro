@@ -48,7 +48,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_nav_home
 import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_live_tv
-import nuvio.composeapp.generated.resources.compose_nav_profile
+import nuvio.composeapp.generated.resources.compose_settings_page_root
 import nuvio.composeapp.generated.resources.compose_nav_search
 import nuvio.composeapp.generated.resources.sidebar_home_outline
 import nuvio.composeapp.generated.resources.sidebar_library_outline
@@ -256,7 +256,7 @@ internal fun mainFloatingNavigationItems(
         FloatingNavigationItem(
             selected = highlightedTab == AppScreenTab.Settings,
             onClick = { onTabSelected(AppScreenTab.Settings) },
-            label = stringResource(Res.string.compose_nav_profile),
+            label = stringResource(Res.string.compose_settings_page_root),
             content = { onClick ->
                 ProfileSwitcherTab(
                     selected = highlightedTab == AppScreenTab.Settings,
