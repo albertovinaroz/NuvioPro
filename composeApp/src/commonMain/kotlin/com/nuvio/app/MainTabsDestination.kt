@@ -32,6 +32,7 @@ import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.FloatingNavigationBar
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.ui.FloatingNavigationItem
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
@@ -422,6 +423,9 @@ internal fun BoxScope.SettingsRouteNavigationBar(
                 glowEnabled = glowEnabled,
                 inlineLabels = isTabletLayout,
                 showLabels = !isIos,
+                // Same pill as the root tabs' bar, so leaving or returning to a settings page
+                // carries the selection animation over instead of restarting it.
+                sharedMotionKey = if (LocalUseNativeNavigation.current) "main_tabs" else null,
             )
         }
     }
