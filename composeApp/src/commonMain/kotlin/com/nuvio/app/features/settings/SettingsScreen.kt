@@ -1,5 +1,13 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.Alignment
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.build.AppFeaturePolicy
 
@@ -733,6 +741,7 @@ private fun MobileSettingsScreen(
         val overscrollFactory = if (page == SettingsPage.Profile) null else LocalOverscrollFactory.current
         val profileDrawsOwnChrome = page == SettingsPage.Profile && showInternalHeader && !LocalUseNativeNavigation.current
         CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
+        Box(modifier = Modifier.fillMaxSize()) {
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -748,6 +757,18 @@ private fun MobileSettingsScreen(
             topPadding = if (page == SettingsPage.Root || page == SettingsPage.Profile) 0.dp else null,
         ) {
             if (profileDrawsOwnChrome) {
+            } else if (showInternalHeader && page == SettingsPage.Root) {
+                // iOS-style large title: scrolls away with the list and hands over to the compact
+                // centered title overlaid below (SettingsRootCompactTitleBar).
+                item(key = SettingsRootLargeTitleKey) {
+                    Column {
+                        NuvioScreenHeader(
+                            title = stringResource(page.titleRes),
+                            topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
             } else if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
@@ -1000,7 +1021,71 @@ private fun MobileSettingsScreen(
                 )
             }
         }
+        if (showInternalHeader && page == SettingsPage.Root) {
+            SettingsRootCompactTitleBar(
+                title = stringResource(page.titleRes),
+                listState = listState,
+            )
         }
+        }
+        }
+    }
+}
+
+private const val SettingsRootLargeTitleKey = "settings_root_large_title"
+
+/**
+ * The compact bar iOS Settings shows once its large title scrolls up under the status bar: a soft
+ * fade of the page background with the title small and centered, fading in as the large one leaves.
+ */
+@Composable
+private fun SettingsRootCompactTitleBar(title: String, listState: LazyListState) {
+    val tokens = MaterialTheme.nuvio
+    val density = LocalDensity.current
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val barHeight = statusBarTop + 44.dp
+    val barHeightPx = with(density) { barHeight.toPx() }
+    val fadePx = with(density) { 20.dp.toPx() }
+    // 0 → the large title is still below the bar; 1 → it has slid fully beneath it. Fades in over
+    // the last `fadePx` of the large title's bottom edge approaching the bar's.
+    val titleProgress by remember(listState, barHeightPx, fadePx) {
+        derivedStateOf {
+            val titleItem = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == SettingsRootLargeTitleKey }
+            if (titleItem == null) {
+                if (listState.firstVisibleItemIndex > 0) 1f else 0f
+            } else {
+                val titleBottom = (titleItem.offset + titleItem.size).toFloat()
+                ((barHeightPx + fadePx - titleBottom) / fadePx).coerceIn(0f, 1f)
+            }
+        }
+    }
+    val background = tokens.colors.background
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(barHeight + 18.dp)
+            .graphicsLayer { alpha = titleProgress }
+            .background(
+                Brush.verticalGradient(
+                    0f to background,
+                    0.62f to background.copy(alpha = 0.94f),
+                    1f to background.copy(alpha = 0f),
+                ),
+            ),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
+            color = tokens.colors.textPrimary,
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = statusBarTop)
+                .height(44.dp)
+                .wrapContentHeight(Alignment.CenterVertically)
+                .graphicsLayer { translationY = (1f - titleProgress) * 6.dp.toPx() },
+        )
     }
 }
 
