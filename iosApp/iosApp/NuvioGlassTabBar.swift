@@ -291,6 +291,9 @@ struct NuvioGlassTabBar: View {
             isExpanded: isExpanded,
             isCompact: isCompactHeight,
             accentColor: iconStore.accentColor,
+            indicatorColor: iconStore.accentColors.isEmpty
+                ? iconStore.accentColor
+                : iconStore.accentColors[iconStore.accentColors.count / 2],
             hapticsEnabled: { Self.tapHapticsEnabled },
             onSelect: { index in
                 guard tabs.indices.contains(index) else { return }

@@ -115,6 +115,14 @@ import kotlin.math.abs
 private const val HERO_BACKGROUND_PARALLAX = 0.055f
 private const val HERO_BACKGROUND_SCALE = 1.14f
 private const val HERO_CONTENT_PARALLAX = 0.18f
+
+// The outgoing title/logo is fully gone by the halfway point and the incoming one only appears
+// after it, so two titles never sit on top of each other mid-swipe; the backdrop keeps its plain
+// linear crossfade.
+private fun heroContentAlpha(visibility: Float): Float {
+    val t = ((visibility - 0.5f) * 2f).coerceIn(0f, 1f)
+    return t * t * (3f - 2f * t)
+}
 private const val HERO_SCROLL_PARALLAX = 0.3f
 private const val HERO_SCROLL_DOWN_SCALE_MULTIPLIER = 0.0001f
 private const val HERO_SCROLL_UP_SCALE_MULTIPLIER = 0.002f
@@ -720,7 +728,7 @@ internal fun HomeHeroSection(
                                 visiblePages.forEach { layer ->
                                     Box(
                                         modifier = Modifier.graphicsLayer {
-                                            alpha = layer.visibility
+                                            alpha = heroContentAlpha(layer.visibility)
                                             translationX = -layer.offset * heroWidthPx * HERO_CONTENT_PARALLAX
                                         },
                                     ) {

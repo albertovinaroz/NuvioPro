@@ -38,6 +38,9 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
     let isExpanded: Bool
     let isCompact: Bool
     let accentColor: UIColor
+    /// The resting selection indicator's color — the theme gradient's middle stop, which reads as
+    /// the theme's hue where a gradient's end stop (often a pale warm tone) turns muddy at low alpha.
+    let indicatorColor: UIColor
     let hapticsEnabled: () -> Bool
     let onSelect: (Int) -> Void
     let onReselect: (Int) -> Void
@@ -65,6 +68,7 @@ struct NuvioSegmentedTabBar: UIViewRepresentable {
         control.onReselect = onReselect
         control.onLongPress = onLongPress
         control.activeTintColor = accentColor
+        control.indicatorColor = indicatorColor
         view.setCompact(isCompact)
         if view.appliedContentKey != contentKey {
             view.appliedContentKey = contentKey
@@ -262,14 +266,20 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         didSet {
             guard activeTintColor != oldValue else { return }
             accentViews.forEach { $0.tintColor = activeTintColor }
+        }
+    }
+
+    var indicatorColor: UIColor = .tintColor {
+        didSet {
+            guard indicatorColor != oldValue else { return }
             applySelectionTint()
         }
     }
 
     /// The resting selection indicator: lighter than the system's default gray, washed with the
-    /// theme accent so the current tab reads as part of the theme.
+    /// theme color so the current tab reads as part of the theme.
     private func applySelectionTint() {
-        selectedSegmentTintColor = activeTintColor.withAlphaComponent(0.22)
+        selectedSegmentTintColor = indicatorColor.withAlphaComponent(0.24)
     }
 
     /// True between touch down and touch up/cancel, so external selection updates don't fight it.
