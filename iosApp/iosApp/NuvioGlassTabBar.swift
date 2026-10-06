@@ -20,6 +20,10 @@ enum NuvioTabBarBehavior: String, CaseIterable {
 
     var usesCompactPill: Bool { self == .morphed }
 
+    /// Static, auto-hide and morphed all draw NuvioGlassTabBar in place of the system tab bar, so
+    /// they share its theme-tinted Liquid Glass lens; they differ only in how it reacts to scroll.
+    var usesCustomBar: Bool { isEnabled }
+
     var respondsToScroll: Bool { self == .autoHide || self == .morphed }
 }
 
@@ -215,6 +219,15 @@ struct NuvioGlassTabBar: View {
         expandedMetrics == nil
     }
 
+    private var behavior: NuvioTabBarBehavior {
+        appCoordinator.tabBarBehavior
+    }
+
+    /// Auto-hide slides the whole bar away on scroll instead of morphing it into the pill.
+    private var isHiddenByScroll: Bool {
+        behavior == .autoHide && !appCoordinator.isTabBarVisible
+    }
+
     var body: some View {
         Group {
             if usesNativeSegmentedBar {
@@ -228,6 +241,10 @@ struct NuvioGlassTabBar: View {
             }
         }
         .padding(.bottom, bottomInset)
+        .offset(y: isHiddenByScroll ? 140 : 0)
+        .opacity(isHiddenByScroll ? 0 : 1)
+        .allowsHitTesting(!isHiddenByScroll)
+        .animation(.smooth(duration: 0.28), value: isHiddenByScroll)
         .ignoresSafeArea(.container, edges: .bottom)
         .animation(.smooth(duration: 0.22), value: selectedTab)
     }
@@ -288,7 +305,8 @@ struct NuvioGlassTabBar: View {
             items: items,
             contentKey: contentKey,
             selectedIndex: tabs.firstIndex(of: selectedTab) ?? 0,
-            isExpanded: isExpanded,
+            // Only morphed collapses into the pill; static and auto-hide stay a full bar.
+            isExpanded: behavior.usesCompactPill ? isExpanded : true,
             isCompact: isCompactHeight,
             accentColor: iconStore.accentColor,
             indicatorColor: iconStore.accentColors.isEmpty

@@ -1296,10 +1296,10 @@ struct TabContentView: View {
             usesNativeTabBar &&
                 appCoordinator.isMainContentVisible &&
                 coordinator.path.keepsTabBar &&
-                // `morphed` renders its own glass pill (NuvioGlassTabBar) as the only visible tab
-                // bar at all times — the real system one stays hidden so there's never a second
+                // Every enabled behavior renders its own glass bar (NuvioGlassTabBar) as the only
+                // visible tab bar — the real system one stays hidden so there's never a second
                 // instrument to keep in sync with it.
-                appCoordinator.tabBarBehavior != .morphed &&
+                !appCoordinator.tabBarBehavior.usesCustomBar &&
                 appCoordinator.isNativeTabBarVisible
                 ? Visibility.visible
                 : Visibility.hidden,
@@ -2530,7 +2530,7 @@ struct NativeNavContentView: View {
             appCoordinator.tabBarBehavior == .autoHide ? .onScrollDown : .never
         )
         .overlay(alignment: .bottom) {
-            if appCoordinator.tabBarBehavior.usesCompactPill &&
+            if appCoordinator.tabBarBehavior.usesCustomBar &&
                 appCoordinator.isAppReady &&
                 appCoordinator.isSelectedTabAtRoot {
                 // No .opacity/.accessibilityHidden gating here: this pill is the only tab bar
