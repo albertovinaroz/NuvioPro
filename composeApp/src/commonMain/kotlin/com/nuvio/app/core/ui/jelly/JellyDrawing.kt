@@ -33,7 +33,8 @@ internal fun DrawScope.jellyPillPath(frame: JellyFrame, count: Int): Path {
     val tabWidth = (size.width - 2 * inset) / count
     val itemHeight = size.height - 2 * inset
     val centerX = inset + (frame.position + 0.5f) * tabWidth
-    val halfWidth = tabWidth * frame.pillScaleX / 2
+    // A little narrower than its slot, so the pill on an end tab doesn't run into the bar's edge.
+    val halfWidth = (tabWidth - 6.dp.toPx()) * frame.pillScaleX / 2
     val halfHeight = itemHeight * frame.pillScaleY / 2
     val radius = min(tabWidth, itemHeight) / 2
     return Path().apply {

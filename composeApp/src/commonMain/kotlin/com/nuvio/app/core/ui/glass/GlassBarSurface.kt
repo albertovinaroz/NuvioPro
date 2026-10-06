@@ -30,12 +30,17 @@ internal expect fun GlassBarSurface(
 
 /** Haze blur, a dark fill and a thin top-lit edge: the glass bar without the refraction shader. */
 @Composable
-internal fun FrostedGlassBar(hazeState: HazeState?, modifier: Modifier, glowStrength: Float) {
+internal fun FrostedGlassBar(
+    hazeState: HazeState?,
+    modifier: Modifier,
+    glowStrength: Float,
+    hazedFillAlpha: Float = 0.55f,
+) {
     Box(
         modifier
             .then(if (hazeState != null) Modifier.barBackdrop(hazeState) else Modifier)
             .drawWithCache {
-                val fill = GlassSurfaceColor.copy(alpha = if (hazeState != null) 0.55f else 0.82f)
+                val fill = GlassSurfaceColor.copy(alpha = if (hazeState != null) hazedFillAlpha else 0.82f)
                 val edge = Brush.verticalGradient(
                     listOf(Color.White.copy(alpha = 0.27f), Color.White.copy(alpha = 0.02f)),
                 )

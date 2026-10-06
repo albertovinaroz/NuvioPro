@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -49,6 +50,10 @@ import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_live_tv
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
+import nuvio.composeapp.generated.resources.sidebar_home_outline
+import nuvio.composeapp.generated.resources.sidebar_library_outline
+import nuvio.composeapp.generated.resources.sidebar_search_filled
+import nuvio.composeapp.generated.resources.sidebar_search_outline
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.SideEffect
@@ -182,11 +187,15 @@ internal fun MainTabsDestination(
                                 bottom = 8.dp,
                             )
                         } else {
-                            floatingNavigationBarPadding()
+                            phoneFloatingNavigationBarPadding()
                         },
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
                         inlineLabels = isTabletLayout,
+                        showLabels = !isIos,
+                        // A tab tap always leaves the bar expanded, rather than in whatever state
+                        // the previous tab's scroll left it.
+                        expandOnSelect = navBarStyleSetting == NavBarStyle.ADAPTIVE,
                     )
                 }
             }
@@ -209,14 +218,18 @@ internal fun mainFloatingNavigationItems(
             onClick = { onTabSelected(AppScreenTab.Home) },
             icon = Icons.Filled.Home,
             label = stringResource(Res.string.compose_nav_home),
+            outlineDrawable = Res.drawable.sidebar_home_outline,
         ),
     )
     add(
         FloatingNavigationItem(
             selected = highlightedTab == AppScreenTab.Search,
             onClick = { onTabSelected(AppScreenTab.Search) },
-            drawable = AppScreenTab.Search.sidebarDrawable,
+            // The bar's own filled lens (solid glass, like the iOS tab icon); the sidebar's
+            // search drawable is a ring, which reads as unfilled next to its outline.
+            drawable = Res.drawable.sidebar_search_filled,
             label = stringResource(Res.string.compose_nav_search),
+            outlineDrawable = Res.drawable.sidebar_search_outline,
         ),
     )
     add(
@@ -225,6 +238,7 @@ internal fun mainFloatingNavigationItems(
             onClick = { onTabSelected(AppScreenTab.Library) },
             drawable = AppScreenTab.Library.sidebarDrawable,
             label = stringResource(Res.string.compose_nav_library),
+            outlineDrawable = Res.drawable.sidebar_library_outline,
         ),
     )
     if (showLiveTv) {
@@ -234,6 +248,7 @@ internal fun mainFloatingNavigationItems(
                 onClick = { onTabSelected(AppScreenTab.LiveTv) },
                 icon = Icons.Filled.Tv,
                 label = stringResource(Res.string.compose_nav_live_tv),
+                outlineIcon = Icons.Outlined.Tv,
             ),
         )
     }
@@ -304,6 +319,17 @@ internal fun MainClassicNavigationBar(
             )
         }
     }
+}
+
+/**
+ * Bottom padding for the floating bar: on iOS it sits closer to the bottom edge (it's icon-only
+ * there). Shared by the tabs bar and the settings-route bar so the two never drift apart.
+ */
+@Composable
+private fun phoneFloatingNavigationBarPadding(): PaddingValues {
+    if (!isIos) return floatingNavigationBarPadding()
+    val base = floatingNavigationBarPadding().calculateBottomPadding()
+    return PaddingValues(bottom = (base - 18.dp).coerceAtLeast(0.dp))
 }
 
 @Composable
@@ -385,10 +411,11 @@ internal fun BoxScope.SettingsRouteNavigationBar(
                         bottom = 8.dp,
                     )
                 } else {
-                    floatingNavigationBarPadding()
+                    phoneFloatingNavigationBarPadding()
                 },
                 glowEnabled = glowEnabled,
                 inlineLabels = isTabletLayout,
+                showLabels = !isIos,
             )
         }
     }

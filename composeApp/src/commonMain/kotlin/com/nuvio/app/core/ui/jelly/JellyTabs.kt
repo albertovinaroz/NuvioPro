@@ -58,20 +58,28 @@ internal fun JellyTabRow(
 ) {
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
-    val color = if (active) tokens.colors.accent else tokens.colors.textMuted
+    // Unselected items in the secondary text tone (not muted), so the bar doesn't read as disabled.
+    val color = if (active) tokens.colors.accent else tokens.colors.textSecondary
     val iconSize = if (compactSize) 24.dp else 28.dp
     val labelHeight = if (compactSize) 14.dp else 16.dp
     val iconModifier = Modifier.size(iconSize)
         .then(if (active) Modifier.gradientMask(palette.accentBrush()) else Modifier)
     val iconTint = if (active) Color.White else color
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Row(
         modifier = modifier.padding(4.dp).clearAndSetSemantics {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        items.forEach { item ->
+        items.forEachIndexed { index, item ->
+            val visualIndex = visualNavIndex(index, items.size, isRtl)
             Box(
                 Modifier.weight(1f).fillMaxHeight().graphicsLayer {
-                    val scale = if (active) motion.frame.contentScale else 1f
+                    // Scaled by how much the pill covers this tab, identically in the base and the
+                    // pill row — so where the pill's edge cuts across an icon, both halves are the
+                    // same size and it only swaps outline for fill, with no size jump to flicker.
+                    val frame = motion.frame
+                    val coverage = (1f - abs(frame.position - visualIndex)).coerceIn(0f, 1f)
+                    val scale = 1f + (frame.contentScale - 1f) * coverage
                     scaleX = scale
                     scaleY = scale
                 },
@@ -81,6 +89,8 @@ internal fun JellyTabRow(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(iconSize)) {
                             when {
+                                !active && item.outlineIcon != null -> Icon(item.outlineIcon, null, iconModifier, tint = iconTint)
+                                !active && item.outlineDrawable != null -> Icon(painterResource(item.outlineDrawable), null, iconModifier, tint = iconTint)
                                 item.icon != null -> Icon(item.icon, null, iconModifier, tint = iconTint)
                                 item.drawable != null -> Icon(painterResource(item.drawable), null, iconModifier, tint = iconTint)
                             }
@@ -92,6 +102,11 @@ internal fun JellyTabRow(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(iconSize).graphicsLayer { translationY = 2.dp.toPx() * labelFraction }) {
                         when {
+                            // Outline in the base row, filled in the pill's row: since the pill's row
+                            // is clipped to the pill, a tab fills in exactly where the pill covers it
+                            // — including mid-drag, as the pill slides across.
+                            !active && item.outlineIcon != null -> Icon(item.outlineIcon, null, iconModifier, tint = iconTint)
+                            !active && item.outlineDrawable != null -> Icon(painterResource(item.outlineDrawable), null, iconModifier, tint = iconTint)
                             item.icon != null -> Icon(item.icon, null, iconModifier, tint = iconTint)
                             item.drawable != null -> Icon(painterResource(item.drawable), null, iconModifier, tint = iconTint)
                         }
@@ -104,7 +119,7 @@ internal fun JellyTabRow(
                             style = TextStyle(
                                 fontSize = if (compactSize) 12.sp else 13.sp,
                                 lineHeight = if (compactSize) 14.sp else 16.sp,
-                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
                                 textAlign = TextAlign.Center,
                             ),
                             maxLines = 1,
@@ -205,7 +220,7 @@ private fun InlineJellyLabel(label: String, labelFraction: Float, color: Color, 
         style = TextStyle(
             fontSize = 14.sp,
             lineHeight = 16.sp,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
         ),
         maxLines = 1,
         softWrap = false,

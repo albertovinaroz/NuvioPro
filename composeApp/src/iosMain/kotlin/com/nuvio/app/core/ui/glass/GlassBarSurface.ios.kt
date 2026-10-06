@@ -8,5 +8,6 @@ import dev.chrisbanes.haze.HazeState
 // haze bar — the same surface Android falls back to below API 33.
 @Composable
 internal actual fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier, glowStrength: Float) {
-    FrostedGlassBar(hazeState, modifier, glowStrength)
+    // A lighter fill over the blur than Android's, so the bar reads as translucent glass.
+    FrostedGlassBar(hazeState, modifier, glowStrength, hazedFillAlpha = 0.12f)
 }

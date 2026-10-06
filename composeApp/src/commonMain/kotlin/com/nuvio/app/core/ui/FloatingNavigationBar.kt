@@ -2,6 +2,8 @@ package com.nuvio.app.core.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -59,6 +61,9 @@ internal class FloatingNavigationItem(
     val icon: ImageVector? = null,
     val drawable: DrawableResource? = null,
     val content: (@Composable (onClick: () -> Unit) -> Unit)? = null,
+    /** Unselected look; the filled [icon]/[drawable] shows only under the selection pill. */
+    val outlineIcon: ImageVector? = null,
+    val outlineDrawable: DrawableResource? = null,
 )
 
 /**
@@ -68,6 +73,11 @@ internal class FloatingNavigationItem(
 internal val LocalNuvioTabletNavLayout = staticCompositionLocalOf { false }
 
 internal expect val floatingNavigationGlowSupported: Boolean
+
+/** The jelly track's spring stiffness (see JellyMotion: 240 / 0.9), shared so the bar's own expand/zoom settle in step with it. */
+private const val JellyTrackStiffness = 240f / 0.9f
+private const val ExpandOnSelectDelayMs = 180L
+private const val CollapsedZoom = 0.94f
 
 @Composable
 internal fun floatingNavigationBarPadding(): PaddingValues = PaddingValues(
@@ -87,6 +97,8 @@ internal fun FloatingNavigationBar(
     compactSize: Boolean = false,
     glowEnabled: Boolean = true,
     inlineLabels: Boolean = false,
+    showLabels: Boolean = true,
+    expandOnSelect: Boolean = false,
 ) {
     if (items.isEmpty()) return
     val showGlow = !floatingNavigationGlowSupported || glowEnabled
@@ -98,11 +110,25 @@ internal fun FloatingNavigationBar(
     val tokens = MaterialTheme.nuvio
     val accentColor = tokens.colors.accent
     val selectedSurface = accentColor.copy(alpha = NuvioTokens.Opacity.selected)
-    val labelFraction by animateFloatAsState(
-        targetValue = scrollState?.labelVisibility ?: 1f,
-        animationSpec = tween(NuvioTokens.Motion.sheetEnterMillis, easing = NuvioTokens.Motion.standard),
+    // How expanded the bar is (scroll-driven); labels follow it unless they're switched off, in
+    // which case the bar still widens/narrows but stays icon-only and icon-height.
+    val targetExpansion = scrollState?.labelVisibility ?: 1f
+    val expansion by animateFloatAsState(
+        targetValue = targetExpansion,
+        // Expanding springs slightly past full width for a "zoom in" pop; collapsing stays a plain
+        // tween — an undershoot below 0 would shrink label slots to negative heights.
+        animationSpec = if (targetExpansion >= 1f) {
+            spring(dampingRatio = 0.72f, stiffness = JellyTrackStiffness)
+        } else {
+            tween(NuvioTokens.Motion.sheetEnterMillis, easing = NuvioTokens.Motion.standard)
+        },
         label = "jelly_labels",
     )
+    val labelFraction = if (showLabels) expansion.coerceIn(0f, 1f) else 0f
+    // The bar's size follows the same animated value as its width, so expanding reads as one
+    // continuous zoom-in (with the spring's slight overshoot as the pop) instead of a separate scale
+    // animation that had to snap down first and settled on its own, out of step with the width.
+    val zoom = CollapsedZoom + (1f - CollapsedZoom) * expansion.coerceAtLeast(0f)
     val layoutDirection = LocalLayoutDirection.current
     val isRtl = layoutDirection == LayoutDirection.Rtl
     val selectedIndex = items.indexOfFirst { it.selected }
@@ -113,13 +139,13 @@ internal fun FloatingNavigationBar(
     val density = LocalDensity.current
     val trackHeight = if (inlineLabels) 48.dp + 4.dp * labelFraction
     else 48.dp + (if (compactSize) 8.dp else 16.dp) * labelFraction
-    val horizontalPadding = 58.dp - 30.dp * labelFraction
+    val horizontalPadding = 58.dp - 30.dp * expansion
     // Inline (tablet) pill: expanded fits icon + label per tab, compact shrinks to icon-only
     // slots instead of keeping most of the expanded width.
     val inlineMaxWidth = run {
         val compactWidth = 64.dp * items.size + 8.dp
         val expandedWidth = 640.dp
-        compactWidth + (expandedWidth - compactWidth) * labelFraction
+        compactWidth + (expandedWidth - compactWidth) * expansion
     }
 
     SideEffect {
@@ -132,6 +158,12 @@ internal fun FloatingNavigationBar(
             motion.snap(visualSelectedIndex)
         } else {
             motion.select(visualSelectedIndex)
+        }
+        if (expandOnSelect && scrollState != null && scrollState.labelVisibility < 1f) {
+            // Lets the pill's selection pop play first, then expands/zooms the bar as a follow-on
+            // beat rather than both competing at once.
+            kotlinx.coroutines.delay(ExpandOnSelectDelayMs)
+            scrollState.expand()
         }
     }
     LaunchedEffect(motion.running) {
@@ -157,6 +189,11 @@ internal fun FloatingNavigationBar(
                 .widthIn(max = if (inlineLabels) inlineMaxWidth else 400.dp)
                 .fillMaxWidth()
                 .height(trackHeight)
+                .graphicsLayer {
+                    scaleX = zoom
+                    scaleY = zoom
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                }
                 .onSizeChanged {
                     motion.resize(it.width / density.density, it.height / density.density, items.size)
                 }
@@ -272,7 +309,17 @@ internal suspend fun PointerInputScope.detectJellyTabGestures(
                     finished = true
                     break
                 }
-                if (change.isConsumed && !claimed) break
+                if (change.isConsumed && !claimed) {
+                    // A plain tap released onto a tab: that tab's own selectable consumed the up
+                    // and handles the click itself. Finish the motion toward it rather than letting
+                    // the cancel below snap the pill back to the old tab until the new selection
+                    // lands (late on iOS, via the native tab bridge) — the back-and-forth flicker.
+                    if (!change.pressed) {
+                        motion.finish()
+                        finished = true
+                    }
+                    break
+                }
                 motion.drag(delta.x / density, delta.y / density)
                 if (!change.pressed) {
                     val visualIndex = motion.finish()
