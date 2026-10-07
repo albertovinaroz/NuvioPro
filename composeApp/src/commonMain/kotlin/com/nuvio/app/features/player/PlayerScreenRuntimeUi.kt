@@ -918,6 +918,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         },
         showStreamInfoModal = showStreamInfoModal,
         mediaInfoJson = playbackSnapshot.mediaInfoJson,
+        streamInfoSource = PlaybackInfoSource(
+            addonName = activeProviderName,
+            addonLogo = activeAddonLogo,
+            streamName = activeStreamTitle,
+            streamDescription = activeStreamSubtitle,
+        ),
+        streamInfoSubtitleTrack = subtitleTracks.firstOrNull { it.index == selectedSubtitleIndex }
+            .takeIf { !useCustomSubtitles },
+        streamInfoAddonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onStreamInfoModalDismissed = { showStreamInfoModal = false },
         showSleepTimerModal = showSleepTimerModal,
         sleepTimerActive = sleepTimerEndAtMs != null,

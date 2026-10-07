@@ -50,7 +50,26 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_player_playback_info
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import nuvio.composeapp.generated.resources.stream_info_section_source
+import nuvio.composeapp.generated.resources.stream_info_section_subtitle
+import nuvio.composeapp.generated.resources.stream_info_name
+import nuvio.composeapp.generated.resources.stream_info_language
+import nuvio.composeapp.generated.resources.stream_info_source
+import nuvio.composeapp.generated.resources.stream_info_subtitle_source_addon
+import nuvio.composeapp.generated.resources.stream_info_subtitle_source_embedded
 import org.jetbrains.compose.resources.stringResource
+
+/** Where the playing stream came from: the addon that served it and the stream's own name/notes. */
+internal data class PlaybackInfoSource(
+    val addonName: String,
+    val addonLogo: String?,
+    val streamName: String,
+    val streamDescription: String?,
+)
 
 @Composable
 internal fun PlaybackInfoModal(
@@ -58,6 +77,9 @@ internal fun PlaybackInfoModal(
     mediaInfoJson: String,
     selectedQualityVariant: PlayerQualityVariant? = null,
     selectedQualityIsAuto: Boolean = false,
+    source: PlaybackInfoSource? = null,
+    subtitleTrack: SubtitleTrack? = null,
+    addonSubtitle: AddonSubtitle? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -67,6 +89,8 @@ internal fun PlaybackInfoModal(
             ?.takeIf { it.isNotEmpty() }
     }
     val hasSelectedQuality = selectedQualityVariant != null
+    val hasSource = source != null && source.addonName.isNotBlank()
+    val hasSubtitle = subtitleTrack != null || addonSubtitle != null
 
     AnimatedVisibility(
         visible = visible,
@@ -141,7 +165,7 @@ internal fun PlaybackInfoModal(
 
                         HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-                        if (parsed == null && !hasSelectedQuality) {
+                        if (parsed == null && !hasSelectedQuality && !hasSource && !hasSubtitle) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -160,6 +184,9 @@ internal fun PlaybackInfoModal(
                                 parsed = parsed,
                                 selectedQualityVariant = selectedQualityVariant,
                                 selectedQualityIsAuto = selectedQualityIsAuto,
+                                source = source?.takeIf { hasSource },
+                                subtitleTrack = subtitleTrack,
+                                addonSubtitle = addonSubtitle,
                                 modifier = Modifier
                                     .weight(1f)
                                     .verticalScroll(rememberScrollState()),
@@ -177,9 +204,13 @@ private fun PlaybackInfoContent(
     parsed: JsonObject?,
     selectedQualityVariant: PlayerQualityVariant?,
     selectedQualityIsAuto: Boolean,
+    source: PlaybackInfoSource?,
+    subtitleTrack: SubtitleTrack?,
+    addonSubtitle: AddonSubtitle?,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
+        source?.let { PlaybackSourceSection(it) }
         selectedQualityVariant?.let { variant ->
             SectionHeader(title = "Selected Quality")
 
@@ -209,7 +240,16 @@ private fun PlaybackInfoContent(
             }
         }
 
-        val playbackInfo = parsed ?: return@Column
+        parsed?.let { PlaybackStreamsSections(it) }
+        if (addonSubtitle != null || subtitleTrack != null) {
+            PlaybackSubtitleSection(subtitleTrack, addonSubtitle)
+        }
+    }
+}
+
+@Composable
+private fun PlaybackStreamsSections(playbackInfo: JsonObject) {
+    Column {
         val engine = playbackInfo.stringValue("engine")
         if (engine.isNotBlank()) {
             SectionHeader(title = "Playback Engine")
@@ -333,6 +373,76 @@ private fun PlaybackInfoContent(
             }
         }
     }
+}
+
+@Composable
+private fun PlaybackSourceSection(source: PlaybackInfoSource) {
+    SectionHeader(title = stringResource(Res.string.stream_info_section_source))
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!source.addonLogo.isNullOrBlank()) {
+            AsyncImage(
+                model = source.addonLogo,
+                contentDescription = source.addonName,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)),
+            )
+            Spacer(Modifier.width(12.dp))
+        }
+        Column {
+            Text(
+                text = source.addonName,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (source.streamName.isNotBlank() && source.streamName != source.addonName) {
+                PlaybackSourceSecondaryText(source.streamName)
+            }
+        }
+    }
+    if (!source.streamDescription.isNullOrBlank()) {
+        PlaybackSourceSecondaryText(source.streamDescription, maxLines = 3)
+    }
+}
+
+@Composable
+private fun PlaybackSourceSecondaryText(text: String, maxLines: Int = 1) {
+    Text(
+        text = text.replace("\n", " · "),
+        color = Color.White.copy(alpha = 0.7f),
+        fontSize = 13.sp,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun PlaybackSubtitleSection(subtitleTrack: SubtitleTrack?, addonSubtitle: AddonSubtitle?) {
+    SectionHeader(title = stringResource(Res.string.stream_info_section_subtitle))
+    val name = addonSubtitle?.display
+        ?: subtitleTrack?.let { localizedTrackDisplayName(it.label, it.language, it.index) }
+    if (!name.isNullOrBlank()) {
+        InfoRow(label = stringResource(Res.string.stream_info_name), value = name)
+    }
+    (addonSubtitle?.language ?: subtitleTrack?.language)
+        ?.takeIf { it.isNotBlank() }
+        ?.let { InfoRow(label = stringResource(Res.string.stream_info_language), value = languageLabelForCode(it)) }
+    InfoRow(
+        label = stringResource(Res.string.stream_info_source),
+        value = if (addonSubtitle != null) {
+            listOfNotNull(
+                stringResource(Res.string.stream_info_subtitle_source_addon),
+                addonSubtitle.addonName?.takeIf { it.isNotBlank() },
+            ).joinToString(" · ")
+        } else {
+            stringResource(Res.string.stream_info_subtitle_source_embedded)
+        },
+    )
 }
 
 @Composable
