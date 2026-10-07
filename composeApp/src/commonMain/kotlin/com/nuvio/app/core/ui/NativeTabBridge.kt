@@ -54,6 +54,15 @@ internal object NativeTabBridge {
         _profileSelectionRequests.tryEmit(profileIndex)
     }
 
+    // Taps on the calendar button in Library's native Liquid Glass capsule, which opens a panel
+    // owned by the Compose screen.
+    private val _libraryCalendarRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val libraryCalendarRequests: SharedFlow<Unit> = _libraryCalendarRequests.asSharedFlow()
+
+    fun requestLibraryCalendar() {
+        _libraryCalendarRequests.tryEmit(Unit)
+    }
+
     fun markActiveTab(tab: NativeNavigationTab) {
         _activeTab.value = tab
     }
@@ -257,6 +266,10 @@ fun observeNativePopToRoot(listener: (String) -> Unit) {
 
 fun nativeTabSelect(tabName: String) {
     NativeTabBridge.requestTab(tabName)
+}
+
+fun nativeLibraryCalendarOpen() {
+    NativeTabBridge.requestLibraryCalendar()
 }
 
 fun publishProfileTabIconFrame(xDp: Float, yDp: Float, widthDp: Float, heightDp: Float) {

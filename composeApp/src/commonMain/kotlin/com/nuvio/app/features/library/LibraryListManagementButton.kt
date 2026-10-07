@@ -3,8 +3,11 @@ package com.nuvio.app.features.library
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.ui.nuvio
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,11 +37,16 @@ internal fun LibraryListManagementButton() {
     if (context == null) return
     val provider = context.source.providerId?.let(TrackingProviderRegistry::libraryProvider) ?: return
     val manager = provider.listManager ?: return
-    IconButton(onClick = controller::create) {
+    // A chip at the head of the saved-library filter row (see LibrarySavedControls).
+    LibraryControlIconChip(
+        contentDescription = stringResource(Res.string.library_create_list),
+        onClick = controller::create,
+    ) {
         Icon(
             imageVector = Icons.Rounded.Add,
-            contentDescription = stringResource(Res.string.library_create_list),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.nuvio.colors.textPrimary,
         )
     }
     state?.let { dialog ->

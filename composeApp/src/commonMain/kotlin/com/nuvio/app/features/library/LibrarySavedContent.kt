@@ -1,5 +1,19 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.nuvio.app.core.ui.nuvio
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -45,15 +59,21 @@ internal fun LibrarySavedControls(
     onSortSelected: (LibrarySortOption) -> Unit,
     onMinRatingSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** View controls shown ahead of the filters, e.g. the layout toggle. */
+    leadingActions: @Composable RowScope.() -> Unit = {},
 ) {
     val sortOptions = availableLibrarySortOptions(sourceMode)
     val allTypesLabel = stringResource(Res.string.library_filter_all_types)
     val anyRatingLabel = stringResource(Res.string.library_rating_any)
 
     Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
+        // Intrinsic height so the square icon chips match the dropdown chips' height.
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        leadingActions()
         if (layoutMode == LibraryLayoutMode.VERTICAL && sourceMode.isRemoteTrackingSource) {
             val selectedSection = verticalProjection.availableSections
                 .firstOrNull { section -> section.type == verticalProjection.selectedSectionKey }
@@ -118,6 +138,28 @@ internal fun LibrarySavedControls(
             options = ratingOptions,
             onSelected = { option -> onMinRatingSelected(option.key.toIntOrNull() ?: 0) },
         )
+    }
+}
+
+/** A square, icon-only chip styled like [NuvioDropdownChip], for the controls row. */
+@Composable
+internal fun LibraryControlIconChip(
+    contentDescription: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .aspectRatio(1f, matchHeightConstraintsFirst = true)
+            .clip(tokens.shapes.compactCard)
+            .background(tokens.colors.surface)
+            .clickable(onClick = onClick)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 

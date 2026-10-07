@@ -94,6 +94,7 @@ internal fun AppGate(
             addProfile: String,
             downloads: String,
             libraryRated: String,
+            libraryCalendar: String,
         ) -> Unit
     )?,
     nativeProfileSwitcherController: NativeProfileSwitcherController?,

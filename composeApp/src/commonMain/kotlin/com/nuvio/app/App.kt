@@ -50,6 +50,7 @@ fun App(
             addProfile: String,
             downloads: String,
             libraryRated: String,
+            libraryCalendar: String,
         ) -> Unit
     )? = null,
     nativeProfileSwitcherController: NativeProfileSwitcherController? = null,

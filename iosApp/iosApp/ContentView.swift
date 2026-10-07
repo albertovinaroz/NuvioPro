@@ -886,6 +886,7 @@ final class AppNavigationCoordinator: ObservableObject {
     @Published private(set) var localizedAddProfileTitle = ""
     @Published private(set) var localizedDownloadsTitle = ""
     @Published private(set) var localizedLibraryRatedTitle = ""
+    @Published private(set) var localizedLibraryCalendarTitle = ""
     @Published var isProfileSwitcherPresented = false
 
     let homeCoordinator = TabNavigationCoordinator()
@@ -1033,7 +1034,8 @@ final class AppNavigationCoordinator: ObservableObject {
         switchProfile: String,
         addProfile: String,
         downloads: String,
-        libraryRated: String
+        libraryRated: String,
+        libraryCalendar: String
     ) {
         localizedTabTitles = [
             .home: home,
@@ -1046,6 +1048,7 @@ final class AppNavigationCoordinator: ObservableObject {
         localizedAddProfileTitle = addProfile
         localizedDownloadsTitle = downloads
         localizedLibraryRatedTitle = libraryRated
+        localizedLibraryCalendarTitle = libraryCalendar
     }
 
     func updateAppReady(_ ready: Bool) {
@@ -1138,7 +1141,7 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            onTabTitles: { home, search, library, profile, switchProfile, addProfile, downloads, libraryRated in
+            onTabTitles: { home, search, library, profile, switchProfile, addProfile, downloads, libraryRated, libraryCalendar in
                 appCoordinator.updateTabTitles(
                     home: home,
                     search: search,
@@ -1147,7 +1150,8 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                     switchProfile: switchProfile,
                     addProfile: addProfile,
                     downloads: downloads,
-                    libraryRated: libraryRated
+                    libraryRated: libraryRated,
+                    libraryCalendar: libraryCalendar
                 )
             },
             appGateController: appCoordinator.appGateController
@@ -1330,10 +1334,15 @@ struct TabContentView: View {
                 // offset is measured from) — see GlassIconButtonGroup on the Kotlin side, which
                 // this replaces on iOS.
                 LibraryHeaderGlassButtons(
+                    calendarTitle: appCoordinator.localizedLibraryCalendarTitle,
                     downloadsTitle: appCoordinator.localizedDownloadsTitle,
                     ratedTitle: appCoordinator.localizedLibraryRatedTitle,
                     isDownloading: downloadsButtonViewModel.isDownloading,
                     hasUnseenCompletedDownload: downloadsButtonViewModel.hasUnseenCompleted,
+                    // The release calendar is a panel inside the Compose screen, not a route.
+                    onCalendar: {
+                        NativeTabBridgeKt.nativeLibraryCalendarOpen()
+                    },
                     onDownloads: {
                         appCoordinator.push(
                             DownloadsRoute(title: appCoordinator.localizedDownloadsTitle),
@@ -1779,14 +1788,22 @@ private struct HeroTrailerMuteButton: View {
 /// (which is all Compose's own GlassIconButtonGroup can approximate on this platform).
 @available(iOS 16.0, *)
 private struct LibraryHeaderGlassButtons: View {
+    let calendarTitle: String
     let downloadsTitle: String
     let ratedTitle: String
     let isDownloading: Bool
     let hasUnseenCompletedDownload: Bool
+    let onCalendar: () -> Void
     let onDownloads: () -> Void
     let onRated: () -> Void
 
     private static let diameter: CGFloat = 44
+
+    private var calendarIcon: some View {
+        Image(systemName: "calendar")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(.white)
+    }
 
     private var ratedIcon: some View {
         Image(systemName: "star.fill")
@@ -1804,6 +1821,7 @@ private struct LibraryHeaderGlassButtons: View {
             // fusion never actually merged the two circles into one surface at this size/gap —
             // this one is a single shape by construction, so there's no fusion threshold to miss.
             HStack(spacing: 14) {
+                glassButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 glassButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
@@ -1812,6 +1830,7 @@ private struct LibraryHeaderGlassButtons: View {
             .glassEffect(.clear.interactive(), in: Capsule())
         } else {
             HStack(spacing: 14) {
+                plainButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 plainButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }

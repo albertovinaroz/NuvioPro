@@ -1,5 +1,25 @@
 package com.nuvio.app.features.library
 
+import com.nuvio.app.core.ui.rememberPinnedHeaderFiller
+import com.nuvio.app.core.ui.pinnedHeaderFiller
+import com.nuvio.app.core.ui.NativeTabBridge
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlin.math.roundToInt
+import com.nuvio.app.core.ui.nuvioNoTopOverscroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.animation.Crossfade
@@ -450,6 +470,11 @@ fun LibraryScreen(
         }
     }
 
+    // The native capsule's calendar button (iOS) can't reach this screen's state directly.
+    LaunchedEffect(Unit) {
+        NativeTabBridge.libraryCalendarRequests.collect { showReleaseCalendar = true }
+    }
+
     val disintegration = remember { LibraryDisintegrationHolder() }
     val librarySectionsDisplay = if (
         sourceMode != LibraryViewMode.Cloud &&
@@ -468,16 +493,67 @@ fun LibraryScreen(
         emptyList()
     }
 
-    // Title and the source switch sit outside the scrollable list entirely (rather than in a
-    // stickyHeader within it) so they're permanently pinned no matter how far the list scrolls —
-    // matching Search's header, which is the reference for this. LibrarySavedControls (the
-    // section/type/sort row) keeps its own stickyHeader further down, the same way Search's own
-    // filter row does.
-    Column(modifier = modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            androidx.compose.foundation.layout.Column(
-                modifier = Modifier.fillMaxWidth(),
+    // Like Search: the large title scrolls away with the list, while the source switch, its
+    // actions and the saved-library filters ride in an overlay that follows their slot in the
+    // list until it reaches the status bar, then pins there on a blurred, theme-tinted header.
+    // The calendar/downloads/rated capsule stays put at the top trailing corner (natively on iOS
+    // — see LibraryHeaderGlassButtons in ContentView.swift), so the switch row docks beside it as
+    // it pins. The view controls (layout, list management) lead the filter row instead.
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val headerDensity = LocalDensity.current
+    val statusBarTopPx = with(headerDensity) { statusBarTop.toPx() }
+    val pinFadePx = with(headerDensity) { 16.dp.toPx() }
+    val headerFadePx = with(headerDensity) { LibraryHeaderFadeHeight.toPx() }
+    val headerHazeState = rememberHazeState()
+    var headerHeightPx by remember { mutableIntStateOf(0) }
+    // Where the header's slot in the list currently sits; -inf once it has scrolled off the top.
+    val headerSlotTop by remember(listState) {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val slot = layoutInfo.visibleItemsInfo.firstOrNull { it.key == LibraryHeaderSlotKey }
+            when {
+                slot != null -> (slot.offset - layoutInfo.viewportStartOffset).toFloat()
+                listState.firstVisibleItemIndex > 0 -> Float.NEGATIVE_INFINITY
+                else -> null
+            }
+        }
+    }
+    // Same condition as the list's populated branch below, which is where these filters used to live.
+    val showSavedControls = sourceMode == LibraryViewMode.Saved &&
+        uiState.isLoaded &&
+        uiState.sections.isNotEmpty()
+    // Short libraries (say, two rows) still scroll far enough for the header to pin.
+    val headerFiller = rememberPinnedHeaderFiller(
+        listState = listState,
+        firstKey = LibraryTitleKey,
+        slotKey = LibraryHeaderSlotKey,
+        pinnedTopPx = statusBarTopPx,
+    )
+    val background = MaterialTheme.nuvio.colors.background
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+            val windowSize = LocalWindowInfo.current.containerSize
+            val density = LocalDensity.current
+            val windowShortSide = with(density) { minOf(windowSize.width, windowSize.height).toDp() }
+            val isLandscape = maxWidth > maxHeight
+            val gridColumns = remember(isLandscape, windowShortSide) {
+                libraryGridColumnCount(
+                    isLandscape = isLandscape,
+                    isTablet = windowShortSide >= 600.dp,
+                )
+            }
+
+            NuvioScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nuvioNoTopOverscroll()
+                    .hazeSource(state = headerHazeState),
+                horizontalPadding = 0.dp,
+                topPadding = 0.dp,
+                listState = listState,
+                autoHidesNativeTabBar = true,
             ) {
+            item(key = LibraryTitleKey) {
                 NuvioScreenHeader(
                     title = if (sourceMode == LibraryViewMode.Cloud) {
                         stringResource(Res.string.library_title)
@@ -492,114 +568,16 @@ fun LibraryScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     // A touch more than the bare status-bar inset — matching Search's header,
                     // which gets the same small top margin.
-                    topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                    actions = {
-                        // Native nav (iOS) renders these as a real Liquid Glass capsule instead —
-                        // see LibraryHeaderGlassButtons in ContentView.swift.
-                        if (!LocalUseNativeNavigation.current) {
-                            val openRatedLabel = stringResource(Res.string.library_rated_open)
-                            GlassIconButtonGroup {
-                                if (onDownloadsClick != null) {
-                                    LibraryDownloadsButton(onClick = onDownloadsClick)
-                                }
-                                IconButton(
-                                    onClick = { onRatedClick?.invoke() },
-                                    modifier = Modifier.semantics { contentDescription = openRatedLabel },
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Star,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(19.dp),
-                                        tint = Color.White,
-                                    )
-                                }
-                            }
-                        }
-                    },
-                )
-                // Same title-to-control gap as Search's header-to-searchbar spacer, so the two
-                // sections read as sharing one layout rhythm.
-                Spacer(modifier = Modifier.height(6.dp))
-                LibrarySourceSwitch(
-                    selectedMode = sourceMode,
-                    onModeSelected = { mode ->
-                        sourceModeName = mode.name
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                ) {
-                    if (sourceMode == LibraryViewMode.Saved) {
-                        LibraryListManagementButton()
-                        val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
-                            LibraryLayoutMode.VERTICAL
-                        } else {
-                            LibraryLayoutMode.HORIZONTAL
-                        }
-                        IconButton(
-                            onClick = {
-                                LibraryDisplaySettingsRepository.setLayoutMode(targetLayout)
-                            },
-                        ) {
-                            Crossfade(
-                                targetState = targetLayout,
-                                animationSpec = tween(durationMillis = 140),
-                                label = "libraryLayoutAction",
-                            ) { animatedTargetLayout ->
-                                Icon(
-                                    imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                        Icons.Rounded.GridView
-                                    } else {
-                                        Icons.Rounded.ViewAgenda
-                                    },
-                                    contentDescription = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
-                                        stringResource(Res.string.library_layout_show_vertical)
-                                    } else {
-                                        stringResource(Res.string.library_layout_show_horizontal)
-                                    },
-                                    tint = MaterialTheme.nuvio.colors.textPrimary,
-                                )
-                            }
-                        }
-                    }
-                    if (sourceMode != LibraryViewMode.Cloud) {
-                        val openCalendarLabel = stringResource(Res.string.library_calendar_open)
-                        IconButton(
-                            onClick = { showReleaseCalendar = true },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .semantics { contentDescription = openCalendarLabel },
-                        ) {
-                            LibraryCalendarGlyph(
-                                modifier = Modifier.size(19.dp),
-                                tint = MaterialTheme.nuvio.colors.textPrimary,
-                                cutoutColor = MaterialTheme.colorScheme.background,
-                            )
-                        }
-                    }
-                }
-                // Matches Search's searchbar-to-content spacer.
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-        }
-
-        BoxWithConstraints(modifier = Modifier.weight(1f)) {
-            val windowSize = LocalWindowInfo.current.containerSize
-            val density = LocalDensity.current
-            val windowShortSide = with(density) { minOf(windowSize.width, windowSize.height).toDp() }
-            val isLandscape = maxWidth > maxHeight
-            val gridColumns = remember(isLandscape, windowShortSide) {
-                libraryGridColumnCount(
-                    isLandscape = isLandscape,
-                    isTablet = windowShortSide >= 600.dp,
+                    topPadding = statusBarTop + 8.dp,
                 )
             }
-
-            NuvioScreen(
-                modifier = Modifier.fillMaxSize(),
-                horizontalPadding = 0.dp,
-                topPadding = 0.dp,
-                listState = listState,
-                autoHidesNativeTabBar = true,
-            ) {
+            item(key = LibraryHeaderSlotKey) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(with(LocalDensity.current) { headerHeightPx.toDp() }),
+                )
+            }
 
             if (sourceMode == LibraryViewMode.Cloud) {
                 cloudLibraryContent(
@@ -693,39 +671,6 @@ fun LibraryScreen(
                     }
 
                     else -> {
-                        // Sticky like Search's own DiscoverFilterRow, so the section/type/sort
-                        // controls stay pinned under the fixed title while the grid scrolls under
-                        // them instead of carrying the controls away with it.
-                        stickyHeader(
-                            key = "library-saved-controls:${uiState.sourceMode}:" +
-                                "${displaySettings.layoutMode}:$effectiveSortOption",
-                        ) {
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .nuvioConsumePointerEvents(),
-                                )
-                                LibrarySavedControls(
-                                    layoutMode = displaySettings.layoutMode,
-                                    sourceMode = uiState.sourceMode,
-                                    sortOption = effectiveSortOption,
-                                    verticalProjection = verticalProjection,
-                                    minRating = selectedMinRating,
-                                    onSectionSelected = { sectionKey ->
-                                        selectedLibrarySectionKey = sectionKey
-                                        selectedLibraryType = null
-                                    },
-                                    onTypeSelected = { type -> selectedLibraryType = type },
-                                    onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
-                                    onMinRatingSelected = { rating -> selectedMinRating = rating },
-                                    modifier = libraryContentTransitionModifier()
-                                        .padding(horizontal = 16.dp)
-                                        .padding(top = 8.dp, bottom = 14.dp),
-                                )
-                            }
-                        }
                         when (displaySettings.layoutMode) {
                             LibraryLayoutMode.HORIZONTAL -> librarySections(
                                 displaySections = librarySectionsDisplay,
@@ -751,8 +696,170 @@ fun LibraryScreen(
                     }
                 }
             }
-        }
-    }
+            pinnedHeaderFiller(headerFiller)
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Positioned in the placement phase, not a graphicsLayer block, which iOS
+                    // stops re-running on scroll after a rotation.
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, placeable.height) {
+                            val slotTop = headerSlotTop
+                            // Parked off screen for the one frame before the list has placed the slot.
+                            val y = if (slotTop == null) {
+                                -placeable.height
+                            } else {
+                                (slotTop - statusBarTopPx).coerceAtLeast(0f).roundToInt()
+                            }
+                            placeable.place(0, y)
+                        }
+                    },
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        // Blur and tint thin out below the filters instead of ending on a hard edge.
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val fadeStart = ((size.height - headerFadePx) / size.height).coerceIn(0f, 1f)
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    fadeStart to Color.Black,
+                                    1f to Color.Transparent,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                        .hazeEffect(state = headerHazeState) {
+                            blurRadius = 24.dp
+                            backgroundColor = background
+                            tints = listOf(HazeTint(background.copy(alpha = 0.72f)))
+                            noiseFactor = 0f
+                            // Fades in over the last stretch before the header pins.
+                            val distance = (headerSlotTop ?: Float.POSITIVE_INFINITY) - statusBarTopPx
+                            alpha = (1f - distance / pinFadePx).coerceIn(0f, 1f)
+                        },
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Room for the backdrop's fade, which stays touch-transparent.
+                        .padding(bottom = LibraryHeaderFadeHeight)
+                        // Drags that start on the header still scroll the list beneath it.
+                        .scrollable(
+                            state = listState,
+                            orientation = Orientation.Vertical,
+                            reverseDirection = true,
+                        )
+                        .padding(top = statusBarTop)
+                        .onSizeChanged { headerHeightPx = it.height },
+                ) {
+                    LibrarySourceSwitch(
+                        selectedMode = sourceMode,
+                        onModeSelected = { mode ->
+                            sourceModeName = mode.name
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            // Centres the row on the capsule once pinned.
+                            .padding(top = 6.dp),
+                    )
+                    if (showSavedControls) {
+                        LibrarySavedControls(
+                            layoutMode = displaySettings.layoutMode,
+                            sourceMode = uiState.sourceMode,
+                            sortOption = effectiveSortOption,
+                            verticalProjection = verticalProjection,
+                            minRating = selectedMinRating,
+                            onSectionSelected = { sectionKey ->
+                                selectedLibrarySectionKey = sectionKey
+                                selectedLibraryType = null
+                            },
+                            onTypeSelected = { type -> selectedLibraryType = type },
+                            onSortSelected = LibraryDisplaySettingsRepository::setSortOption,
+                            onMinRatingSelected = { rating -> selectedMinRating = rating },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 8.dp, bottom = 14.dp),
+                        ) {
+                            LibraryListManagementButton()
+                            val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+                                LibraryLayoutMode.VERTICAL
+                            } else {
+                                LibraryLayoutMode.HORIZONTAL
+                            }
+                            LibraryControlIconChip(
+                                contentDescription = if (targetLayout == LibraryLayoutMode.VERTICAL) {
+                                    stringResource(Res.string.library_layout_show_vertical)
+                                } else {
+                                    stringResource(Res.string.library_layout_show_horizontal)
+                                },
+                                onClick = { LibraryDisplaySettingsRepository.setLayoutMode(targetLayout) },
+                            ) {
+                                Crossfade(
+                                    targetState = targetLayout,
+                                    animationSpec = tween(durationMillis = 140),
+                                    label = "libraryLayoutAction",
+                                ) { animatedTargetLayout ->
+                                    Icon(
+                                        imageVector = if (animatedTargetLayout == LibraryLayoutMode.VERTICAL) {
+                                            Icons.Rounded.GridView
+                                        } else {
+                                            Icons.Rounded.ViewAgenda
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.nuvio.colors.textPrimary,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                }
+            }
+
+            // Native nav (iOS) renders these as a real Liquid Glass capsule instead.
+            if (!LocalUseNativeNavigation.current) {
+                val openRatedLabel = stringResource(Res.string.library_rated_open)
+                GlassIconButtonGroup(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = statusBarTop + 8.dp, end = 16.dp),
+                ) {
+                    val openCalendarLabel = stringResource(Res.string.library_calendar_open)
+                    IconButton(
+                        onClick = { showReleaseCalendar = true },
+                        modifier = Modifier.semantics { contentDescription = openCalendarLabel },
+                    ) {
+                        LibraryCalendarGlyph(
+                            modifier = Modifier.size(19.dp),
+                            tint = Color.White,
+                            cutoutColor = MaterialTheme.colorScheme.background,
+                        )
+                    }
+                    if (onDownloadsClick != null) {
+                        LibraryDownloadsButton(onClick = onDownloadsClick)
+                    }
+                    IconButton(
+                        onClick = { onRatedClick?.invoke() },
+                        modifier = Modifier.semantics { contentDescription = openRatedLabel },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(19.dp),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            }
     }
 
     if (showReleaseCalendar) {
@@ -781,6 +888,10 @@ fun LibraryScreen(
         )
     }
 }
+
+private const val LibraryTitleKey = "library_title"
+private const val LibraryHeaderSlotKey = "library_header"
+private val LibraryHeaderFadeHeight = 28.dp
 
 private fun LazyListScope.cloudLibraryContent(
     uiState: CloudLibraryUiState,
@@ -984,11 +1095,9 @@ private fun LibrarySourceSwitch(
     selectedMode: LibraryViewMode,
     onModeSelected: (LibraryViewMode) -> Unit,
     modifier: Modifier = Modifier,
-    trailingActions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
-        // Held at an IconButton's height so the row doesn't shrink (and everything below it jump
-        // up) in Cloud mode, which shows no trailing actions.
+        // An IconButton's height, which also centres it on the Liquid Glass capsule once pinned.
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp),
@@ -1004,12 +1113,6 @@ private fun LibrarySourceSwitch(
             label = stringResource(Res.string.library_source_cloud),
             selected = selectedMode == LibraryViewMode.Cloud,
             onClick = { onModeSelected(LibraryViewMode.Cloud) },
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(0.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = trailingActions,
         )
     }
 }

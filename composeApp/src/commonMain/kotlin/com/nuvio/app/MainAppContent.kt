@@ -223,6 +223,7 @@ internal fun MainAppContent(
             addProfile: String,
             downloads: String,
             libraryRated: String,
+            libraryCalendar: String,
         ) -> Unit
     )? = null,
     appGateController: AppGateController? = null,
@@ -389,6 +390,7 @@ internal fun MainAppContent(
     val notificationsFeedTitle = stringResource(Res.string.notifications_feed_title)
     val notificationsSettingsTitle = stringResource(Res.string.compose_settings_page_notifications)
     val libraryRatedTitle = stringResource(Res.string.library_rated_title)
+    val libraryCalendarTitle = stringResource(Res.string.library_calendar_open)
     val downloadsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
@@ -523,6 +525,7 @@ internal fun MainAppContent(
         nativeAddProfileTitle,
         downloadsTitle,
         libraryRatedTitle,
+        libraryCalendarTitle,
         onTabTitles,
     ) {
         NativeTabBridge.publishTabTitles(
@@ -540,6 +543,7 @@ internal fun MainAppContent(
             nativeAddProfileTitle,
             downloadsTitle,
             libraryRatedTitle,
+            libraryCalendarTitle,
         )
     }
 
