@@ -549,13 +549,13 @@ internal fun HomeHeroSection(
                         .fillMaxSize()
                         .hazeSource(state = heroHazeState),
                 ) {
+                    // The artwork spans the whole hero; only HeroContentBlock below is held to
+                    // contentWidthFraction/contentMaxWidth on wide screens.
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(layout.contentWidthFraction)
-                            .widthIn(max = layout.contentMaxWidth)
+                            .fillMaxWidth()
                             .height(layout.heroHeight)
                             .heroStretchZoom(stretchPx),
-                        contentAlignment = if (layout.isTablet) Alignment.CenterStart else Alignment.BottomStart,
                     ) {
                         visiblePages.forEach { layer ->
                             val item = items[layer.itemIndex]
