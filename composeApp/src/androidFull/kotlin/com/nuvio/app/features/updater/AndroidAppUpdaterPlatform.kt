@@ -24,6 +24,7 @@ import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 
 object AndroidAppUpdaterPlatform {
+    private const val whatsNewCacheKey = "whats_new_cache"
     private const val preferencesName = "nuvio_updater"
     private const val ignoredTagKey = "ignored_release_tag"
     private const val updateChannelKey = "update_channel"
@@ -55,6 +56,14 @@ object AndroidAppUpdaterPlatform {
     fun setIgnoredTag(tag: String?) {
         preferences().edit().apply {
             if (tag == null) remove(ignoredTagKey) else putString(ignoredTagKey, tag)
+        }.apply()
+    }
+
+    fun getWhatsNewCache(): String? = preferences().getString(whatsNewCacheKey, null)
+
+    fun setWhatsNewCache(payload: String?) {
+        preferences().edit().apply {
+            if (payload == null) remove(whatsNewCacheKey) else putString(whatsNewCacheKey, payload)
         }.apply()
     }
 

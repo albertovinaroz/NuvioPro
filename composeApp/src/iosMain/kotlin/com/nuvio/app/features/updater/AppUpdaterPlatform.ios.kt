@@ -1,9 +1,12 @@
 package com.nuvio.app.features.updater
 
+import platform.Foundation.NSUserDefaults
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.updates_not_available
 import org.jetbrains.compose.resources.getString
+
+private const val whatsNewCacheKey = "nuvio_whats_new_cache"
 
 actual object AppUpdaterPlatform {
     actual val isSupported: Boolean = false
@@ -18,6 +21,18 @@ actual object AppUpdaterPlatform {
     actual fun getUpdateChannel(): String? = null
 
     actual fun setUpdateChannel(channel: String) = Unit
+
+    actual fun getWhatsNewCache(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(whatsNewCacheKey)
+
+    actual fun setWhatsNewCache(payload: String?) {
+        val defaults = NSUserDefaults.standardUserDefaults
+        if (payload == null) {
+            defaults.removeObjectForKey(whatsNewCacheKey)
+        } else {
+            defaults.setObject(payload, forKey = whatsNewCacheKey)
+        }
+    }
 
     actual fun deleteDownloadedApk(path: String) = Unit
 

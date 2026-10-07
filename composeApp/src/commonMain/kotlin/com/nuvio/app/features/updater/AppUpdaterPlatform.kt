@@ -14,6 +14,11 @@ expect object AppUpdaterPlatform {
 
     fun setUpdateChannel(channel: String)
 
+    /** Persisted release history for the What's New screen (see WhatsNewRepository). */
+    fun getWhatsNewCache(): String?
+
+    fun setWhatsNewCache(payload: String?)
+
     fun deleteDownloadedApk(path: String)
 
     suspend fun downloadApk(

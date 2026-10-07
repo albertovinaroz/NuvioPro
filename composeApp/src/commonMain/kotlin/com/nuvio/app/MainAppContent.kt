@@ -176,7 +176,7 @@ import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.toggleTrackingLibraryMembership
 import com.nuvio.app.features.updater.AppUpdaterHost
 import com.nuvio.app.features.updater.AppUpdaterPlatform
-import com.nuvio.app.features.updater.WhatsNewScreen
+import com.nuvio.app.features.whatsnew.WhatsNewSettingsScreen
 import com.nuvio.app.features.updater.rememberAppUpdaterController
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingActions
@@ -1889,7 +1889,7 @@ internal fun MainAppContent(
                 }
                 entry<WhatsNewRoute> { route ->
                     SettingsDestination(route, navController) { onBack ->
-                        WhatsNewScreen(onBack = onBack)
+                        WhatsNewSettingsScreen(onBack = onBack)
                     }
                 }
                 entry<SettingsPageRoute> { route ->

@@ -112,6 +112,17 @@ internal object VersionUtils {
         return parts.takeIf { it.isNotEmpty() }
     }
 
+    /** Orderable form of a release version, or null for anything that isn't one (at least X.Y.Z). */
+    fun parse(raw: String?): ReleaseVersion? =
+        parseVersionParts(raw)?.takeIf { it.size >= 3 }?.let(::ReleaseVersion)
+
+    /** Same X.Y.Z, whatever the build suffix ("0.5.6-b2" and "0.5.6-b6"). */
+    fun isSameBaseVersion(left: String?, right: String?): Boolean {
+        val leftParts = parse(left)?.parts ?: return false
+        val rightParts = parse(right)?.parts ?: return false
+        return leftParts.take(3) == rightParts.take(3)
+    }
+
     fun isRemoteNewer(remote: String?, local: String?): Boolean {
         val remoteParts = parseVersionParts(remote)
         val localParts = parseVersionParts(local)
@@ -132,6 +143,17 @@ internal object VersionUtils {
     }
 }
 
+/** Numeric version parts compared in order, a missing part counting as 0 — so "-b10" sorts after "-b9". */
+internal data class ReleaseVersion(val parts: List<Int>) : Comparable<ReleaseVersion> {
+    override fun compareTo(other: ReleaseVersion): Int {
+        for (index in 0 until maxOf(parts.size, other.parts.size)) {
+            val difference = parts.getOrElse(index) { 0 } - other.parts.getOrElse(index) { 0 }
+            if (difference != 0) return difference
+        }
+        return 0
+    }
+}
+
 internal data class LatestChannelRelease(
     val tag: String,
     val releaseUrl: String?,
@@ -140,9 +162,16 @@ internal data class LatestChannelRelease(
 
 internal data class ChannelReleaseNote(
     val tag: String,
+    val title: String = tag,
     val notes: String,
     val releaseUrl: String?,
     val publishedAt: String?,
+)
+
+internal data class ChannelReleaseHistory(
+    val notModified: Boolean,
+    val etag: String?,
+    val releases: List<ChannelReleaseNote>,
 )
 
 internal object AppUpdaterRepository {
@@ -180,42 +209,63 @@ internal object AppUpdaterRepository {
         )
     }
 
-    /** Recent channel releases with their notes, newest first — for an in-app "What's New" list
-     * rather than just checking whether an update is available. */
-    suspend fun getRecentChannelReleases(limit: Int): Result<List<ChannelReleaseNote>> = runCatching {
-        fetchChannelReleases().take(limit).map { release ->
-            ChannelReleaseNote(
-                tag = release.tagOrName(),
-                notes = release.body.orEmpty(),
-                releaseUrl = release.htmlUrl,
-                publishedAt = release.publishedAt,
-            )
+    /**
+     * The channel's release history for What's New, newest first. [etag] from a previous call makes
+     * it a conditional request: an unchanged history comes back as [ChannelReleaseHistory.notModified]
+     * without spending the response (or, on GitHub's side, the rate limit) on it again.
+     */
+    suspend fun getChannelReleaseHistory(etag: String?): ChannelReleaseHistory {
+        val response = requestReleases(perPage = 100, etag = etag)
+        val responseEtag = response.headers.entries
+            .firstOrNull { it.key.equals("ETag", ignoreCase = true) }
+            ?.value
+        if (response.status == 304) {
+            return ChannelReleaseHistory(notModified = true, etag = responseEtag ?: etag, releases = emptyList())
         }
+        return ChannelReleaseHistory(
+            notModified = false,
+            etag = responseEtag,
+            releases = decodeChannelReleases(response.body).map { release ->
+                val tag = release.tagOrName()
+                ChannelReleaseNote(
+                    tag = tag,
+                    title = release.name?.takeIf { it.isNotBlank() } ?: tag,
+                    notes = release.body.orEmpty(),
+                    releaseUrl = release.htmlUrl,
+                    publishedAt = release.publishedAt,
+                )
+            },
+        )
     }
 
     private suspend fun fetchLatestChannelRelease(): GitHubReleaseDto =
         fetchChannelReleases().firstOrNull() ?: throw NoChannelReleaseException()
 
-    private suspend fun fetchChannelReleases(): List<GitHubReleaseDto> {
-        val response = httpRequestRaw(
+    private suspend fun fetchChannelReleases(): List<GitHubReleaseDto> =
+        decodeChannelReleases(requestReleases(perPage = 20, etag = null).body)
+
+    private suspend fun requestReleases(perPage: Int, etag: String?) =
+        httpRequestRaw(
             method = "GET",
-            url = "$gitHubApiBase/repos/$gitHubOwner/$gitHubRepo/releases?per_page=20",
-            headers = mapOf(
-                "Accept" to "application/vnd.github+json",
-                "User-Agent" to "NuvioMobile",
-            ),
+            url = "$gitHubApiBase/repos/$gitHubOwner/$gitHubRepo/releases?per_page=$perPage",
+            headers = buildMap {
+                put("Accept", "application/vnd.github+json")
+                put("User-Agent", "NuvioMobile")
+                etag?.takeIf { it.isNotBlank() }?.let { put("If-None-Match", it) }
+            },
             body = "",
-        )
-        if (response.status == 403 || response.status == 429) {
-            throw GitHubRateLimitedException(response.status)
-        }
-        if (response.status !in 200..299) {
-            error(getString(Res.string.updates_github_api_error, response.status))
+        ).also { response ->
+            if (response.status == 403 || response.status == 429) {
+                throw GitHubRateLimitedException(response.status)
+            }
+            if (response.status != 304 && response.status !in 200..299) {
+                error(getString(Res.string.updates_github_api_error, response.status))
+            }
         }
 
-        val releases = appUpdaterJson.decodeFromString<List<GitHubReleaseDto>>(response.body)
-        return releases.filter { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
-    }
+    private fun decodeChannelReleases(body: String): List<GitHubReleaseDto> =
+        appUpdaterJson.decodeFromString<List<GitHubReleaseDto>>(body)
+            .filter { it.matchesRequestedChannel() && !it.draft && !it.prerelease }
 
     private suspend fun GitHubReleaseDto.tagOrName(): String =
         tagName?.takeIf { it.isNotBlank() }
