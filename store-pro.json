@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.5.6-b6",
+          "buildVersion": "175",
+          "date": "2026-10-06T15:18:03Z",
+          "localizedDescription": "# Nuvio Pro 0.5.6-b6\n\n**AltStore/SideStore source:**\n```\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\n```\n\n## Changelog\n\n### Pro\n\n- fix(nav): all four tab bar modes (off, static, auto-hide, morphed) reworked, with smoother animations and polished details @albertovinaroz\n- feat(settings): iOS-style scroll, where the title collapses into a centered, blurred bar at the top @albertovinaroz\n- feat(settings): profile card with your profile photo, replacing the old Profile row @albertovinaroz\n- fix(home): hero titles no longer overlap mid-swipe @albertovinaroz\n\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.5.6-b6/nuvio-0.5.6-b6-pro-release.ipa",
+          "size": 69826590,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.6-b5",
           "buildVersion": "174",
           "date": "2026-10-05T12:32:37Z",
