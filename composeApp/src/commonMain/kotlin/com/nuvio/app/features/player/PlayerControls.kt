@@ -7,6 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -85,6 +88,8 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.player.seekpreview.SeekPreviewController
+import com.nuvio.app.features.player.seekpreview.SeekPreviewOverlay
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
@@ -143,6 +148,7 @@ internal fun PlayerControlsShell(
     onScrubFinished: (Long) -> Unit,
     horizontalSafePadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    seekPreview: SeekPreviewController? = null,
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
@@ -286,6 +292,7 @@ internal fun PlayerControlsShell(
                     onLiveChannelsClick = onLiveChannelsClick,
                     qualityLabel = qualityLabel,
                     onQualityClick = onQualityClick,
+                    seekPreview = seekPreview,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -323,6 +330,7 @@ internal fun PlayerControlsShell(
                             onInteraction()
                             onScrubFinished(it)
                         },
+                        seekPreview = seekPreview,
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
@@ -711,6 +719,7 @@ private fun ProgressControls(
     onLiveChannelsClick: (() -> Unit)? = null,
     qualityLabel: String? = null,
     onQualityClick: (() -> Unit)? = null,
+    seekPreview: SeekPreviewController? = null,
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -721,9 +730,11 @@ private fun ProgressControls(
         PlayerSeekBar(
             durationMs = playbackSnapshot.durationMs,
             displayedPositionMs = displayedPositionMs,
+            bufferedPositionMs = playbackSnapshot.bufferedPositionMs,
             metrics = metrics,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
+            seekPreview = seekPreview,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -855,32 +866,51 @@ internal fun PlayerSeekBar(
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    bufferedPositionMs: Long = 0L,
+    seekPreview: SeekPreviewController? = null,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
+    val bufferedFraction = playerBufferedFraction(bufferedPositionMs, durationMs)
     val seekDescription = stringResource(Res.string.player_seek_position)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val isDragged by interactionSource.collectIsDraggedAsState()
     Column(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(metrics.sliderTouchHeight)
-                .graphicsLayer(scaleY = metrics.sliderScaleY)
-                .tapToSeekOnTimeline(
-                    durationMs = durationMs,
-                    currentPositionMs = { displayedPositionMs },
-                    onSeek = { targetPositionMs ->
-                        onScrubChange(targetPositionMs)
-                        onScrubFinished(targetPositionMs)
-                    },
-                ),
-        ) {
-            Slider(
-                modifier = Modifier.fillMaxSize().semantics { contentDescription = seekDescription },
-                value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
-                onValueChange = { value -> onScrubChange(value.toLong()) },
-                onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
-                enabled = durationMs > 0L,
-                valueRange = 0f..seekDurationMs.toFloat(),
-                track = { sliderState -> PlayerProgressTrack(sliderState) },
+        Box {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(metrics.sliderTouchHeight)
+                    .graphicsLayer(scaleY = metrics.sliderScaleY)
+                    .tapToSeekOnTimeline(
+                        durationMs = durationMs,
+                        currentPositionMs = { displayedPositionMs },
+                        onSeek = { positionMs ->
+                            val targetPositionMs = positionMs.coerceIn(0L, seekDurationMs)
+                            onScrubChange(targetPositionMs)
+                            onScrubFinished(targetPositionMs)
+                        },
+                    ),
+            ) {
+                Slider(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { contentDescription = seekDescription },
+                    value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
+                    onValueChange = { value -> onScrubChange(value.toLong()) },
+                    onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
+                    enabled = durationMs > 0L,
+                    valueRange = 0f..seekDurationMs.toFloat(),
+                    interactionSource = interactionSource,
+                    track = { sliderState -> PlayerProgressTrack(sliderState, bufferedFraction) },
+                )
+            }
+            SeekPreviewOverlay(
+                controller = seekPreview,
+                active = durationMs > 0L && (isPressed || isDragged),
+                positionMs = displayedPositionMs.coerceIn(0L, seekDurationMs),
+                durationMs = durationMs,
+                modifier = Modifier.matchParentSize(),
             )
         }
         Row(
@@ -897,12 +927,44 @@ internal fun PlayerSeekBar(
     }
 }
 
+internal fun playerBufferedFraction(bufferedPositionMs: Long, durationMs: Long): Float =
+    if (durationMs > 0L) {
+        (bufferedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+internal val PlayerBaseTrackColor = Color.White.copy(alpha = 0.20f)
+
+internal val PlayerBufferedTrackColor = Color.White.copy(alpha = 0.40f)
+
 @Composable
-private fun PlayerProgressTrack(sliderState: SliderState) {
+private fun PlayerBufferedTrack(bufferedFraction: Float, enabled: Boolean = true) {
+    if (bufferedFraction <= 0f) return
+    val bufferedState = remember { SliderState(value = 0f, valueRange = 0f..1f) }
+    bufferedState.value = bufferedFraction
+    SliderDefaults.Track(
+        sliderState = bufferedState,
+        enabled = enabled,
+        colors = SliderDefaults.colors(
+            activeTrackColor = PlayerBufferedTrackColor,
+            inactiveTrackColor = Color.Transparent,
+            disabledActiveTrackColor = PlayerBufferedTrackColor,
+            disabledInactiveTrackColor = Color.Transparent,
+        ),
+        drawStopIndicator = null,
+        thumbTrackGapSize = 0.dp,
+    )
+}
+
+@Composable
+private fun PlayerProgressTrack(sliderState: SliderState, bufferedFraction: Float) {
     val palette = MaterialTheme.themePalette
     val inactiveTrackColors = SliderDefaults.colors(
         activeTrackColor = Color.Transparent,
+        inactiveTrackColor = PlayerBaseTrackColor,
         disabledActiveTrackColor = Color.Transparent,
+        disabledInactiveTrackColor = PlayerBaseTrackColor,
     )
     val activeTrackColors = SliderDefaults.colors(
         activeTrackColor = Color.White,
@@ -916,6 +978,7 @@ private fun PlayerProgressTrack(sliderState: SliderState) {
             sliderState = sliderState,
             colors = inactiveTrackColors,
         )
+        PlayerBufferedTrack(bufferedFraction = bufferedFraction)
         SliderDefaults.Track(
             sliderState = sliderState,
             modifier = Modifier.gradientMask(palette.accentBrush()),
@@ -1010,6 +1073,33 @@ internal fun LockedPlayerOverlay(
                     valueRange = 0f..durationMs.toFloat(),
                     enabled = false,
                     colors = sliderColors,
+                    track = { sliderState ->
+                        Box {
+                            SliderDefaults.Track(
+                                sliderState = sliderState,
+                                enabled = false,
+                                colors = SliderDefaults.colors(
+                                    disabledActiveTrackColor = Color.Transparent,
+                                    disabledInactiveTrackColor = PlayerBaseTrackColor,
+                                ),
+                            )
+                            PlayerBufferedTrack(
+                                bufferedFraction = playerBufferedFraction(
+                                    playbackSnapshot.bufferedPositionMs,
+                                    playbackSnapshot.durationMs,
+                                ),
+                                enabled = false,
+                            )
+                            SliderDefaults.Track(
+                                sliderState = sliderState,
+                                enabled = false,
+                                colors = SliderDefaults.colors(
+                                    disabledActiveTrackColor = Color.White,
+                                    disabledInactiveTrackColor = Color.Transparent,
+                                ),
+                            )
+                        }
+                    },
                 )
                 Row(
                     modifier = Modifier
