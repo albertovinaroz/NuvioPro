@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -97,10 +98,12 @@ internal fun PlayerControlActions(
     onSourcesClick: (() -> Unit)?,
     onEpisodesClick: (() -> Unit)?,
     onNextEpisodeClick: (() -> Unit)?,
+    onSwitchEngineClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
     onResizeModeClick: () -> Unit,
     onVideoSettingsClick: (() -> Unit)?,
     onOpenInExternalPlayer: (() -> Unit)?,
+    onStreamInfoClick: (() -> Unit)?,
     onSubmitIntroClick: (() -> Unit)?,
     qualityLabel: String? = null,
     onQualityClick: (() -> Unit)? = null,
@@ -151,6 +154,12 @@ internal fun PlayerControlActions(
                 icon = Icons.Rounded.HighQuality,
             )
         },
+        onSwitchEngineClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.cd_switch_player_engine), it,
+                icon = Icons.Rounded.SwapHoriz,
+            )
+        },
         PlayerControlAction(
             "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
             onSpeedClick, icon = Icons.Rounded.Speed,
@@ -163,6 +172,12 @@ internal fun PlayerControlActions(
             PlayerControlAction(
                 stringResource(Res.string.streams_open_external_player), it,
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
+            )
+        },
+        onStreamInfoClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.cd_stream_info), it,
+                icon = Icons.Rounded.Info,
             )
         },
         onVideoSettingsClick?.let {

@@ -222,6 +222,9 @@ internal class PlayerScreenRuntime(
      * fires or the user cancels it — see notifySleepTimerTick in PlayerScreenRuntimePlaybackActions.kt. */
     var sleepTimerEndAtMs by mutableStateOf<Long?>(null)
     var showUserRatingSheet by mutableStateOf(false)
+    var showStreamInfo by mutableStateOf(false)
+    var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
+    var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var subtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
     var selectedAudioIndex by mutableStateOf(-1)
