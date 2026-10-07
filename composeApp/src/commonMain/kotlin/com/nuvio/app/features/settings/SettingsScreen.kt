@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.nuvioNoTopOverscroll
 import androidx.compose.foundation.layout.Box
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.navigation.LocalUseNativeNavigation
@@ -58,7 +59,9 @@ import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.NuvioCollapsingLargeTitle
 import com.nuvio.app.core.ui.NuvioCompactTitleBar
+import com.nuvio.app.core.ui.rememberCollapsingTitleState
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
@@ -677,6 +680,7 @@ private fun MobileSettingsScreen(
         var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
         var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
         val listState = rememberLazyListState()
+        val collapsingTitle = rememberCollapsingTitleState()
         ScreenActivityEffect(listState) { screenActive ->
             if (!screenActive) listState.stopScroll()
         }
@@ -746,7 +750,8 @@ private fun MobileSettingsScreen(
         CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
         Box(modifier = Modifier.fillMaxSize()) {
         NuvioScreen(
-            modifier = Modifier.nestedScroll(rootSearchRevealConnection),
+            // Outside the reveal connection, so the pull at the top still reveals search.
+            modifier = Modifier.nuvioNoTopOverscroll().nestedScroll(rootSearchRevealConnection),
             listState = listState,
             autoHidesNativeTabBar = true,
             // NuvioScreen's own leading contentPadding.top is scrollable space *before* the
@@ -765,8 +770,9 @@ private fun MobileSettingsScreen(
                 // centered title overlaid below (SettingsRootCompactTitleBar).
                 item(key = SettingsRootLargeTitleKey) {
                     Column {
-                        NuvioScreenHeader(
+                        NuvioCollapsingLargeTitle(
                             title = stringResource(page.titleRes),
+                            state = collapsingTitle,
                             topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
                         )
                         Spacer(modifier = Modifier.height(10.dp))
@@ -1030,6 +1036,7 @@ private fun MobileSettingsScreen(
                 title = stringResource(page.titleRes),
                 listState = listState,
                 largeTitleKey = SettingsRootLargeTitleKey,
+                state = collapsingTitle,
             )
         }
         }
