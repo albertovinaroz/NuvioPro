@@ -1,5 +1,8 @@
 package com.nuvio.app.features.search
 
+import com.nuvio.app.core.ui.rememberPinnedHeaderFiller
+import com.nuvio.app.core.ui.pinnedHeaderFiller
+import com.nuvio.app.core.ui.nuvioNoTopOverscroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -50,8 +53,25 @@ import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreenHeader
+import com.nuvio.app.core.ui.nuvio
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.ui.layout.onSizeChanged
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
 import com.nuvio.app.core.ui.NuvioTokens
-import com.nuvio.app.core.ui.nuvioConsumePointerEvents
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.features.addons.AddonRepository
@@ -76,7 +96,6 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_retry
 import nuvio.composeapp.generated.resources.compose_nav_search
 import nuvio.composeapp.generated.resources.compose_search_clear
-import nuvio.composeapp.generated.resources.compose_search_discover_title
 import nuvio.composeapp.generated.resources.compose_search_empty_failed_message
 import nuvio.composeapp.generated.resources.compose_search_empty_failed_title
 import nuvio.composeapp.generated.resources.compose_search_empty_no_active_addons_message
@@ -135,11 +154,6 @@ fun SearchScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var lastRequestedQuery by rememberSaveable { mutableStateOf<String?>(null) }
     var observedOfflineState by remember { mutableStateOf(false) }
-    val discoverInFocus by remember(query, listState) {
-        derivedStateOf {
-            query.isBlank() && listState.firstVisibleItemIndex > 0
-        }
-    }
 
     ScreenActivityEffect(scrollToTopRequests) { screenActive ->
         if (!screenActive) return@ScreenActivityEffect
@@ -241,82 +255,68 @@ fun SearchScreen(
         val homeSectionPadding = remember(maxWidth) {
             homeSectionHorizontalPaddingForWidth(maxWidth.value)
         }
-        val headerTitle = when {
-            query.isNotBlank() -> stringResource(Res.string.compose_nav_search)
-            discoverInFocus -> stringResource(Res.string.compose_search_discover_title)
-            else -> stringResource(Res.string.compose_nav_search)
-        }
-
-        androidx.compose.foundation.layout.Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                androidx.compose.foundation.layout.Column(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    NuvioScreenHeader(
-                        title = headerTitle,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        // A touch more than the bare status-bar inset, matching Library's header.
-                        topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                    )
-                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(6.dp))
-                    androidx.compose.foundation.layout.Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        NuvioInputField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = stringResource(Res.string.compose_search_placeholder),
-                            modifier = Modifier
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { isSearchFocused = it.isFocused },
-                            shape = RoundedCornerShape(NuvioTokens.Radius.full),
-                            trailingContent = if (query.isNotBlank()) {
-                                {
-                                    IconButton(onClick = { query = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Close,
-                                            contentDescription = stringResource(Res.string.compose_search_clear),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            } else {
-                                null
-                            },
-                        )
-                    }
-                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(14.dp))
+        val headerTitle = stringResource(Res.string.compose_nav_search)
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val statusBarTopPx = with(LocalDensity.current) { statusBarTop.toPx() }
+        val pinFadePx = with(LocalDensity.current) { 16.dp.toPx() }
+        val headerFadePx = with(LocalDensity.current) { SearchHeaderFadeHeight.toPx() }
+        val controlsHazeState = rememberHazeState()
+        var controlsHeightPx by remember { mutableIntStateOf(0) }
+        // Where the controls' slot in the list currently sits; -inf once it has scrolled off the top.
+        val controlsSlotTop by remember(listState) {
+            derivedStateOf {
+                val layoutInfo = listState.layoutInfo
+                val slot = layoutInfo.visibleItemsInfo.firstOrNull { it.key == SearchControlsKey }
+                when {
+                    slot != null -> (slot.offset - layoutInfo.viewportStartOffset).toFloat()
+                    listState.firstVisibleItemIndex > 0 -> Float.NEGATIVE_INFINITY
+                    else -> null
                 }
             }
+        }
 
+        // A few results still scroll far enough for the header to pin.
+        val headerFiller = rememberPinnedHeaderFiller(
+            listState = listState,
+            firstKey = SearchLargeTitleKey,
+            slotKey = SearchControlsKey,
+            pinnedTopPx = statusBarTopPx,
+        )
+
+        // The large "Search" title scrolls away with the list. The search field and the discover
+        // filters sit in an overlay that follows their slot in the list until it reaches the status
+        // bar, then stays pinned there on a blurred, theme-tinted header the results scroll under.
+        Box(modifier = Modifier.fillMaxSize()) {
             NuvioScreen(
                 horizontalPadding = 0.dp,
                 topPadding = 0.dp,
                 listState = listState,
                 autoHidesNativeTabBar = true,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nuvioNoTopOverscroll()
+                    .hazeSource(state = controlsHazeState),
             ) {
+                item(key = SearchLargeTitleKey) {
+                    Text(
+                        text = headerTitle,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.nuvio.colors.textPrimary,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            // A touch more than the bare status-bar inset, matching Library's header.
+                            .padding(top = statusBarTop + 8.dp),
+                    )
+                }
+                item(key = SearchControlsKey) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(with(LocalDensity.current) { controlsHeightPx.toDp() }),
+                    )
+                }
                 if (query.isBlank()) {
-                    item {
-                        DiscoverSectionHeader(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                    stickyHeader {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .background(MaterialTheme.colorScheme.background)
-                                    .nuvioConsumePointerEvents(),
-                            )
-                            DiscoverFilterRow(
-                                state = discoverUiState,
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp)
-                                    .padding(top = 8.dp, bottom = 14.dp),
-                                onTypeSelected = SearchRepository::selectDiscoverType,
-                                onCatalogSelected = SearchRepository::selectDiscoverCatalog,
-                                onGenreSelected = SearchRepository::selectDiscoverGenre,
-                            )
-                        }
-                    }
                     if (isSearchFocused && recentSearches.isNotEmpty()) {
                         item(key = "recent_searches") {
                             SearchRecentSection(
@@ -420,10 +420,117 @@ fun SearchScreen(
                         }
                     }
                 }
+                pinnedHeaderFiller(headerFiller)
+            }
+            val background = MaterialTheme.nuvio.colors.background
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Positioned in the placement phase, not a graphicsLayer block: after a rotation
+                    // iOS stopped re-running those on scroll, leaving the header stuck where it was.
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, placeable.height) {
+                            val slotTop = controlsSlotTop
+                            // Parked off screen for the one frame before the list has placed the slot.
+                            val y = if (slotTop == null) {
+                                -placeable.height
+                            } else {
+                                (slotTop - statusBarTopPx).coerceAtLeast(0f).roundToInt()
+                            }
+                            placeable.place(0, y)
+                        }
+                    },
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        // Blur and tint thin out below the filters instead of ending on a hard
+                        // edge across the results. (Haze's own `mask` throws while drawing on iOS.)
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val fadeStart = ((size.height - headerFadePx) / size.height).coerceIn(0f, 1f)
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    fadeStart to Color.Black,
+                                    1f to Color.Transparent,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                        .hazeEffect(state = controlsHazeState) {
+                            blurRadius = 24.dp
+                            backgroundColor = background
+                            tints = listOf(HazeTint(background.copy(alpha = 0.72f)))
+                            noiseFactor = 0f
+                            // Fades in over the last stretch before the header pins.
+                            val distance = (controlsSlotTop ?: Float.POSITIVE_INFINITY) - statusBarTopPx
+                            alpha = (1f - distance / pinFadePx).coerceIn(0f, 1f)
+                        },
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Room for the backdrop's fade, which stays touch-transparent so the
+                        // results under it can still be tapped.
+                        .padding(bottom = SearchHeaderFadeHeight)
+                        // Drags that start on the header still scroll the list beneath it.
+                        .scrollable(
+                            state = listState,
+                            orientation = Orientation.Vertical,
+                            reverseDirection = true,
+                        )
+                        .padding(top = statusBarTop)
+                        .onSizeChanged { controlsHeightPx = it.height },
+                ) {
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        NuvioInputField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = stringResource(Res.string.compose_search_placeholder),
+                            modifier = Modifier
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { isSearchFocused = it.isFocused },
+                            shape = RoundedCornerShape(NuvioTokens.Radius.full),
+                            trailingContent = if (query.isNotBlank()) {
+                                {
+                                    IconButton(onClick = { query = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Close,
+                                            contentDescription = stringResource(Res.string.compose_search_clear),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                    if (query.isBlank()) {
+                        DiscoverFilterRow(
+                            state = discoverUiState,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 12.dp, bottom = 14.dp),
+                            onTypeSelected = SearchRepository::selectDiscoverType,
+                            onCatalogSelected = SearchRepository::selectDiscoverCatalog,
+                            onGenreSelected = SearchRepository::selectDiscoverGenre,
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+                }
             }
         }
     }
 }
+
+private const val SearchLargeTitleKey = "search_large_title"
+private const val SearchControlsKey = "search_controls"
+private val SearchHeaderFadeHeight = 28.dp
 
 @Composable
 private fun SearchEmptyStateCard(
