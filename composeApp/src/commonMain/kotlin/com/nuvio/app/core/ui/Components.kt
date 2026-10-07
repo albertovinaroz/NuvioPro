@@ -1,5 +1,10 @@
 package com.nuvio.app.core.ui
 
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
@@ -114,6 +119,21 @@ fun NuvioScreen(
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.listGap),
         content = content,
     )
+}
+
+/**
+ * Drops the rubber-band bounce when a list is pulled down past its top, keeping it at the bottom:
+ * the leftover downward scroll and fling are eaten before they reach the overscroll effect.
+ * Connections closer to the list (applied after this) still see the pull first.
+ */
+internal fun Modifier.nuvioNoTopOverscroll(): Modifier = nestedScroll(NoTopOverscrollConnection)
+
+private object NoTopOverscrollConnection : NestedScrollConnection {
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
+        Offset(0f, available.y.coerceAtLeast(0f))
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+        Velocity(0f, available.y.coerceAtLeast(0f))
 }
 
 internal fun Modifier.nuvioConsumePointerEvents(): Modifier =
