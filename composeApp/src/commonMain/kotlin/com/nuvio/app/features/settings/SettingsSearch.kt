@@ -1,5 +1,7 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.ui.focus.FocusRequester
+import com.nuvio.app.features.search.SearchBar
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -1115,20 +1117,19 @@ internal fun LazyListScope.settingsSearchRootContent(
     query: String,
     entries: @Composable () -> List<SettingsSearchEntry>,
     isTablet: Boolean,
-    showSearchField: Boolean,
-    animateSearchField: Boolean,
     onQueryChange: (String) -> Unit,
     onTargetClick: (SettingsSearchTarget) -> Unit,
 ) {
-    if (showSearchField || query.isNotBlank()) {
-        item(key = "settings-search-field") {
-            SettingsSearchRevealItem(animate = animateSearchField) {
-                SettingsSearchField(
-                    query = query,
-                    onQueryChange = onQueryChange,
-                )
-            }
-        }
+    // Always there under the title, like iOS Settings, rather than revealed by a pull.
+    item(key = "settings-search-field") {
+        val focusRequester = remember { FocusRequester() }
+        SearchBar(
+            query = query,
+            onQueryChange = onQueryChange,
+            placeholder = stringResource(Res.string.settings_search_placeholder),
+            focusRequester = focusRequester,
+            onFocusChanged = {},
+        )
     }
 
     if (query.isBlank()) return
@@ -1154,6 +1155,7 @@ internal fun LazyListScope.settingsSearchRootContent(
                             title = entry.title,
                             description = entry.resultDescription(),
                             icon = entry.icon,
+                            iconTile = true,
                             isTablet = isTablet,
                             onClick = { onTargetClick(entry.target) },
                         )
@@ -1162,87 +1164,6 @@ internal fun LazyListScope.settingsSearchRootContent(
             }
         }
     }
-}
-
-@Composable
-private fun SettingsSearchRevealItem(
-    animate: Boolean,
-    content: @Composable () -> Unit,
-) {
-    if (!animate) {
-        content()
-        return
-    }
-
-    val visibleState = remember {
-        MutableTransitionState(false).apply {
-            targetState = true
-        }
-    }
-    AnimatedVisibility(
-        visibleState = visibleState,
-        enter = expandVertically(
-            animationSpec = tween(durationMillis = NuvioTokens.Motion.normalMillis),
-            expandFrom = Alignment.Top,
-        ) + fadeIn(
-            animationSpec = tween(durationMillis = NuvioTokens.Motion.fastMillis),
-        ) + slideInVertically(
-            animationSpec = tween(durationMillis = NuvioTokens.Motion.normalMillis),
-            initialOffsetY = { -it / 4 },
-        ),
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun SettingsSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-) {
-    val tokens = MaterialTheme.nuvio
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
-        shape = tokens.shapes.chip,
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = tokens.colors.textMuted,
-            )
-        },
-        trailingIcon = if (query.isNotBlank()) {
-            {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(Res.string.compose_search_clear),
-                        tint = tokens.colors.textMuted,
-                    )
-                }
-            }
-        } else {
-            null
-        },
-        placeholder = {
-            Text(
-                text = stringResource(Res.string.settings_search_placeholder),
-                color = tokens.colors.textMuted,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(color = tokens.colors.textPrimary),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = tokens.colors.borderFocus,
-            unfocusedBorderColor = tokens.colors.borderDefault,
-            focusedContainerColor = tokens.colors.surfaceCard,
-            unfocusedContainerColor = tokens.colors.surfaceCard,
-            cursorColor = tokens.colors.accent,
-        ),
-    )
 }
 
 @Composable

@@ -1,5 +1,9 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.labelRes
+import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.tracking.TrackingProviderId
+import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -148,6 +152,11 @@ internal fun LazyListScope.settingsRootContent(
         }
         val sectionModifier2 = nextSectionModifier()
         item {
+            val connectedTracking by TrackingProviderRegistry.connectedProviderIds.collectAsStateWithLifecycle()
+            val trackingValue = TrackingProviderId.entries
+                .filter { it in connectedTracking }
+                .joinToString(", ") { it.displayName }
+                .ifBlank { null }
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
@@ -156,16 +165,17 @@ internal fun LazyListScope.settingsRootContent(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_account),
-                        description = stringResource(Res.string.compose_settings_root_account_description),
                         icon = Icons.Rounded.AccountCircle,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onAccountClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_tracking),
-                        description = stringResource(Res.string.compose_settings_root_tracking_description),
                         icon = Icons.Default.Sync,
+                        iconTile = true,
+                        value = trackingValue,
                         isTablet = isTablet,
                         onClick = onTrackingClick,
                     )
@@ -176,6 +186,15 @@ internal fun LazyListScope.settingsRootContent(
     if (showGeneralSection) {
         val sectionModifier3 = nextSectionModifier()
         item {
+            val selectedTheme by remember {
+                ThemeSettingsRepository.ensureLoaded()
+                ThemeSettingsRepository.selectedTheme
+            }.collectAsStateWithLifecycle()
+            val downloads by remember {
+                DownloadsRepository.ensureLoaded()
+                DownloadsRepository.uiState
+            }.collectAsStateWithLifecycle()
+            val downloadsValue = downloads.completedItems.size.takeIf { it > 0 }?.toString()
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
@@ -184,48 +203,50 @@ internal fun LazyListScope.settingsRootContent(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_appearance),
-                        description = stringResource(Res.string.compose_settings_root_appearance_description),
                         icon = Icons.Rounded.Palette,
+                        iconTile = true,
+                        value = stringResource(selectedTheme.labelRes),
                         isTablet = isTablet,
                         onClick = onAppearanceClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_content_discovery),
-                        description = stringResource(Res.string.compose_settings_root_content_discovery_description),
                         icon = Icons.Rounded.Extension,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onContentDiscoveryClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_playback),
-                        description = stringResource(Res.string.settings_playback_subtitle),
                         icon = Icons.Rounded.PlayArrow,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onPlaybackClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_integrations),
-                        description = stringResource(Res.string.compose_settings_root_integrations_description),
                         icon = Icons.Rounded.Link,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onIntegrationsClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_notifications),
-                        description = stringResource(Res.string.compose_settings_root_notifications_description),
                         icon = Icons.Rounded.Notifications,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onNotificationsClick,
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_root_downloads_title),
-                        description = stringResource(Res.string.compose_settings_root_downloads_description),
                         icon = Icons.Rounded.CloudDownload,
+                        iconTile = true,
+                        value = downloadsValue,
                         isTablet = isTablet,
                         onClick = onDownloadsClick,
                     )
@@ -246,8 +267,8 @@ internal fun LazyListScope.settingsRootContent(
                     if (showSupportersContributorsPage) {
                         SettingsNavigationRow(
                             title = stringResource(Res.string.compose_settings_page_supporters_contributors),
-                            description = stringResource(Res.string.about_supporters_contributors_subtitle),
                             icon = Icons.Rounded.Favorite,
+                            iconTile = true,
                             isTablet = isTablet,
                             onClick = onSupportersContributorsClick,
                         )
@@ -255,16 +276,16 @@ internal fun LazyListScope.settingsRootContent(
                     }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_privacy_policy),
-                        description = stringResource(Res.string.compose_settings_root_privacy_policy_description),
                         icon = Icons.Rounded.Policy,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_licenses_attributions),
-                        description = stringResource(Res.string.about_licenses_attributions_subtitle),
                         icon = Icons.Rounded.Info,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onLicensesAttributionsClick,
                     )
@@ -272,8 +293,8 @@ internal fun LazyListScope.settingsRootContent(
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
                             title = stringResource(Res.string.compose_settings_root_check_updates_title),
-                            description = stringResource(Res.string.compose_settings_root_check_updates_description),
                             icon = Icons.Rounded.CloudDownload,
+                            iconTile = true,
                             isTablet = isTablet,
                             onClick = onCheckForUpdatesClick,
                         )
@@ -281,8 +302,8 @@ internal fun LazyListScope.settingsRootContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.whats_new_title),
-                        description = stringResource(Res.string.whats_new_settings_description),
                         icon = Icons.Rounded.NewReleases,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onWhatsNewClick,
                     )
@@ -290,8 +311,8 @@ internal fun LazyListScope.settingsRootContent(
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
                             title = stringResource(Res.string.updates_debug_test_title),
-                            description = stringResource(Res.string.updates_debug_test_description),
                             icon = Icons.Rounded.BugReport,
+                            iconTile = true,
                             isTablet = isTablet,
                             onClick = onTestUpdateBannerClick,
                         )
@@ -311,8 +332,8 @@ internal fun LazyListScope.settingsRootContent(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_advanced),
-                        description = stringResource(Res.string.compose_settings_root_advanced_description),
                         icon = Icons.Rounded.Tune,
+                        iconTile = true,
                         isTablet = isTablet,
                         onClick = onAdvancedClick,
                     )
@@ -383,7 +404,7 @@ private fun SettingsProfileCardRow(isTablet: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .settingsRowClickable(onClick = onClick)
             .padding(horizontal = if (isTablet) 20.dp else 16.dp, vertical = if (isTablet) 16.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -1,5 +1,26 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -291,7 +312,7 @@ internal fun SettingsClickableRow(
 @Composable
 internal fun SettingsNavigationRow(
     title: String,
-    description: String?,
+    description: String? = null,
     icon: ImageVector? = null,
     iconPainter: Painter? = null,
     // Plain glyph, no background chip — the native iOS Settings / WhatsApp Settings look, where
@@ -303,18 +324,30 @@ internal fun SettingsNavigationRow(
     enabled: Boolean = true,
     isTablet: Boolean,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
+    /**
+     * Puts [icon] in a white glyph on a colored rounded square instead, iOS Settings' top-level
+     * look, so each category reads at a glance. The color comes from [settingsTileColor].
+     */
+    iconTile: Boolean = false,
+    /** A short current value shown before the chevron, e.g. the connected tracking service. */
+    value: String? = null,
     onClick: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     val resolvedIconTint = iconTint ?: tokens.colors.accent
     val iconSize = if (isTablet) 26.dp else 22.dp
-    val verticalPadding = if (isTablet) 16.dp else 14.dp
+    // A title-only row sits tighter, like iOS Settings' list.
+    val compact = description.isNullOrBlank()
+    val verticalPadding = when {
+        isTablet -> if (compact) 13.dp else 16.dp
+        else -> if (compact) 11.dp else 14.dp
+    }
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
+            .settingsRowClickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
         horizontalArrangement = Arrangement.Start,
@@ -327,7 +360,24 @@ internal fun SettingsNavigationRow(
                 .widthIn(max = if (isTablet) 560.dp else Dp.Unspecified),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (icon != null || iconPainter != null) {
+            if (iconTile && icon != null) {
+                val tileSize = if (isTablet) 32.dp else 30.dp
+                Box(
+                    modifier = Modifier
+                        .size(tileSize)
+                        .clip(RoundedCornerShape(if (isTablet) 8.dp else 7.dp))
+                        .background(iconTint ?: settingsTileColor(icon)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(if (isTablet) 16.dp else 14.dp))
+            } else if (icon != null || iconPainter != null) {
                 Box(
                     modifier = Modifier.size(iconSize),
                     contentAlignment = Alignment.Center,
@@ -377,6 +427,18 @@ internal fun SettingsNavigationRow(
         if (trailingContent != null) {
             trailingContent(this)
         } else {
+            if (!value.isNullOrBlank()) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = tokens.colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .widthIn(max = if (isTablet) 220.dp else 150.dp)
+                        .padding(end = 4.dp),
+                )
+            }
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 contentDescription = null,
@@ -403,7 +465,7 @@ internal fun SettingsSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .settingsRowClickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
@@ -765,4 +827,53 @@ private fun Top10OrientationOption(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
+}
+
+/**
+ * Category colors for [SettingsNavigationRow]'s icon tiles, after the iOS system palette. Keyed
+ * on the row's icon so Settings search results get the same tile as the category they lead to;
+ * anything unlisted takes the theme accent.
+ */
+@Composable
+internal fun settingsTileColor(icon: ImageVector): Color = when (icon) {
+    Icons.Rounded.AccountCircle -> Color(0xFF8E8E93)
+    Icons.Default.Sync -> Color(0xFF30D158)
+    Icons.Rounded.Palette -> Color(0xFFBF5AF2)
+    Icons.Rounded.Extension -> Color(0xFF5E5CE6)
+    Icons.Rounded.PlayArrow -> Color(0xFFFF453A)
+    Icons.Rounded.Link -> Color(0xFF40C8E0)
+    Icons.Rounded.Notifications -> Color(0xFFFF375F)
+    Icons.Rounded.CloudDownload -> Color(0xFF0A84FF)
+    Icons.Rounded.Favorite -> Color(0xFFFF2D55)
+    Icons.Rounded.Policy -> Color(0xFF64D2FF)
+    Icons.Rounded.Info -> Color(0xFF8E8E93)
+    Icons.Rounded.NewReleases -> Color(0xFFFF9F0A)
+    Icons.Rounded.BugReport -> Color(0xFFAC8E68)
+    Icons.Rounded.Tune -> Color(0xFF636366)
+    else -> MaterialTheme.nuvio.colors.accent
+}
+
+/**
+ * A settings row's tap target with iOS' grey cell highlight instead of a ripple: on at once while
+ * pressed, fading out on release.
+ */
+@Composable
+internal fun Modifier.settingsRowClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier {
+    val tokens = MaterialTheme.nuvio
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val highlight by animateColorAsState(
+        targetValue = if (pressed) tokens.colors.textPrimary.copy(alpha = 0.09f) else Color.Transparent,
+        animationSpec = tween(durationMillis = if (pressed) 0 else 260),
+        label = "settingsRowHighlight",
+    )
+    return background(highlight).clickable(
+        enabled = enabled,
+        interactionSource = interactionSource,
+        indication = null,
+        onClick = onClick,
+    )
 }

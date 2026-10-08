@@ -1,5 +1,9 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import kotlinx.coroutines.flow.filterIsInstance
 import com.nuvio.app.core.ui.nuvioNoTopOverscroll
 import androidx.compose.foundation.layout.Box
 import com.nuvio.app.core.ui.nuvio
@@ -111,10 +115,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-
-private val SettingsSearchRevealThreshold = 28.dp
-private const val SettingsSearchRevealAnimationMillis = 240L
-private const val SettingsSearchRevealHapticDelayMillis = 90L
 
 private fun SettingsPage.isEnabledByPolicy(): Boolean =
     when (this) {
@@ -677,27 +677,10 @@ private fun MobileSettingsScreen(
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
         var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
-        var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
-        var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
         val listState = rememberLazyListState()
         val collapsingTitle = rememberCollapsingTitleState()
         ScreenActivityEffect(listState) { screenActive ->
             if (!screenActive) listState.stopScroll()
-        }
-        val hapticFeedback = LocalHapticFeedback.current
-        val hapticScope = rememberCoroutineScope()
-        val rootSearchRevealConnection = rememberSettingsRootSearchRevealConnection(
-            page = page,
-            listState = listState,
-            query = settingsSearchQuery,
-            searchVisible = rootSearchVisible,
-        ) {
-            rootSearchVisible = true
-            rootSearchRevealAnimating = true
-            hapticScope.launch {
-                delay(SettingsSearchRevealHapticDelayMillis)
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            }
         }
         fun openSearchTarget(target: SettingsSearchTarget) {
             when (target) {
@@ -727,18 +710,12 @@ private fun MobileSettingsScreen(
             }
         }
 
-        LaunchedEffect(rootSearchRevealAnimating) {
-            if (rootSearchRevealAnimating) {
-                delay(SettingsSearchRevealAnimationMillis)
-                rootSearchRevealAnimating = false
-            }
-        }
-
         LaunchedEffect(scrollToTopRequests) {
             scrollToTopRequests.collect {
                 listState.animateScrollToItem(0)
             }
         }
+        DismissKeyboardOnDrag(listState)
 
         // Profile's cinematic hero photo bleeds unclipped past its own top edge to reach behind
         // the native nav bar (see ProfileInsightsHeroCinematic) — iOS's native rubber-band
@@ -750,8 +727,7 @@ private fun MobileSettingsScreen(
         CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
         Box(modifier = Modifier.fillMaxSize()) {
         NuvioScreen(
-            // Outside the reveal connection, so the pull at the top still reveals search.
-            modifier = Modifier.nuvioNoTopOverscroll().nestedScroll(rootSearchRevealConnection),
+            modifier = Modifier.nuvioNoTopOverscroll(),
             listState = listState,
             autoHidesNativeTabBar = true,
             // NuvioScreen's own leading contentPadding.top is scrollable space *before* the
@@ -831,8 +807,6 @@ private fun MobileSettingsScreen(
                             )
                         },
                         isTablet = false,
-                        showSearchField = rootSearchVisible,
-                        animateSearchField = rootSearchRevealAnimating,
                         onQueryChange = { settingsSearchQuery = it },
                         onTargetClick = { openSearchTarget(it) },
                     )
@@ -1047,48 +1021,6 @@ private fun MobileSettingsScreen(
 private const val SettingsRootLargeTitleKey = "settings_root_large_title"
 
 @Composable
-private fun rememberSettingsRootSearchRevealConnection(
-    page: SettingsPage,
-    listState: LazyListState,
-    query: String,
-    searchVisible: Boolean,
-    onReveal: () -> Unit,
-): NestedScrollConnection {
-    val revealThresholdPx = with(LocalDensity.current) { SettingsSearchRevealThreshold.toPx() }
-    val currentOnReveal by rememberUpdatedState(onReveal)
-    var pullDistancePx by remember(page) { mutableStateOf(0f) }
-    var revealTriggered by remember(page) { mutableStateOf(false) }
-
-    return remember(page, listState, query, searchVisible, revealThresholdPx) {
-        object : NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: Offset,
-                available: Offset,
-                source: NestedScrollSource,
-            ): Offset {
-                val isRootAtTop = page == SettingsPage.Root &&
-                    listState.firstVisibleItemIndex == 0 &&
-                    listState.firstVisibleItemScrollOffset == 0
-                val canRevealSearch = isRootAtTop && !searchVisible && !revealTriggered && query.isBlank()
-
-                if (canRevealSearch && available.y > 0f) {
-                    pullDistancePx += available.y
-                    if (pullDistancePx >= revealThresholdPx) {
-                        pullDistancePx = 0f
-                        revealTriggered = true
-                        currentOnReveal()
-                    }
-                } else if (!isRootAtTop || available.y < 0f) {
-                    pullDistancePx = 0f
-                }
-
-                return Offset.Zero
-            }
-        }
-    }
-}
-
-@Composable
 private fun TabletSettingsScreen(
     page: SettingsPage,
     scrollToTopRequests: Flow<Unit>,
@@ -1230,10 +1162,6 @@ private fun TabletSettingsScreen(
 
         saveableStateHolder.SaveableStateProvider(page.name) {
             var settingsSearchQuery by rememberSaveable { mutableStateOf("") }
-            var rootSearchVisible by rememberSaveable { mutableStateOf(false) }
-            var rootSearchRevealAnimating by rememberSaveable { mutableStateOf(false) }
-            val hapticFeedback = LocalHapticFeedback.current
-            val hapticScope = rememberCoroutineScope()
             fun openSearchTarget(target: SettingsSearchTarget) {
                 when (target) {
                     is SettingsSearchTarget.Page -> {
@@ -1252,35 +1180,15 @@ private fun TabletSettingsScreen(
                 if (!screenActive) listState.stopScroll()
             }
             val bottomOverlayPadding = LocalNuvioBottomNavigationOverlayPadding.current
-            val rootSearchRevealConnection = rememberSettingsRootSearchRevealConnection(
-                page = page,
-                listState = listState,
-                query = settingsSearchQuery,
-                searchVisible = rootSearchVisible,
-            ) {
-                rootSearchVisible = true
-                rootSearchRevealAnimating = true
-                hapticScope.launch {
-                    delay(SettingsSearchRevealHapticDelayMillis)
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
-            }
-            LaunchedEffect(rootSearchRevealAnimating) {
-                if (rootSearchRevealAnimating) {
-                    delay(SettingsSearchRevealAnimationMillis)
-                    rootSearchRevealAnimating = false
-                }
-            }
             LaunchedEffect(scrollToTopRequests) {
                 scrollToTopRequests.collect {
                     listState.animateScrollToItem(0)
                 }
             }
+            DismissKeyboardOnDrag(listState)
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(rootSearchRevealConnection),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 40.dp,
                     top = topOffset,
@@ -1324,8 +1232,6 @@ private fun TabletSettingsScreen(
                                 )
                             },
                             isTablet = true,
-                            showSearchField = rootSearchVisible,
-                            animateSearchField = rootSearchRevealAnimating,
                             onQueryChange = { settingsSearchQuery = it },
                             onTargetClick = { openSearchTarget(it) },
                         )
@@ -1526,5 +1432,20 @@ private fun TabletSettingsScreen(
                 }
             }
         }
+    }
+}
+
+/** Like iOS, starting to drag the list puts the keyboard away (Settings' search field). */
+@Composable
+private fun DismissKeyboardOnDrag(listState: LazyListState) {
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions
+            .filterIsInstance<DragInteraction.Start>()
+            .collect {
+                focusManager.clearFocus()
+                keyboard?.hide()
+            }
     }
 }
