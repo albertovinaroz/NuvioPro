@@ -1,5 +1,10 @@
 package com.nuvio.app.features.library
 
+import kotlin.time.TimeMark
+import com.nuvio.app.core.ui.StaggeredEntrance
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -63,6 +68,8 @@ internal fun LibrarySavedControls(
     leadingActions: @Composable RowScope.() -> Unit = {},
 ) {
     val sortOptions = availableLibrarySortOptions(sourceMode)
+    val haptics = LocalHapticFeedback.current
+    fun tick() = haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
     val allTypesLabel = stringResource(Res.string.library_filter_all_types)
     val anyRatingLabel = stringResource(Res.string.library_rating_any)
 
@@ -85,7 +92,10 @@ internal fun LibrarySavedControls(
                     NuvioDropdownOption(key = section.type, label = section.displayTitle)
                 },
                 enabled = verticalProjection.availableSections.size > 1,
-                onSelected = { option -> onSectionSelected(option.key) },
+                onSelected = { option ->
+                    tick()
+                    onSectionSelected(option.key)
+                },
             )
         }
 
@@ -106,7 +116,16 @@ internal fun LibrarySavedControls(
                 selectedKey = verticalProjection.selectedType.orEmpty(),
                 options = typeOptions,
                 enabled = typeOptions.size > 1,
-                onSelected = { option -> onTypeSelected(option.key.ifBlank { null }) },
+                onSelected = { option ->
+                    tick()
+                    onTypeSelected(option.key.ifBlank { null })
+                },
+                // A picked type narrows the grid: tint it, with a clear button back to all types.
+                active = verticalProjection.selectedType != null,
+                onClear = {
+                    tick()
+                    onTypeSelected(null)
+                },
             )
         }
 
@@ -119,6 +138,7 @@ internal fun LibrarySavedControls(
             },
             enabled = sortOptions.size > 1,
             onSelected = { option ->
+                tick()
                 LibrarySortOption.entries
                     .firstOrNull { it.name == option.key }
                     ?.let(onSortSelected)
@@ -136,7 +156,15 @@ internal fun LibrarySavedControls(
             label = if (minRating <= 0) anyRatingLabel else stringResource(Res.string.library_rating_min_stars, minRating),
             selectedKey = minRating.toString(),
             options = ratingOptions,
-            onSelected = { option -> onMinRatingSelected(option.key.toIntOrNull() ?: 0) },
+            onSelected = { option ->
+                tick()
+                onMinRatingSelected(option.key.toIntOrNull() ?: 0)
+            },
+            active = minRating > 0,
+            onClear = {
+                tick()
+                onMinRatingSelected(0)
+            },
         )
     }
 }
@@ -171,34 +199,65 @@ internal fun LazyListScope.libraryVerticalContent(
     fullyWatchedSeriesKeys: Set<String>,
     onPosterClick: ((LibraryItem) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
+    /** When the current filter's rows first appeared, for their staggered entrance. */
+    entranceBatch: TimeMark? = null,
 ) {
-    items(
+    itemsIndexed(
         items = projection.entries.chunked(columns),
-        key = { rowEntries ->
+        key = { _, rowEntries ->
             val firstEntry = rowEntries.first()
             "library-vertical:${firstEntry.item.type}:${firstEntry.item.id}"
         },
-    ) { rowEntries ->
-        PosterGridRow(
-            items = rowEntries.map { entry ->
-                entry.item.toMetaPreview().copy(releaseInfo = releaseInfoFor(entry.item))
-            },
-            columns = columns,
-            modifier = libraryContentTransitionModifier()
-                .padding(horizontal = 16.dp),
-            watchedKeys = watchedKeys,
-            fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-            isRecentlyAdded = { preview -> rowEntries.findEntry(preview)?.item?.isRecentlyAdded() == true },
-            onPosterClick = onPosterClick?.let { callback ->
-                { preview -> rowEntries.findEntry(preview)?.item?.let(callback) }
-            },
-            onPosterLongClick = onPosterLongClick?.let { callback ->
-                { preview ->
-                    rowEntries.findEntry(preview)?.let { entry -> callback(entry.item, entry.section) }
-                }
-            },
-        )
+    ) { rowIndex, rowEntries ->
+        val row = @Composable {
+            LibraryVerticalRow(
+                rowEntries = rowEntries,
+                columns = columns,
+                releaseInfoFor = releaseInfoFor,
+                watchedKeys = watchedKeys,
+                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                onPosterClick = onPosterClick,
+                onPosterLongClick = onPosterLongClick,
+            )
+        }
+        Box(modifier = libraryContentTransitionModifier()) {
+            if (entranceBatch != null) {
+                StaggeredEntrance(batch = entranceBatch, index = rowIndex, content = row)
+            } else {
+                row()
+            }
+        }
     }
+}
+
+@Composable
+private fun LibraryVerticalRow(
+    rowEntries: List<LibraryVerticalEntry>,
+    columns: Int,
+    releaseInfoFor: (LibraryItem) -> String,
+    watchedKeys: Set<String>,
+    fullyWatchedSeriesKeys: Set<String>,
+    onPosterClick: ((LibraryItem) -> Unit)?,
+    onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
+) {
+    PosterGridRow(
+        items = rowEntries.map { entry ->
+            entry.item.toMetaPreview().copy(releaseInfo = releaseInfoFor(entry.item))
+        },
+        columns = columns,
+        modifier = Modifier.padding(horizontal = 16.dp),
+        watchedKeys = watchedKeys,
+        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+        isRecentlyAdded = { preview -> rowEntries.findEntry(preview)?.item?.isRecentlyAdded() == true },
+        onPosterClick = onPosterClick?.let { callback ->
+            { preview -> rowEntries.findEntry(preview)?.item?.let(callback) }
+        },
+        onPosterLongClick = onPosterLongClick?.let { callback ->
+            { preview ->
+                rowEntries.findEntry(preview)?.let { entry -> callback(entry.item, entry.section) }
+            }
+        },
+    )
 }
 
 internal fun LazyListScope.libraryVerticalSkeletonItems(columns: Int) {

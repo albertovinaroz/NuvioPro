@@ -1,5 +1,7 @@
 package com.nuvio.app.features.search
 
+import com.nuvio.app.core.ui.StaggeredEntrance
+import com.nuvio.app.core.ui.NuvioEmptyState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Explore
@@ -304,7 +306,7 @@ private fun DiscoverEmptyStateCard(
         }
     }
 
-    SearchEmptyState(
+    NuvioEmptyState(
         icon = icon,
         title = title,
         message = message,

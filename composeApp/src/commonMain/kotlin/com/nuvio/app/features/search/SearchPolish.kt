@@ -15,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.onSizeChanged
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,33 +36,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.offset
-import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.nuvio
-import kotlinx.coroutines.delay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_search_recent_searches
 import nuvio.composeapp.generated.resources.compose_search_remove_recent_search
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.TimeMark
 
 /** Recent searches as clock chips; tap to search again, swipe either way to forget one. */
 @Composable
@@ -179,104 +171,4 @@ private fun SearchRecentChip(
     }
 }
 
-/** A centred empty state: an icon in a soft disc, a title, the message and an optional action. */
-@Composable
-internal fun SearchEmptyState(
-    icon: ImageVector,
-    title: String,
-    message: String,
-    modifier: Modifier = Modifier,
-    /** The search that came up empty, echoed back under the title. */
-    query: String? = null,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    val tokens = MaterialTheme.nuvio
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(CircleShape)
-                .background(tokens.colors.accent.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tokens.colors.accent,
-                modifier = Modifier.size(34.dp),
-            )
-        }
-        Spacer(modifier = Modifier.height(18.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = tokens.colors.textPrimary,
-            textAlign = TextAlign.Center,
-        )
-        if (!query.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "“${query.trim()}”",
-                style = MaterialTheme.typography.bodyLarge,
-                color = tokens.colors.textSecondary,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = tokens.colors.textMuted,
-            textAlign = TextAlign.Center,
-        )
-        if (actionLabel != null && onAction != null) {
-            Spacer(modifier = Modifier.height(20.dp))
-            NuvioPrimaryButton(text = actionLabel, onClick = onAction)
-        }
-    }
-}
-
-/**
- * Fades and lifts a row in, [index] rows after the first, when it appears shortly after [batch]
- * started (new filter results arriving). Rows composed later — reached by scrolling, or added by
- * pagination — just show, so scrolling never replays the animation.
- */
-@Composable
-internal fun StaggeredEntrance(
-    batch: TimeMark,
-    index: Int,
-    content: @Composable () -> Unit,
-) {
-    val progress = remember(batch) {
-        Animatable(if (batch.elapsedNow() < EntranceWindow) 0f else 1f)
-    }
-    LaunchedEffect(batch) {
-        if (progress.value < 1f) {
-            delay(index.coerceAtMost(MaxStaggeredRows) * StaggerStepMillis)
-            progress.animateTo(1f, tween(durationMillis = 340, easing = FastOutSlowInEasing))
-        }
-    }
-    val liftPx = with(androidx.compose.ui.platform.LocalDensity.current) { 18.dp.toPx() }
-    Box(
-        modifier = Modifier
-            // Alpha is read here and the lift in the placement phase rather than through a
-            // graphicsLayer block, which iOS can stop re-running after a rotation.
-            .alpha(progress.value)
-            .offset { IntOffset(0, ((1f - progress.value) * liftPx).roundToInt()) },
-    ) {
-        content()
-    }
-}
-
-private val EntranceWindow = 700.milliseconds
 private const val ChipDismissVelocity = 1200f
-private const val MaxStaggeredRows = 6
-private const val StaggerStepMillis = 55L

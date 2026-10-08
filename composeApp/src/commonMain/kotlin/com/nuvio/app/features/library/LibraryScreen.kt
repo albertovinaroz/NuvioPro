@@ -1,5 +1,31 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.nuvio.app.core.ui.StaggeredEntrance
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import kotlinx.coroutines.flow.filterIsInstance
+import com.nuvio.app.core.ui.NuvioEmptyState
+import com.nuvio.app.features.search.SearchBar
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.CloudQueue
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.Constraints
 import com.nuvio.app.core.ui.rememberPinnedHeaderFiller
 import com.nuvio.app.core.ui.pinnedHeaderFiller
 import com.nuvio.app.core.ui.NativeTabBridge
@@ -522,6 +548,31 @@ fun LibraryScreen(
     val showSavedControls = sourceMode == LibraryViewMode.Saved &&
         uiState.isLoaded &&
         uiState.sections.isNotEmpty()
+    // Restarts whenever what the saved library shows changes, so its rows or sections stagger
+    // in; ones reached later by scrolling just show.
+    val libraryEntrance = remember(
+        sourceMode,
+        uiState.sourceMode,
+        displaySettings.layoutMode,
+        effectiveSortOption,
+        selectedLibrarySectionKey,
+        selectedLibraryType,
+        selectedMinRating,
+        uiState.isLoaded && uiState.sections.isNotEmpty(),
+    ) { TimeSource.Monotonic.markNow() }
+
+    // Like iOS, starting to drag the list puts the keyboard away (Cloud's search field).
+    val keyboardFocusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions
+            .filterIsInstance<DragInteraction.Start>()
+            .collect {
+                keyboardFocusManager.clearFocus()
+                keyboard?.hide()
+            }
+    }
+
     // Short libraries (say, two rows) still scroll far enough for the header to pin.
     val headerFiller = rememberPinnedHeaderFiller(
         listState = listState,
@@ -634,8 +685,9 @@ fun LibraryScreen(
                                     onRetry = retryLibraryLoad,
                                 )
                             } else {
-                                HomeEmptyStateCard(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                NuvioEmptyState(
+                                    icon = Icons.Rounded.ErrorOutline,
+                                    modifier = Modifier.animateItem(),
                                     title = when (uiState.sourceMode) {
                                         LibrarySourceMode.LOCAL -> stringResource(Res.string.library_load_failed)
                                         LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_load_failed)
@@ -644,7 +696,7 @@ fun LibraryScreen(
                                     },
                                     message = uiState.errorMessage.orEmpty(),
                                     actionLabel = stringResource(Res.string.action_retry),
-                                    onActionClick = retryLibraryLoad,
+                                    onAction = retryLibraryLoad,
                                 )
                             }
                         }
@@ -652,8 +704,9 @@ fun LibraryScreen(
 
                     uiState.sections.isEmpty() -> {
                         item {
-                            HomeEmptyStateCard(
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                            NuvioEmptyState(
+                                icon = Icons.Rounded.VideoLibrary,
+                                modifier = Modifier.animateItem(),
                                 title = when (uiState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_title)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
@@ -682,6 +735,7 @@ fun LibraryScreen(
                                 onSectionViewAllClick = onSectionViewAllClick,
                                 onPosterLongClick = onPosterLongClick,
                                 onDisintegrated = disintegration::onExited,
+                                entranceBatch = libraryEntrance,
                             )
                             LibraryLayoutMode.VERTICAL -> libraryVerticalContent(
                                 projection = verticalProjection,
@@ -691,6 +745,7 @@ fun LibraryScreen(
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 onPosterClick = wrappedOnPosterClick,
                                 onPosterLongClick = onPosterLongClick,
+                                entranceBatch = libraryEntrance,
                             )
                         }
                     }
@@ -915,24 +970,26 @@ private fun LazyListScope.cloudLibraryContent(
 
         !uiState.isEnabled -> {
             item {
-                HomeEmptyStateCard(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                NuvioEmptyState(
+                    icon = Icons.Rounded.CloudOff,
+                    modifier = Modifier.animateItem(),
                     title = stringResource(Res.string.cloud_library_disabled_title),
                     message = stringResource(Res.string.cloud_library_disabled_message),
                     actionLabel = stringResource(Res.string.cloud_library_disabled_action),
-                    onActionClick = onConnectCloudClick,
+                    onAction = onConnectCloudClick,
                 )
             }
         }
 
         !uiState.hasConnectedProvider -> {
             item {
-                HomeEmptyStateCard(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                NuvioEmptyState(
+                    icon = Icons.Rounded.Link,
+                    modifier = Modifier.animateItem(),
                     title = stringResource(Res.string.cloud_library_connect_title),
                     message = stringResource(Res.string.cloud_library_connect_message),
                     actionLabel = stringResource(Res.string.cloud_library_connect_action),
-                    onActionClick = onConnectCloudClick,
+                    onAction = onConnectCloudClick,
                 )
             }
         }
@@ -997,12 +1054,13 @@ private fun LazyListScope.cloudLibraryContent(
                 }
                 failedProviderStates.forEach { providerState ->
                     item(key = "cloud-error-${providerState.providerId}") {
-                        HomeEmptyStateCard(
-                            modifier = Modifier.padding(horizontal = 16.dp),
+                        NuvioEmptyState(
+                            icon = Icons.Rounded.ErrorOutline,
+                            modifier = Modifier.animateItem(),
                             title = stringResource(Res.string.cloud_library_load_failed, providerState.providerName),
                             message = providerState.errorMessage.orEmpty(),
                             actionLabel = stringResource(Res.string.action_retry),
-                            onActionClick = onRefresh,
+                            onAction = onRefresh,
                         )
                     }
                 }
@@ -1011,8 +1069,9 @@ private fun LazyListScope.cloudLibraryContent(
                     cloudLibrarySkeletonItems()
                 } else if (filteredItems.isEmpty() && failedProviderStates.isEmpty()) {
                     item {
-                        HomeEmptyStateCard(
-                            modifier = Modifier.padding(horizontal = 16.dp),
+                        NuvioEmptyState(
+                            icon = if (hasActiveFilter) Icons.Rounded.SearchOff else Icons.Rounded.CloudQueue,
+                            modifier = Modifier.animateItem(),
                             title = stringResource(
                                 if (hasActiveFilter) {
                                     Res.string.cloud_library_no_matches_title
@@ -1028,7 +1087,7 @@ private fun LazyListScope.cloudLibraryContent(
                                 },
                             ),
                             actionLabel = if (hasActiveFilter) null else stringResource(Res.string.action_retry),
-                            onActionClick = if (hasActiveFilter) null else onRefresh,
+                            onAction = if (hasActiveFilter) null else onRefresh,
                         )
                     }
                 } else {
@@ -1039,6 +1098,7 @@ private fun LazyListScope.cloudLibraryContent(
                         CloudLibraryRow(
                             item = item,
                             onClick = { onItemSelected(item) },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -1053,29 +1113,15 @@ private fun CloudLibrarySearchField(
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
-        singleLine = true,
-        shape = MaterialTheme.nuvio.shapes.chip,
-        placeholder = { Text(stringResource(Res.string.cloud_library_search_label)) },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-            )
-        },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(Res.string.compose_search_clear),
-                    )
-                }
-            }
-        },
+    // Search's capsule bar, so both search fields in the app look and behave alike.
+    val focusRequester = remember { FocusRequester() }
+    SearchBar(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = stringResource(Res.string.cloud_library_search_label),
+        focusRequester = focusRequester,
+        onFocusChanged = {},
+        modifier = modifier,
     )
 }
 
@@ -1104,16 +1150,97 @@ private fun LibrarySourceSwitch(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LibraryChip(
-            label = stringResource(Res.string.library_source_saved),
-            selected = selectedMode == LibraryViewMode.Saved,
-            onClick = { onModeSelected(LibraryViewMode.Saved) },
+        LibrarySegmentedControl(
+            labels = listOf(
+                stringResource(Res.string.library_source_saved),
+                stringResource(Res.string.library_source_cloud),
+            ),
+            selectedIndex = if (selectedMode == LibraryViewMode.Cloud) 1 else 0,
+            onSelected = { index ->
+                onModeSelected(if (index == 1) LibraryViewMode.Cloud else LibraryViewMode.Saved)
+            },
         )
-        LibraryChip(
-            label = stringResource(Res.string.library_source_cloud),
-            selected = selectedMode == LibraryViewMode.Cloud,
-            onClick = { onModeSelected(LibraryViewMode.Cloud) },
+    }
+}
+
+/**
+ * iOS' segmented control: equal segments in one capsule, with the selection a pill that slides
+ * across to the tapped segment.
+ */
+@Composable
+private fun LibrarySegmentedControl(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    val haptics = LocalHapticFeedback.current
+    val position by animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f),
+        label = "librarySegmentPosition",
+    )
+    val pillColor = tokens.colors.accent.copy(alpha = 0.24f).compositeOver(tokens.colors.surface)
+    val pillBorder = tokens.colors.accent.copy(alpha = 0.5f)
+    Box(
+        modifier = modifier
+            .height(IntrinsicSize.Min)
+            .width(IntrinsicSize.Max)
+            .clip(CircleShape)
+            .background(tokens.colors.surface)
+            .padding(3.dp),
+    ) {
+        // The sliding pill, placed in the layout phase from the animated position.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .layout { measurable, constraints ->
+                    // The capsule sizes itself by intrinsics, which measure with open-ended
+                    // constraints; fixed infinite constraints would throw, so just pass through.
+                    if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+                        val placeable = measurable.measure(constraints)
+                        return@layout layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                    }
+                    val segmentWidth = constraints.maxWidth / labels.size
+                    val placeable = measurable.measure(Constraints.fixed(segmentWidth, constraints.maxHeight))
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        placeable.place((position * segmentWidth).roundToInt(), 0)
+                    }
+                }
+                .clip(CircleShape)
+                .background(pillColor)
+                .border(1.dp, pillBorder, CircleShape),
         )
+        Row {
+            labels.forEachIndexed { index, label ->
+                val selected = index == selectedIndex
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            if (!selected) {
+                                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                onSelected(index)
+                            }
+                        }
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (selected) tokens.colors.textPrimary else tokens.colors.textMuted,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1156,6 +1283,7 @@ private fun CloudLibraryToolbar(
         ?: stringResource(Res.string.cloud_library_provider_all)
     val selectedTypeLabel = selectedType?.let { type -> cloudLibraryTypeLabel(type) }
         ?: stringResource(Res.string.cloud_library_type_all)
+    val haptics = LocalHapticFeedback.current
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -1180,7 +1308,13 @@ private fun CloudLibraryToolbar(
                     options = providerOptions,
                     enabled = providerOptions.size > 1,
                     onSelected = { option ->
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         onProviderSelected(option.key.ifBlank { null })
+                    },
+                    active = selectedProviderId != null,
+                    onClear = {
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onProviderSelected(null)
                     },
                 )
                 NuvioDropdownChip(
@@ -1190,10 +1324,16 @@ private fun CloudLibraryToolbar(
                     options = typeOptions,
                     enabled = typeOptions.size > 1,
                     onSelected = { option ->
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                         val type = option.key
                             .takeIf { it.isNotBlank() }
                             ?.let(CloudLibraryItemType::valueOf)
                         onTypeSelected(type)
+                    },
+                    active = selectedType != null,
+                    onClear = {
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onTypeSelected(null)
                     },
                 )
             }
@@ -1205,43 +1345,6 @@ private fun CloudLibraryToolbar(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun LibraryChip(
-    label: String,
-    selected: Boolean,
-    loading: Boolean = false,
-    error: Boolean = false,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    expanded: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) colorScheme.primaryContainer else colorScheme.surfaceContainerLow,
-        border = if (selected) BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.45f)) else null,
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-                .shimmer(loading),
-            style = MaterialTheme.typography.labelMedium,
-            color = when {
-                error -> colorScheme.error
-                selected -> colorScheme.onPrimaryContainer
-                else -> colorScheme.onSurfaceVariant
-            },
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
@@ -2021,49 +2124,60 @@ private fun LazyListScope.librarySections(
     onSectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
     onDisintegrated: (String) -> Unit,
+    /** When the current filter's sections first appeared, for their staggered entrance. */
+    entranceBatch: TimeMark? = null,
 ) {
-    items(
+    itemsIndexed(
         items = displaySections,
-        key = { section -> "library-horizontal:${section.type}" },
-    ) { section ->
-        NuvioShelfSection(
-            title = section.displayTitle,
-            entries = section.previewEntries,
-            modifier = libraryContentTransitionModifier(),
-            headerHorizontalPadding = 16.dp,
-            rowContentPadding = PaddingValues(horizontal = 16.dp),
-            onViewAllClick = section.source
-                ?.takeIf { it.items.size > LIBRARY_SECTION_PREVIEW_LIMIT }
-                ?.let { source -> onSectionViewAllClick?.let { { it(source, sortOption) } } },
-            viewAllPillSize = NuvioViewAllPillSize.Compact,
-            key = { entry -> entry.globalKey },
-            animatePlacement = true,
-        ) { entry ->
-            val item = entry.item
-            val posterItem = item.toMetaPreview().copy(releaseInfo = releaseInfoFor(item))
-            val entrySource = entry.section
-            DisintegratingContainer(
-                disintegrating = entry.exiting,
-                onDisintegrated = { onDisintegrated(entry.globalKey) },
-            ) {
-                HomePosterCard(
-                    item = posterItem,
-                    isWatched = WatchingState.isPosterWatched(
-                        watchedKeys = watchedKeys,
-                        item = posterItem,
-                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                    ),
-                    isRecentlyAdded = item.isRecentlyAdded(),
-                    onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
-                    onLongClick = if (entry.exiting || entrySource == null) {
-                        null
-                    } else {
-                        onPosterLongClick?.let { { it(item, entrySource) } }
-                    },
-                )
+        key = { _, section -> "library-horizontal:${section.type}" },
+    ) { sectionIndex, section ->
+        Box(modifier = libraryContentTransitionModifier()) {
+            StaggeredEntranceIfAny(batch = entranceBatch, index = sectionIndex) {
+                NuvioShelfSection(
+                    title = section.displayTitle,
+                    entries = section.previewEntries,
+                    headerHorizontalPadding = 16.dp,
+                    rowContentPadding = PaddingValues(horizontal = 16.dp),
+                    onViewAllClick = section.source
+                        ?.takeIf { it.items.size > LIBRARY_SECTION_PREVIEW_LIMIT }
+                        ?.let { source -> onSectionViewAllClick?.let { { it(source, sortOption) } } },
+                    viewAllPillSize = NuvioViewAllPillSize.Compact,
+                    key = { entry -> entry.globalKey },
+                    animatePlacement = true,
+                ) { entry ->
+                    val item = entry.item
+                    val posterItem = item.toMetaPreview().copy(releaseInfo = releaseInfoFor(item))
+                    val entrySource = entry.section
+                    DisintegratingContainer(
+                        disintegrating = entry.exiting,
+                        onDisintegrated = { onDisintegrated(entry.globalKey) },
+                    ) {
+                        HomePosterCard(
+                            item = posterItem,
+                            isWatched = WatchingState.isPosterWatched(
+                                watchedKeys = watchedKeys,
+                                item = posterItem,
+                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                            ),
+                            isRecentlyAdded = item.isRecentlyAdded(),
+                            onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
+                            onLongClick = if (entry.exiting || entrySource == null) {
+                                null
+                            } else {
+                                onPosterLongClick?.let { { it(item, entrySource) } }
+                            },
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+/** [StaggeredEntrance] when there's a batch to stagger from, otherwise just [content]. */
+@Composable
+private fun StaggeredEntranceIfAny(batch: TimeMark?, index: Int, content: @Composable () -> Unit) {
+    if (batch != null) StaggeredEntrance(batch = batch, index = index, content = content) else content()
 }
 
 private fun LibraryItem.libraryReleaseInfoKey(): String = "${type.lowercase()}:$id"

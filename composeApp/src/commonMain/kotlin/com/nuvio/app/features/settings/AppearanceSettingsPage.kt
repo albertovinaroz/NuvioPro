@@ -1,5 +1,26 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import com.nuvio.app.core.ui.accentBrush
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.LocalNuvioTabletNavLayout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -107,16 +128,33 @@ internal fun LazyListScope.appearanceSettingsContent(
     onPosterCustomizationClick: () -> Unit,
 ) {
     item {
+        // Folded down to the current theme; the swatches only open when you mean to change it.
+        var themeExpanded by rememberSaveable { mutableStateOf(false) }
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_theme),
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
-                AppearanceThemePicker(
+                AppearanceThemeCollapseRow(
+                    themeName = stringResource(selectedTheme.labelRes),
+                    expanded = themeExpanded,
                     isTablet = isTablet,
-                    selectedTheme = selectedTheme,
-                    onThemeSelected = onThemeSelected,
+                    onClick = { themeExpanded = !themeExpanded },
                 )
+                AnimatedVisibility(
+                    visible = themeExpanded,
+                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                ) {
+                    Column {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        AppearanceThemePicker(
+                            isTablet = isTablet,
+                            selectedTheme = selectedTheme,
+                            onThemeSelected = onThemeSelected,
+                        )
+                    }
+                }
             }
         }
     }
@@ -477,5 +515,53 @@ private fun TabBarBehaviorBottomSheet(
                 )
             }
         }
+    }
+}
+
+/** The Theme section's folded row: the current theme's swatch and name, and a chevron that turns. */
+@Composable
+private fun AppearanceThemeCollapseRow(
+    themeName: String,
+    expanded: Boolean,
+    isTablet: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        label = "themeCollapseChevron",
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .settingsRowClickable(onClick = onClick)
+            .padding(
+                horizontal = if (isTablet) 20.dp else 16.dp,
+                vertical = if (isTablet) 14.dp else 12.dp,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(if (isTablet) 28.dp else 26.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.themePalette.accentBrush()),
+        )
+        Spacer(modifier = Modifier.width(if (isTablet) 16.dp else 14.dp))
+        Text(
+            text = themeName,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tokens.colors.textPrimary,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = tokens.colors.textMuted,
+            modifier = Modifier
+                .size(if (isTablet) 22.dp else 20.dp)
+                .rotate(chevronRotation),
+        )
     }
 }

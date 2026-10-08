@@ -1,5 +1,6 @@
 package com.nuvio.app.features.search
 
+import com.nuvio.app.core.ui.NuvioEmptyState
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -604,7 +605,7 @@ private fun SearchEmptyStateCard(
         }
     }
 
-    SearchEmptyState(
+    NuvioEmptyState(
         icon = icon,
         title = title,
         message = message,
