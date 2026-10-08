@@ -1263,6 +1263,7 @@ struct TabContentView: View {
     @StateObject private var trailerMuteViewModel = HeroTrailerMuteViewModel()
     // Same one-observer-per-tab guard as trailerMuteViewModel, gated on `tab == .library` instead.
     @StateObject private var downloadsButtonViewModel = NativeDownloadsButtonViewModel()
+    @StateObject private var libraryHeaderTop = LibraryHeaderTopViewModel()
 
     var body: some View {
         NavigationStack(
@@ -1358,8 +1359,15 @@ struct TabContentView: View {
                         )
                     }
                 )
-                .padding(.top, 8)
-                .padding(.trailing, 16)
+                // Level with Compose's header: its status-bar inset + 8, measured from the very
+                // top. Until Compose reports it, fall back to the safe area (the old placement).
+                .padding(.top, (libraryHeaderTop.top ?? 0) + 8)
+                // Same side inset as Compose's content, rather than SwiftUI's full safe area.
+                .padding(.trailing, (libraryHeaderTop.end ?? 0) + 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .ignoresSafeArea(
+                    edges: libraryHeaderTop.top == nil ? [] : (libraryHeaderTop.end == nil ? .top : [.top, .horizontal])
+                )
             }
         }
         .animation(.easeInOut(duration: 0.22), value: trailerMuteViewModel.visible)
@@ -1369,6 +1377,7 @@ struct TabContentView: View {
             }
             if tab == .library {
                 downloadsButtonViewModel.startObserving()
+                libraryHeaderTop.startObserving()
             }
         }
         .onDisappear {
@@ -1634,6 +1643,23 @@ private final class HeroTrailerMuteViewModel: ObservableObject {
     }
 }
 
+/// The status-bar inset Compose lays Library's header out from (see publishLibraryHeaderTop),
+/// so the glass capsule sits level with the title and the pinned Saved/Cloud row in any
+/// orientation; nil until Compose has reported it.
+private final class LibraryHeaderTopViewModel: ObservableObject {
+    @Published private(set) var top: CGFloat?
+    @Published private(set) var end: CGFloat?
+
+    func startObserving() {
+        NativeTabBridgeKt.observeLibraryHeaderTop { [weak self] value in
+            DispatchQueue.main.async { self?.top = CGFloat(truncating: value) }
+        }
+        NativeTabBridgeKt.observeLibraryHeaderEnd { [weak self] value in
+            DispatchQueue.main.async { self?.end = CGFloat(truncating: value) }
+        }
+    }
+}
+
 private final class NativeDownloadsButtonViewModel: ObservableObject {
     @Published private(set) var isDownloading = false
     @Published private(set) var hasUnseenCompleted = false
@@ -1797,17 +1823,21 @@ private struct LibraryHeaderGlassButtons: View {
     let onDownloads: () -> Void
     let onRated: () -> Void
 
-    private static let diameter: CGFloat = 44
+    // A compact group, like iOS 26's own grouped toolbar buttons: narrow hit columns at the
+    // nav bar's 44pt height, tight together inside one capsule.
+    private static let buttonWidth: CGFloat = 38
+    private static let height: CGFloat = 44
+    private static let iconFont = Font.system(size: 17, weight: .medium)
 
     private var calendarIcon: some View {
         Image(systemName: "calendar")
-            .font(.system(size: 17, weight: .semibold))
+            .font(Self.iconFont)
             .foregroundStyle(.white)
     }
 
     private var ratedIcon: some View {
-        Image(systemName: "star.fill")
-            .font(.system(size: 17, weight: .semibold))
+        Image(systemName: "star")
+            .font(Self.iconFont)
             .foregroundStyle(.white)
     }
 
@@ -1820,23 +1850,27 @@ private struct LibraryHeaderGlassButtons: View {
             // happening in unrelated gestured content) but the container's proximity-based
             // fusion never actually merged the two circles into one surface at this size/gap —
             // this one is a single shape by construction, so there's no fusion threshold to miss.
-            HStack(spacing: 14) {
+            HStack(spacing: 2) {
                 glassButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 glassButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
                 glassButton(label: ratedTitle, action: onRated) { ratedIcon }
             }
-            .glassEffect(.clear.interactive(), in: Capsule())
+            .padding(.horizontal, 6)
+            // Regular rather than clear glass: over the near-black page, clear read as a dark
+            // blot with a faint rim; regular frosts and catches light like the system bars.
+            .glassEffect(.regular.interactive(), in: Capsule())
         } else {
-            HStack(spacing: 14) {
+            HStack(spacing: 2) {
                 plainButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 plainButton(label: downloadsTitle, action: onDownloads) {
                     DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
                 }
                 plainButton(label: ratedTitle, action: onRated) { ratedIcon }
             }
-            .frame(height: Self.diameter)
+            .padding(.horizontal, 6)
+            .frame(height: Self.height)
             .background(Capsule().fill(.ultraThinMaterial))
         }
     }
@@ -1849,7 +1883,7 @@ private struct LibraryHeaderGlassButtons: View {
     ) -> some View {
         Button(action: action) {
             icon()
-                .frame(width: Self.diameter, height: Self.diameter)
+                .frame(width: Self.buttonWidth, height: Self.height)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1862,7 +1896,7 @@ private struct LibraryHeaderGlassButtons: View {
         @ViewBuilder icon: () -> some View
     ) -> some View {
         icon()
-            .frame(width: Self.diameter, height: Self.diameter)
+            .frame(width: Self.buttonWidth, height: Self.height)
             .contentShape(Rectangle())
             .onTapGesture(perform: action)
             .accessibilityAddTraits(.isButton)
@@ -1984,8 +2018,9 @@ private struct DownloadsGlassIcon: View {
     @State private var pulse = false
 
     var body: some View {
-        Image(systemName: "arrow.down.circle")
-            .font(.system(size: 17, weight: .semibold))
+        // Same weight and outline style as its calendar/star neighbours in the capsule.
+        Image(systemName: "arrow.down.to.line")
+            .font(.system(size: 17, weight: .medium))
             .foregroundStyle(
                 hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
             )

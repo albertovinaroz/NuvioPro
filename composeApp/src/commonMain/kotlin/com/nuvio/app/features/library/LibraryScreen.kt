@@ -1,5 +1,12 @@
 package com.nuvio.app.features.library
 
+import com.nuvio.app.core.ui.nuvioLandscapeSideInsets
+import com.nuvio.app.core.ui.publishLibraryHeaderEnd
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.calculateEndPadding
+import com.nuvio.app.core.ui.publishLibraryHeaderTop
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -534,6 +541,8 @@ fun LibraryScreen(
     // — see LibraryHeaderGlassButtons in ContentView.swift), so the switch row docks beside it as
     // it pins. The view controls (layout, list management) lead the filter row instead.
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // The native capsule (iOS) aligns to this rather than to SwiftUI's own safe area.
+    LaunchedEffect(statusBarTop) { publishLibraryHeaderTop(statusBarTop.value) }
     val headerDensity = LocalDensity.current
     val statusBarTopPx = with(headerDensity) { statusBarTop.toPx() }
     val pinFadePx = with(headerDensity) { 16.dp.toPx() }
@@ -604,9 +613,23 @@ fun LibraryScreen(
     )
     val background = MaterialTheme.nuvio.colors.background
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-            // Same rule as Search's grid, so both screens fit the same number of posters to a row.
-            val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
+    // Clear of the Dynamic Island and rounded corners in landscape, like the native capsule.
+    val horizontalSafePadding = nuvioLandscapeSideInsets()
+    val layoutDirection = LocalLayoutDirection.current
+    LaunchedEffect(horizontalSafePadding, layoutDirection) {
+        publishLibraryHeaderEnd(horizontalSafePadding.calculateEndPadding(layoutDirection).value)
+    }
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontalSafePadding),
+    ) {
+            // Same rule as Search's grid, from the full screen width, so both screens fit the same
+            // number of posters to a row even with the landscape safe area taken off the sides.
+            val fullWidth = maxWidth +
+                horizontalSafePadding.calculateStartPadding(layoutDirection) +
+                horizontalSafePadding.calculateEndPadding(layoutDirection)
+            val gridColumns = remember(fullWidth) { posterGridColumnCountForWidth(fullWidth) }
 
             NuvioScreen(
                 modifier = Modifier
@@ -953,7 +976,7 @@ fun LibraryScreen(
                         modifier = Modifier.semantics { contentDescription = openRatedLabel },
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Star,
+                            imageVector = Icons.Rounded.StarBorder,
                             contentDescription = null,
                             modifier = Modifier.size(19.dp),
                             tint = Color.White,

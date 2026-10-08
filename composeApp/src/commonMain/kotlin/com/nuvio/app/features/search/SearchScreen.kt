@@ -1,5 +1,10 @@
 package com.nuvio.app.features.search
 
+import com.nuvio.app.core.ui.nuvioLandscapeSideInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.nuvio.app.core.ui.NuvioEmptyState
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.ui.platform.LocalFocusManager
@@ -307,7 +312,13 @@ fun SearchScreen(
         // The large "Search" title scrolls away with the list. The search field and the discover
         // filters sit in an overlay that follows their slot in the list until it reaches the status
         // bar, then stays pinned there on a blurred, theme-tinted header the results scroll under.
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Clear of the Dynamic Island and rounded corners in landscape; the column count above
+        // still comes from the full width.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(nuvioLandscapeSideInsets()),
+        ) {
             NuvioScreen(
                 horizontalPadding = 0.dp,
                 topPadding = 0.dp,

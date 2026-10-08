@@ -1,5 +1,15 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.nuvioLandscapeSideInsets
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -1104,7 +1114,19 @@ private fun TabletSettingsScreen(
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val topOffset = max(statusBarPadding + 24.dp, 48.dp) + 64.dp
+    val bottomOverlayPadding = LocalNuvioBottomNavigationOverlayPadding.current
+    // The extra 64dp clears a tab bar along the top, which iPads have (iPadOS puts the native
+    // one there). A phone turned sideways keeps its floating bar at the bottom, so on a short
+    // screen that room only pushed the categories down past the bottom edge.
+    val windowSize = LocalWindowInfo.current.containerSize
+    val windowShortSide = with(LocalDensity.current) { minOf(windowSize.width, windowSize.height).toDp() }
+    val topBarClearance = if (windowShortSide < 600.dp && bottomOverlayPadding > 0.dp) 0.dp else 64.dp
+    val topOffset = max(statusBarPadding + 24.dp, 48.dp) + topBarClearance
+    // Clear of the Dynamic Island and rounded corners in landscape.
+    val safeSides = nuvioLandscapeSideInsets()
+    val layoutDirection = LocalLayoutDirection.current
+    val safeStart = safeSides.calculateStartPadding(layoutDirection)
+    val safeEnd = safeSides.calculateEndPadding(layoutDirection)
 
     LaunchedEffect(page) {
         if (page.opensInlineOnTablet) {
@@ -1122,14 +1144,19 @@ private fun TabletSettingsScreen(
     Row(modifier = Modifier.fillMaxSize()) {
         Surface(
             modifier = Modifier
-                .width(280.dp)
+                // The panel's fill reaches the screen edge; its content starts past the safe area.
+                .width(280.dp + safeStart)
                 .fillMaxSize(),
             color = MaterialTheme.colorScheme.surface,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = topOffset),
+                    // Scrolls on short (landscape phone) screens, with room at the bottom for
+                    // the floating tab bar, so every category stays reachable.
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = safeStart)
+                    .padding(top = topOffset, bottom = bottomOverlayPadding + 16.dp),
             ) {
                 Text(
                     text = stringResource(Res.string.compose_settings_page_root),
@@ -1179,7 +1206,6 @@ private fun TabletSettingsScreen(
             ScreenActivityEffect(listState) { screenActive ->
                 if (!screenActive) listState.stopScroll()
             }
-            val bottomOverlayPadding = LocalNuvioBottomNavigationOverlayPadding.current
             LaunchedEffect(scrollToTopRequests) {
                 scrollToTopRequests.collect {
                     listState.animateScrollToItem(0)
@@ -1192,7 +1218,7 @@ private fun TabletSettingsScreen(
                 contentPadding = PaddingValues(
                     start = 40.dp,
                     top = topOffset,
-                    end = 40.dp,
+                    end = 40.dp + safeEnd,
                     bottom = 40.dp + bottomOverlayPadding,
                 ),
                 verticalArrangement = Arrangement.spacedBy(18.dp),

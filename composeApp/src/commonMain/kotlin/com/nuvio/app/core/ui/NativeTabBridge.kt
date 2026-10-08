@@ -260,6 +260,39 @@ fun observeNativeTabBarVisible(listener: (Boolean) -> Unit) {
 
 private var swiftPopToRootListener: ((String) -> Unit)? = null
 
+// Where Library's header row starts (dp from the top of the window): the status-bar inset Compose
+// lays the title and the pinned Saved/Cloud row out from, which the native glass capsule lines up
+// with. Compose's inset and SwiftUI's safe area differ in landscape.
+private var libraryHeaderTopListener: ((Float) -> Unit)? = null
+private var lastLibraryHeaderTop: Float? = null
+
+internal fun publishLibraryHeaderTop(topDp: Float) {
+    if (lastLibraryHeaderTop == topDp) return
+    lastLibraryHeaderTop = topDp
+    libraryHeaderTopListener?.invoke(topDp)
+}
+
+fun observeLibraryHeaderTop(listener: (Float) -> Unit) {
+    libraryHeaderTopListener = listener
+    lastLibraryHeaderTop?.let(listener)
+}
+
+// Library's trailing side inset (dp) in landscape, so the capsule lines up with the content's edge
+// instead of SwiftUI's full safe area.
+private var libraryHeaderEndListener: ((Float) -> Unit)? = null
+private var lastLibraryHeaderEnd: Float? = null
+
+internal fun publishLibraryHeaderEnd(endDp: Float) {
+    if (lastLibraryHeaderEnd == endDp) return
+    lastLibraryHeaderEnd = endDp
+    libraryHeaderEndListener?.invoke(endDp)
+}
+
+fun observeLibraryHeaderEnd(listener: (Float) -> Unit) {
+    libraryHeaderEndListener = listener
+    lastLibraryHeaderEnd?.let(listener)
+}
+
 fun observeNativePopToRoot(listener: (String) -> Unit) {
     swiftPopToRootListener = listener
 }
