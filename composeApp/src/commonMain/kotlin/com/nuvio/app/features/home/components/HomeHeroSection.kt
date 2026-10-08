@@ -719,10 +719,13 @@ internal fun HomeHeroSection(
                                 modifier = Modifier
                                     .fillMaxWidth(layout.contentWidthFraction)
                                     .widthIn(max = layout.contentMaxWidth),
+                                // Anchored to the bottom (NuvioMedia 0.5.8's tablet/landscape fix):
+                                // centring made the block jump as pages of different heights
+                                // crossfaded.
                                 contentAlignment = if (layout.isTablet || isPosterStyle) {
-                                    Alignment.CenterStart
+                                    Alignment.BottomStart
                                 } else {
-                                    Alignment.Center
+                                    Alignment.BottomCenter
                                 },
                             ) {
                                 visiblePages.forEach { layer ->
