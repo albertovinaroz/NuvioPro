@@ -476,7 +476,7 @@ internal fun SettingsSwitchRow(
                 .padding(end = 12.dp)
                 .widthIn(max = if (isTablet) 560.dp else Dp.Unspecified)
                 .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = title,
@@ -485,10 +485,11 @@ internal fun SettingsSwitchRow(
                 fontWeight = FontWeight.Medium,
             )
             if (!description.isNullOrBlank()) {
+                // Smaller and softer than the title, so a page of toggles scans by their names.
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tokens.colors.textMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = tokens.colors.textMuted.copy(alpha = 0.85f),
                 )
             }
         }

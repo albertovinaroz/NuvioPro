@@ -833,7 +833,7 @@
     <string name="settings_hide_secret">Hide value</string>
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_card_depth_title">CARD DEPTH EFFECT</string>
-    <string name="settings_card_depth_description">Adds a lit top edge and a soft sheen to image cards for a subtle sense of depth.</string>
+    <string name="settings_card_depth_description">A lit top edge and a soft sheen that give cards subtle depth.</string>
     <string name="settings_card_depth_enabled">Enable depth effect</string>
     <string name="settings_card_depth_edge">Edge glow</string>
     <string name="settings_card_depth_edge_subtle">Subtle</string>
@@ -846,7 +846,7 @@
     <string name="settings_card_depth_apply_to">Apply to</string>
     <string name="settings_card_depth_fine_tune">Fine-tune</string>
     <string name="settings_card_depth_fine_tune_title">Fine-tune Depth</string>
-    <string name="settings_card_depth_fine_tune_hint">Drag the dot right for a brighter edge, up for more sheen. Use the slider to extend the glow around the full outline.</string>
+    <string name="settings_card_depth_fine_tune_hint">Drag right for a brighter edge, up for more sheen. The slider spreads the glow around the card.</string>
     <string name="settings_card_depth_pad_edge_axis">Edge glow →</string>
     <string name="settings_card_depth_pad_sheen_axis">↑ Sheen</string>
     <string name="settings_card_depth_edge_value">Edge glow</string>
@@ -869,7 +869,7 @@
     <string name="settings_poster_custom">Custom</string>
     <string name="settings_poster_description">Tune card width and corner radius.</string>
     <string name="settings_poster_hide_labels">Hide labels</string>
-    <string name="settings_poster_always_show_landscape_clearlogo">Always backdrop with logo for landscape posters</string>
+    <string name="settings_poster_always_show_landscape_clearlogo">Backdrop + logo in landscape</string>
     <string name="settings_poster_landscape_mode">Landscape Posters</string>
     <string name="settings_poster_live_preview">Live Preview</string>
     <string name="settings_poster_option_with_value">%1$s (%2$s)</string>
@@ -889,8 +889,8 @@
     <string name="settings_poster_width_standard">Standard</string>
     <!-- Custom Poster URL -->
     <string name="settings_custom_poster_title">CUSTOM POSTER SOURCE</string>
-    <string name="settings_custom_poster_description">Provide a poster URL pattern from an external service. If a placeholder has no value for a given title, the original poster is used instead.</string>
-    <string name="settings_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
+    <string name="settings_custom_poster_description">Use a URL pattern to load posters from another service. Titles it can\'t fill keep their own.</string>
+    <string name="settings_custom_poster_placeholder">https://example.com/{type}/{id}.jpg</string>
     <string name="settings_custom_poster_active">Custom poster source active</string>
     <string name="settings_custom_poster_none">No pattern configured</string>
     <string name="settings_custom_poster_save">Save</string>

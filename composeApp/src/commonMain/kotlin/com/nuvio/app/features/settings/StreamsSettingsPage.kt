@@ -126,7 +126,7 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                 )
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_stream_badge_position_title),
-                    description = badgePlacementLabel,
+                    value = badgePlacementLabel,
                     isTablet = isTablet,
                     onClick = { showBadgePositionDialog = true },
                 )
@@ -153,7 +153,7 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
                 if (!isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_stream_background_title),
-                        description = streamBackgroundModeLabel(currentSettings.backgroundMode),
+                        value = streamBackgroundModeLabel(currentSettings.backgroundMode),
                         isTablet = false,
                         onClick = { showBackgroundDialog = true },
                     )

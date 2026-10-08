@@ -456,7 +456,7 @@ private fun PlaybackSettingsSection(
                 // Player preference picker: Internal / External
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_player_preference),
-                    description = if (autoPlayPlayerSettings.externalPlayerEnabled) {
+                    value = if (autoPlayPlayerSettings.externalPlayerEnabled) {
                         stringResource(Res.string.settings_playback_player_preference_external)
                     } else {
                         stringResource(Res.string.settings_playback_player_preference_internal)
@@ -468,7 +468,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_external_player_app),
-                        description = selectedExternalPlayer?.name
+                        value = selectedExternalPlayer?.name
                             ?: if (availableExternalPlayers.isEmpty()) {
                                 stringResource(Res.string.settings_playback_external_player_none_available)
                             } else {
@@ -537,7 +537,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_hold_speed),
-                        description = formatPlaybackSpeedLabel(holdToSpeedValue),
+                        value = formatPlaybackSpeedLabel(holdToSpeedValue),
                         isTablet = isTablet,
                         onClick = { showHoldToSpeedValueDialog = true },
                     )
@@ -563,7 +563,7 @@ private fun PlaybackSettingsSection(
             SettingsGroup(isTablet = isTablet) {
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_preferred_audio_language),
-                    description = when (preferredAudioLanguage) {
+                    value = when (preferredAudioLanguage) {
                         AudioLanguageOption.DEFAULT -> stringResource(Res.string.settings_playback_option_default)
                         AudioLanguageOption.DEVICE -> stringResource(Res.string.settings_playback_option_device_language)
                         AudioLanguageOption.ORIGINAL -> stringResource(Res.string.settings_playback_option_original)
@@ -576,7 +576,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_secondary_audio_language),
-                    description = languageLabelForCode(secondaryPreferredAudioLanguage),
+                    value = languageLabelForCode(secondaryPreferredAudioLanguage),
                     enabled = audioLanguageEnabled,
                     isTablet = isTablet,
                     onClick = { showSecondaryAudioDialog = true },
@@ -584,7 +584,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_preferred_subtitle_language),
-                    description = when (preferredSubtitleLanguage) {
+                    value = when (preferredSubtitleLanguage) {
                         SubtitleLanguageOption.NONE -> stringResource(Res.string.settings_playback_option_none)
                         SubtitleLanguageOption.DEVICE -> stringResource(Res.string.settings_playback_option_device_language)
                         SubtitleLanguageOption.FORCED -> stringResource(Res.string.settings_playback_option_forced)
@@ -597,7 +597,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_secondary_subtitle_language),
-                    description = languageLabelForCode(secondaryPreferredSubtitleLanguage),
+                    value = languageLabelForCode(secondaryPreferredSubtitleLanguage),
                     enabled = subtitleLanguageEnabled,
                     isTablet = isTablet,
                     onClick = { showSecondarySubtitleDialog = true },
@@ -708,7 +708,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_subtitle_text_color),
-                    description = subtitleColorLabel(subtitleStyle.textColor),
+                    value = subtitleColorLabel(subtitleStyle.textColor),
                     enabled = subtitleRenderingEnabled,
                     isTablet = isTablet,
                     onClick = { showSubtitleTextColorDialog = true },
@@ -716,7 +716,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_subtitle_background_color),
-                    description = subtitleColorLabel(subtitleStyle.backgroundColor),
+                    value = subtitleColorLabel(subtitleStyle.backgroundColor),
                     enabled = subtitleRenderingEnabled,
                     isTablet = isTablet,
                     onClick = { showSubtitleBackgroundColorDialog = true },
@@ -736,7 +736,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_subtitle_outline_color),
-                        description = subtitleColorLabel(subtitleStyle.outlineColor),
+                        value = subtitleColorLabel(subtitleStyle.outlineColor),
                         enabled = subtitleRenderingEnabled,
                         isTablet = isTablet,
                         onClick = { showSubtitleOutlineColorDialog = true },
@@ -757,7 +757,7 @@ private fun PlaybackSettingsSection(
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
                             title = stringResource(Res.string.settings_playback_render_type),
-                            description = libassRenderTypeLabel(libassRenderType),
+                            value = libassRenderTypeLabel(libassRenderType),
                             enabled = subtitleRenderingEnabled,
                             isTablet = isTablet,
                             onClick = { showLibassRenderTypeDialog = true },
@@ -797,14 +797,14 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_p2p_profile_title),
-                        description = p2pProfileLabel(p2pSettings.torrentProfile),
+                        value = p2pProfileLabel(p2pSettings.torrentProfile),
                         isTablet = isTablet,
                         onClick = { showP2pProfileDialog = true },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_p2p_cache_size_title),
-                        description = p2pCacheSizeLabel(p2pSettings.cacheSize),
+                        value = p2pCacheSizeLabel(p2pSettings.cacheSize),
                         isTablet = isTablet,
                         onClick = { showP2pCacheSizeDialog = true },
                     )
@@ -864,7 +864,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_last_link_cache_duration),
-                        description = formatReuseCacheDuration(streamReuseLastLinkCacheHours),
+                        value = formatReuseCacheDuration(streamReuseLastLinkCacheHours),
                         isTablet = isTablet,
                         onClick = { showReuseCacheDurationDialog = true },
                     )
@@ -879,7 +879,7 @@ private fun PlaybackSettingsSection(
             SettingsGroup(isTablet = isTablet) {
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_stream_selection_mode),
-                    description = stringResource(autoPlayPlayerSettings.streamAutoPlayMode.labelRes),
+                    value = stringResource(autoPlayPlayerSettings.streamAutoPlayMode.labelRes),
                     isTablet = isTablet,
                     onClick = { showAutoPlayModeDialog = true },
                 )
@@ -888,7 +888,7 @@ private fun PlaybackSettingsSection(
                     val notSetLabel = stringResource(Res.string.settings_playback_not_set)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_regex_pattern),
-                        description = autoPlayPlayerSettings.streamAutoPlayRegex.ifBlank { notSetLabel },
+                        value = autoPlayPlayerSettings.streamAutoPlayRegex.ifBlank { notSetLabel },
                         isTablet = isTablet,
                         onClick = { showAutoPlayRegexDialog = true },
                     )
@@ -955,7 +955,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_source_scope),
-                    description = stringResource(autoPlayPlayerSettings.streamAutoPlaySource.labelRes(pluginsEnabled)),
+                    value = stringResource(autoPlayPlayerSettings.streamAutoPlaySource.labelRes(pluginsEnabled)),
                     isTablet = isTablet,
                     onClick = { showAutoPlaySourceDialog = true },
                 )
@@ -971,7 +971,7 @@ private fun PlaybackSettingsSection(
                     }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_allowed_addons),
-                        description = addonSubtitle,
+                        value = addonSubtitle,
                         isTablet = isTablet,
                         onClick = { showAutoPlayAddonSelectionDialog = true },
                     )
@@ -988,7 +988,7 @@ private fun PlaybackSettingsSection(
                     }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_allowed_plugins),
-                        description = pluginSubtitle,
+                        value = pluginSubtitle,
                         isTablet = isTablet,
                         onClick = { showAutoPlayPluginSelectionDialog = true },
                     )
@@ -1008,7 +1008,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_engine),
-                        description = androidPlaybackEngine.label,
+                        value = androidPlaybackEngine.label,
                         enabled = decoderEnabled,
                         isTablet = isTablet,
                         onClick = { showPlaybackEngineDialog = true },
@@ -1017,7 +1017,7 @@ private fun PlaybackSettingsSection(
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
                             title = stringResource(Res.string.settings_playback_libmpv_video_output),
-                            description = androidLibmpvVideoOutput.label,
+                            value = androidLibmpvVideoOutput.label,
                             enabled = libmpvOptionsEnabled,
                             isTablet = isTablet,
                             onClick = { showLibmpvVideoOutputDialog = true },
@@ -1044,7 +1044,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_decoder_priority),
-                        description = decoderPriorityLabel(decoderPriority),
+                        value = decoderPriorityLabel(decoderPriority),
                         enabled = exoOptionsEnabled,
                         isTablet = isTablet,
                         onClick = { showDecoderPriorityDialog = true },
@@ -1305,7 +1305,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_ios_audio_output),
-                        description = autoPlayPlayerSettings.iosAudioOutputMode.label,
+                        value = autoPlayPlayerSettings.iosAudioOutputMode.label,
                         isTablet = isTablet,
                         onClick = { showIosAudioOutputDialog = true },
                     )
@@ -1319,7 +1319,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroup(isTablet = isTablet) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_ios_hardware_decoder),
-                        description = autoPlayPlayerSettings.iosHardwareDecoderMode.localizedLabel(),
+                        value = autoPlayPlayerSettings.iosHardwareDecoderMode.localizedLabel(),
                         isTablet = isTablet,
                         onClick = { showIosHardwareDecoderDialog = true },
                     )
@@ -1342,14 +1342,14 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_ios_target_primaries),
-                        description = autoPlayPlayerSettings.iosTargetPrimaries.label,
+                        value = autoPlayPlayerSettings.iosTargetPrimaries.label,
                         isTablet = isTablet,
                         onClick = { showIosTargetPrimariesDialog = true },
                     )
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_ios_target_transfer),
-                        description = autoPlayPlayerSettings.iosTargetTransfer.label,
+                        value = autoPlayPlayerSettings.iosTargetTransfer.label,
                         isTablet = isTablet,
                         onClick = { showIosTargetTransferDialog = true },
                     )
@@ -1373,7 +1373,7 @@ private fun PlaybackSettingsSection(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_auto_skip_segments),
-                    description = autoSkipSelectionSummary(autoPlayPlayerSettings.autoSkipSegmentTypes),
+                    value = autoSkipSelectionSummary(autoPlayPlayerSettings.autoSkipSegmentTypes),
                     enabled = autoPlayPlayerSettings.skipIntroEnabled && !autoPlayPlayerSettings.externalPlayerEnabled,
                     isTablet = isTablet,
                     onClick = { showAutoSkipSegmentDialog = true },
@@ -1392,7 +1392,7 @@ private fun PlaybackSettingsSection(
                     val notSetLabel = stringResource(Res.string.settings_playback_not_set)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_anime_skip_client_id),
-                        description = autoPlayPlayerSettings.animeSkipClientId.ifBlank { notSetLabel },
+                        value = autoPlayPlayerSettings.animeSkipClientId.ifBlank { notSetLabel },
                         isTablet = isTablet,
                         onClick = { showAnimeSkipClientIdDialog = true },
                     )
@@ -1421,7 +1421,7 @@ private fun PlaybackSettingsSection(
                     val notSetLabel = stringResource(Res.string.settings_playback_not_set)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_introdb_api_key),
-                        description = autoPlayPlayerSettings.introDbApiKey.ifBlank { notSetLabel },
+                        value = autoPlayPlayerSettings.introDbApiKey.ifBlank { notSetLabel },
                         isTablet = isTablet,
                         onClick = { showIntroDbApiKeyDialog = true },
                     )
@@ -1492,7 +1492,7 @@ private fun PlaybackSettingsSection(
                 var showThresholdModeDialog by remember { mutableStateOf(false) }
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_threshold_mode),
-                    description = stringResource(autoPlayPlayerSettings.nextEpisodeThresholdMode.labelRes),
+                    value = stringResource(autoPlayPlayerSettings.nextEpisodeThresholdMode.labelRes),
                     isTablet = isTablet,
                     onClick = { showThresholdModeDialog = true },
                 )

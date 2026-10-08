@@ -820,6 +820,10 @@ private fun PosterToggleRow(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
+            // Takes the leftover width, so a title that wraps never pushes the switch off the card.
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp),
         )
         Switch(
             checked = checked,

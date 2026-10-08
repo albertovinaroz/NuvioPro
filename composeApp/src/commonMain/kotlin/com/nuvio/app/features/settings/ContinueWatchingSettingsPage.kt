@@ -184,7 +184,7 @@ internal fun LazyListScope.continueWatchingSettingsContent(
                 )
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_continue_watching_sort_mode_title),
-                    description = currentModeLabel,
+                    value = currentModeLabel,
                     isTablet = isTablet,
                     onClick = { showSortModeSheet = true },
                 )

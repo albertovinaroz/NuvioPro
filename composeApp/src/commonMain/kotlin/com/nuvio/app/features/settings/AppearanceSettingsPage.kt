@@ -167,7 +167,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_tab_bar_behavior),
-                        description = stringResource(tabBarBehavior.labelRes),
+                        value = stringResource(tabBarBehavior.labelRes),
                         isTablet = isTablet,
                         onClick = { showTabBarBehaviorSheet = true },
                     )
@@ -193,7 +193,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_appearance_app_language),
-                    description = stringResource(selectedAppLanguage.labelRes),
+                    value = stringResource(selectedAppLanguage.labelRes),
                     isTablet = isTablet,
                     onClick = { showLanguageSheet = true },
                 )
@@ -205,7 +205,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),
-                        description = if (floatingNavigationGlowSupported && effectiveNavBarStyle != NavBarStyle.CLASSIC) {
+                        value = if (floatingNavigationGlowSupported && effectiveNavBarStyle != NavBarStyle.CLASSIC) {
                             stringResource(
                                 Res.string.settings_nav_bar_summary,
                                 stringResource(effectiveNavBarStyle.labelRes),

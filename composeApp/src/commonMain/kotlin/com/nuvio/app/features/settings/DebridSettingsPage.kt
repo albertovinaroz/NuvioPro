@@ -383,7 +383,7 @@ internal fun LazyListScope.debridSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_debrid_prepare_stream_count),
-                        description = prepareCountLabel(prepareLimit),
+                        value = prepareCountLabel(prepareLimit),
                         isTablet = isTablet,
                         onClick = { showPrepareCountDialog = true },
                     )
