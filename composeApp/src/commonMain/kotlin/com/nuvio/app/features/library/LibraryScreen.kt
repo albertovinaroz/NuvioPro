@@ -1,5 +1,13 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.rounded.EventBusy
+import androidx.compose.material.icons.rounded.FolderOff
+import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.nuvio.app.core.ui.StaggeredEntrance
 import kotlin.time.TimeMark
@@ -544,6 +552,20 @@ fun LibraryScreen(
             }
         }
     }
+    // Cloud's filters while browsing a connected library (not inside a title's file picker).
+    val showCloudControls = sourceMode == LibraryViewMode.Cloud &&
+        cloudUiState.isLoaded &&
+        cloudUiState.isEnabled &&
+        cloudUiState.hasConnectedProvider &&
+        selectedCloudItemKey == null
+    val cloudAvailableTypes = remember(cloudUiState.items, selectedProviderId) {
+        cloudUiState.items
+            .filter { item -> selectedProviderId == null || item.providerId == selectedProviderId }
+            .map { item -> item.type }
+            .distinct()
+            .sortedBy { type -> type.ordinal }
+    }
+    val cloudEffectiveType = selectedType?.takeIf { type -> type in cloudAvailableTypes }
     // Same condition as the list's populated branch below, which is where these filters used to live.
     val showSavedControls = sourceMode == LibraryViewMode.Saved &&
         uiState.isLoaded &&
@@ -583,16 +605,8 @@ fun LibraryScreen(
     val background = MaterialTheme.nuvio.colors.background
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-            val windowSize = LocalWindowInfo.current.containerSize
-            val density = LocalDensity.current
-            val windowShortSide = with(density) { minOf(windowSize.width, windowSize.height).toDp() }
-            val isLandscape = maxWidth > maxHeight
-            val gridColumns = remember(isLandscape, windowShortSide) {
-                libraryGridColumnCount(
-                    isLandscape = isLandscape,
-                    isTablet = windowShortSide >= 600.dp,
-                )
-            }
+            // Same rule as Search's grid, so both screens fit the same number of posters to a row.
+            val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
 
             NuvioScreen(
                 modifier = Modifier
@@ -874,6 +888,38 @@ fun LibraryScreen(
                                 }
                             }
                         }
+                    } else if (showCloudControls) {
+                        // Cloud's service/type filters and search ride in the pinned header too,
+                        // like Saved's filters, instead of scrolling away with the list.
+                        CloudLibraryToolbar(
+                            uiState = cloudUiState,
+                            selectedProviderId = selectedProviderId,
+                            selectedType = cloudEffectiveType,
+                            availableTypes = cloudAvailableTypes,
+                            onProviderSelected = {
+                                selectedProviderId = it
+                                selectedTypeName = null
+                                selectedCloudItemKey = null
+                            },
+                            onTypeSelected = {
+                                selectedTypeName = it?.name
+                                selectedCloudItemKey = null
+                            },
+                            onRefresh = { CloudLibraryRepository.refresh() },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 8.dp),
+                        )
+                        CloudLibrarySearchField(
+                            query = cloudSearchQuery,
+                            onQueryChange = {
+                                cloudSearchQuery = it
+                                selectedCloudItemKey = null
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 10.dp, bottom = 14.dp),
+                        )
                     } else {
                         Spacer(modifier = Modifier.height(14.dp))
                     }
@@ -1025,27 +1071,6 @@ private fun LazyListScope.cloudLibraryContent(
                     )
                 }
             } else {
-                item {
-                    CloudLibraryToolbar(
-                        uiState = uiState,
-                        selectedProviderId = selectedProviderId,
-                        selectedType = effectiveSelectedType,
-                        availableTypes = availableTypes,
-                        onProviderSelected = onProviderSelected,
-                        onTypeSelected = onTypeSelected,
-                        onRefresh = onRefresh,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-
-                item(key = "cloud-library-search") {
-                    CloudLibrarySearchField(
-                        query = searchQuery,
-                        onQueryChange = onSearchQueryChange,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-
                 val visibleProviderStates = uiState.providers.filter { providerState ->
                     selectedProviderId == null || providerState.providerId == selectedProviderId
                 }
@@ -1354,14 +1379,18 @@ private fun CloudLibraryRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tokens = MaterialTheme.nuvio
     val playableCount = item.playableFiles.size
+    val title = remember(item.name) { cloudReleaseTitle(item.name) }
+    val tags = remember(item.name) { cloudFileTags(item.name) }
+    val downloading = item.progressFraction?.takeIf { it in 0f..0.999f }
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
             .clickable(enabled = playableCount > 0, onClick = onClick),
-        shape = MaterialTheme.nuvio.shapes.compactCard,
-        color = MaterialTheme.nuvio.colors.surface,
+        shape = tokens.shapes.compactCard,
+        color = tokens.colors.surface,
     ) {
         Column(
             modifier = Modifier
@@ -1371,46 +1400,56 @@ private fun CloudLibraryRow(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = item.name,
+                        text = title,
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = tokens.colors.textPrimary,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = cloudLibrarySubtitle(item),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = cloudLibraryStatusLine(item),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Quality tags, then service, size, file count and — only while it's
+                    // still downloading — the status and progress.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        tags.forEach { tag -> CloudFileTag(tag) }
+                        Text(
+                            text = cloudLibraryMetaLine(item, downloading),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tokens.colors.textMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 if (playableCount > 0) {
-                    IconButton(onClick = onClick) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(tokens.colors.accent.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = stringResource(Res.string.action_play),
+                            tint = tokens.colors.accent,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
             }
-            item.progressFraction?.takeIf { it in 0f..0.999f }?.let { progress ->
+            downloading?.let { progress ->
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth(),
@@ -1421,6 +1460,65 @@ private fun CloudLibraryRow(
         }
     }
 }
+
+@Composable
+private fun cloudLibraryMetaLine(item: CloudLibraryItem, downloading: Float?): String {
+    val playableCount = item.playableFiles.size
+    return listOfNotNull(
+        item.providerName,
+        item.sizeBytes?.let(::formatCloudBytes),
+        when (playableCount) {
+            0 -> stringResource(Res.string.cloud_library_no_playable_files)
+            1 -> null
+            else -> stringResource(Res.string.cloud_library_playable_file_count, playableCount)
+        },
+        downloading?.let { item.status?.toDisplayStatus() },
+        downloading?.let { "${(it * 100f).toInt()}%" },
+    ).joinToString(" · ")
+}
+
+/**
+ * A readable title from a release name: separators become spaces and everything from the year
+ * (or, without one, the first quality marker) on is dropped, the year kept in brackets —
+ * `Doing.Life.2026.1080p.NF.WEB-DL` reads as `Doing Life (2026)`. Falls back to the raw name.
+ */
+internal fun cloudReleaseTitle(rawName: String): String {
+    // Leading junk that's never the title: bracketed site or group tags ("【…www.site.com】",
+    // "[YTS.MX]") and bare site names ("www.site.com - ").
+    var name = rawName.trim()
+    while (true) {
+        val stripped = name
+            .replace(LeadingReleaseTag, "")
+            .replace(LeadingReleaseSite, "")
+            .trim()
+        if (stripped == name || stripped.isEmpty()) break
+        name = stripped
+    }
+    // Drop a file extension ("mkv"), but not a trailing year that only looks like one.
+    val extension = name.substringAfterLast('.', "")
+    val withoutExtension = if (extension.length in 2..4 && extension.any(Char::isLetter) && extension.all(Char::isLetterOrDigit)) {
+        name.substringBeforeLast('.')
+    } else {
+        name
+    }
+    val normalized = withoutExtension.replace(Regex("""[._]+"""), " ").replace(Regex("""\s+"""), " ").trim()
+    Regex("""\b(19\d{2}|20\d{2})\b""").find(normalized)?.let { year ->
+        val before = normalized.substring(0, year.range.first).trim().trimEnd('(', '[', '-').trim()
+        if (before.isNotEmpty()) return "$before (${year.value})"
+    }
+    Regex("""\b(s\d{1,2}e\d{1,3}|2160p|1080p|720p|480p|4k|uhd|web[ -]?dl|webrip|bluray|hdtv)\b""", RegexOption.IGNORE_CASE)
+        .find(normalized)?.let { marker ->
+            val before = normalized.substring(0, marker.range.first).trim().trimEnd('-').trim()
+            if (before.isNotEmpty()) return before
+        }
+    return normalized.ifEmpty { rawName }
+}
+
+private val LeadingReleaseTag = Regex("""^\s*(【[^】]*】|\[[^\]]*]|\([^)]*\)|\{[^}]*\})\s*[-–—:|]*\s*""")
+private val LeadingReleaseSite = Regex(
+    """^\s*(www\.)?[a-z0-9-]+\.(com|org|net|mx|me|to|io|cc|ws|xyz|tv|in|uk|co|ru|lol|fun)\b\s*[-–—:|]+\s*""",
+    RegexOption.IGNORE_CASE,
+)
 
 @Composable
 private fun CloudLibraryFilePicker(
@@ -1472,26 +1570,29 @@ private fun CloudLibraryFilePicker(
 
             val files = item.playableFiles
             if (files.isEmpty()) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.cloud_library_no_files_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = stringResource(Res.string.cloud_library_no_files_message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                NuvioEmptyState(
+                    icon = Icons.Rounded.FolderOff,
+                    title = stringResource(Res.string.cloud_library_no_files_title),
+                    message = stringResource(Res.string.cloud_library_no_files_message),
+                )
             } else {
-                files.forEach { file ->
-                    CloudLibraryFileRow(
-                        file = file,
-                        onClick = { onFileSelected(file) },
-                    )
+                // One list with hairlines between files, rather than a card per file.
+                Column {
+                    files.forEachIndexed { index, file ->
+                        if (index > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 4.dp)
+                                    .height(1.dp)
+                                    .background(MaterialTheme.nuvio.colors.borderSubtle.copy(alpha = 0.5f)),
+                            )
+                        }
+                        CloudLibraryFileRow(
+                            file = file,
+                            onClick = { onFileSelected(file) },
+                        )
+                    }
                 }
             }
         }
@@ -1504,84 +1605,111 @@ private fun CloudLibraryFileRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    val tokens = MaterialTheme.nuvio
+    val tags = remember(file.name) { cloudFileTags(file.name) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val highlight by animateColorAsState(
+        targetValue = if (pressed) tokens.colors.textPrimary.copy(alpha = 0.08f) else Color.Transparent,
+        animationSpec = tween(durationMillis = if (pressed) 0 else 260),
+        label = "cloudFileRowHighlight",
+    )
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.nuvio.colors.surface.copy(alpha = 0.58f),
+            .clip(RoundedCornerShape(10.dp))
+            .background(highlight)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            Text(
+                text = file.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = tokens.colors.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            // What tells two files of the same title apart: episode, resolution, HDR, codec, size.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    modifier = Modifier
-                        .padding(top = 2.dp)
-                        .size(18.dp),
-                    imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    modifier = Modifier.weight(1f),
-                    text = file.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                tags.forEach { tag -> CloudFileTag(tag) }
+                file.sizeBytes?.let { size ->
+                    Text(
+                        text = formatCloudBytes(size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = tokens.colors.textMuted,
+                    )
+                }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = file.sizeBytes?.let { size -> formatCloudBytes(size) }.orEmpty(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(Res.string.cloud_library_play_file),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+        }
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(tokens.colors.accent.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.PlayArrow,
+                contentDescription = stringResource(Res.string.cloud_library_play_file),
+                tint = tokens.colors.accent,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun cloudLibrarySubtitle(item: CloudLibraryItem): String {
-    val fileLine = when (val playableCount = item.playableFiles.size) {
-        0 -> stringResource(Res.string.cloud_library_no_playable_files)
-        1 -> item.playableFiles.first().name
-        else -> stringResource(Res.string.cloud_library_playable_file_count, playableCount)
-    }
-    return listOf(item.providerName, cloudLibraryTypeLabel(item.type), fileLine).joinToString(" • ")
+private fun CloudFileTag(text: String) {
+    val tokens = MaterialTheme.nuvio
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = tokens.colors.textPrimary,
+        modifier = Modifier
+            .clip(RoundedCornerShape(5.dp))
+            .background(tokens.colors.textPrimary.copy(alpha = 0.1f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }
 
-@Composable
-private fun cloudLibraryStatusLine(item: CloudLibraryItem): String {
-    val fallback = if (item.playableFiles.isEmpty()) {
-        stringResource(Res.string.cloud_library_no_playable_files)
-    } else {
-        stringResource(Res.string.cloud_library_status_ready)
+/** Episode, resolution, HDR flavour and codec, read from a release-style file name. */
+internal fun cloudFileTags(fileName: String): List<String> {
+    val name = fileName.lowercase()
+    return buildList {
+        Regex("""s(\d{1,2})[ ._-]?e(\d{1,3})""").find(name)?.let { match ->
+            val season = match.groupValues[1].padStart(2, '0')
+            val episode = match.groupValues[2].padStart(2, '0')
+            add("S${season}E$episode")
+        }
+        when {
+            Regex("""(2160p|\b4k\b|\buhd\b)""").containsMatchIn(name) -> add("4K")
+            "1080p" in name -> add("1080p")
+            "720p" in name -> add("720p")
+            "480p" in name -> add("480p")
+        }
+        when {
+            Regex("""(\bdv\b|dovi|dolby[ ._-]?vision)""").containsMatchIn(name) -> add("DV")
+            Regex("""hdr10\+|hdr10plus""").containsMatchIn(name) -> add("HDR10+")
+            "hdr" in name -> add("HDR")
+        }
+        when {
+            Regex("""(x265|h[ ._]?265|hevc)""").containsMatchIn(name) -> add("HEVC")
+            Regex("""(x264|h[ ._]?264|\bavc\b)""").containsMatchIn(name) -> add("H.264")
+            "av1" in name -> add("AV1")
+        }
     }
-    return listOfNotNull(
-        item.status?.toDisplayStatus(),
-        item.sizeBytes?.let(::formatCloudBytes),
-        item.progressFraction?.let { "${(it * 100f).toInt()}%" },
-    ).joinToString(" • ").ifBlank { fallback }
 }
 
 @Composable
@@ -2223,29 +2351,11 @@ private fun LibraryCalendarInlineLoading() {
 
 @Composable
 private fun LibraryCalendarEmptyState() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(Res.string.library_calendar_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(Res.string.library_calendar_empty_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    NuvioEmptyState(
+        icon = Icons.Rounded.EventBusy,
+        title = stringResource(Res.string.library_calendar_empty_title),
+        message = stringResource(Res.string.library_calendar_empty_message),
+    )
 }
 
 @Composable
@@ -2260,6 +2370,15 @@ private fun LibraryCalendarCard(
     onToday: () -> Unit,
     onDateSelected: (LibraryCalendarDate) -> Unit,
 ) {
+    val haptics = LocalHapticFeedback.current
+    val previousMonth = {
+        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        onPrevious()
+    }
+    val nextMonth = {
+        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        onNext()
+    }
     val swipeModifier = Modifier.pointerInput(month) {
         var totalDrag = 0f
         detectHorizontalDragGestures(
@@ -2267,8 +2386,8 @@ private fun LibraryCalendarCard(
             onHorizontalDrag = { _, dragAmount -> totalDrag += dragAmount },
             onDragEnd = {
                 when {
-                    totalDrag <= -48f -> onNext()
-                    totalDrag >= 48f -> onPrevious()
+                    totalDrag <= -48f -> nextMonth()
+                    totalDrag >= 48f -> previousMonth()
                 }
             },
             onDragCancel = { totalDrag = 0f },
@@ -2292,7 +2411,7 @@ private fun LibraryCalendarCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(
-                    onClick = onPrevious,
+                    onClick = previousMonth,
                     modifier = Modifier.size(38.dp),
                 ) {
                     Icon(
@@ -2333,7 +2452,7 @@ private fun LibraryCalendarCard(
                     )
                 }
                 IconButton(
-                    onClick = onNext,
+                    onClick = nextMonth,
                     modifier = Modifier.size(38.dp),
                 ) {
                     Icon(
@@ -2345,13 +2464,26 @@ private fun LibraryCalendarCard(
                 }
             }
             LibraryCalendarWeekdayHeader()
-            LibraryCalendarMonthGrid(
-                month = month,
-                eventsByDate = eventsByDate,
-                selectedDateIso = selectedDateIso,
-                todayIso = todayIso,
-                onDateSelected = onDateSelected,
-            )
+            // Slides the new month in from the side it came from, like flipping a page.
+            AnimatedContent(
+                targetState = month,
+                transitionSpec = {
+                    val forward = (targetState.year * 12 + targetState.month) >
+                        (initialState.year * 12 + initialState.month)
+                    val direction = if (forward) 1 else -1
+                    (slideInHorizontally(tween(260)) { it / 3 * direction } + fadeIn(tween(220)))
+                        .togetherWith(slideOutHorizontally(tween(260)) { -it / 3 * direction } + fadeOut(tween(160)))
+                },
+                label = "libraryCalendarMonth",
+            ) { shownMonth ->
+                LibraryCalendarMonthGrid(
+                    month = shownMonth,
+                    eventsByDate = eventsByDate,
+                    selectedDateIso = selectedDateIso,
+                    todayIso = todayIso,
+                    onDateSelected = onDateSelected,
+                )
+            }
         }
     }
 }
@@ -2396,6 +2528,7 @@ private fun LibraryCalendarMonthGrid(
     onDateSelected: (LibraryCalendarDate) -> Unit,
 ) {
     val cells = remember(month) { libraryCalendarCells(month) }
+    val haptics = LocalHapticFeedback.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         cells.chunked(7).forEach { week ->
             Row(
@@ -2413,64 +2546,54 @@ private fun LibraryCalendarMonthGrid(
                         val hasEvents = dayEvents.isNotEmpty()
                         val isSelected = selectedDateIso == date.iso
                         val isToday = todayIso == date.iso
+                        // iOS calendar days: circles, today's number in the accent, the
+                        // selected day filled with it, and a dot under any day with releases.
+                        val accent = MaterialTheme.colorScheme.primary
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(40.dp)
-                                .clickable { onDateSelected(date) },
-                            contentAlignment = Alignment.Center,
+                                .height(44.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    if (!isSelected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    onDateSelected(date)
+                                },
+                            contentAlignment = Alignment.TopCenter,
                         ) {
-                            val dayColor = when {
-                                isSelected -> MaterialTheme.colorScheme.onPrimary
-                                hasEvents || isToday -> MaterialTheme.colorScheme.onSurface
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(13.dp))
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    )
-                                    .then(
-                                        if (!isSelected && isToday) {
-                                            Modifier.border(
-                                                BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary),
-                                                RoundedCornerShape(13.dp),
-                                            )
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) accent else Color.Transparent),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = date.day.toString(),
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = dayColor,
-                                    fontWeight = if (hasEvents) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = if (hasEvents && isSelected) {
-                                        Modifier.padding(bottom = 6.dp)
-                                    } else {
-                                        Modifier
+                                    color = when {
+                                        isSelected -> MaterialTheme.colorScheme.onPrimary
+                                        isToday -> accent
+                                        hasEvents -> MaterialTheme.colorScheme.onSurface
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    fontWeight = when {
+                                        isSelected || isToday -> FontWeight.Bold
+                                        hasEvents -> FontWeight.SemiBold
+                                        else -> FontWeight.Normal
                                     },
                                 )
-                                if (hasEvents && !isToday) {
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomCenter)
-                                            .padding(bottom = if (isSelected) 5.dp else 2.dp)
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) {
-                                                    MaterialTheme.colorScheme.onPrimary
-                                                } else {
-                                                    MaterialTheme.colorScheme.primary
-                                                },
-                                            ),
-                                    )
-                                }
+                            }
+                            if (hasEvents) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 2.dp)
+                                        .size(5.dp)
+                                        .clip(CircleShape)
+                                        .background(accent),
+                                )
                             }
                         }
                     }
@@ -3561,9 +3684,3 @@ private fun libraryCalendarDatePlusDays(date: LibraryCalendarDate, days: Int): L
     return LibraryCalendarDate(year, month, day)
 }
 
-internal fun libraryGridColumnCount(isLandscape: Boolean, isTablet: Boolean): Int = when {
-    isTablet && isLandscape -> 7
-    isTablet -> 5
-    isLandscape -> 6
-    else -> 3
-}

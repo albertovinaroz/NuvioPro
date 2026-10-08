@@ -2226,13 +2226,13 @@
     <string name="cloud_library_play_not_connected">Cloud service is not connected.</string>
     <string name="cloud_library_play_provider_not_connected">%1$s is not connected.</string>
     <string name="cloud_library_playable_file_count">%1$d playable files</string>
-    <string name="cloud_library_provider_all">All</string>
+    <string name="cloud_library_provider_all">All services</string>
     <string name="cloud_library_refresh">Refresh cloud library</string>
     <string name="cloud_library_search_label">Search cloud library</string>
     <string name="cloud_library_select_provider">Select provider</string>
     <string name="cloud_library_select_type">Select type</string>
     <string name="cloud_library_status_ready">Ready to play</string>
-    <string name="cloud_library_type_all">All</string>
+    <string name="cloud_library_type_all">All types</string>
     <string name="cloud_library_type_torrents">Torrents</string>
     <string name="cloud_library_type_usenet">Usenet</string>
     <string name="cloud_library_type_web">Web</string>
