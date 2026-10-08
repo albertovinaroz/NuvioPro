@@ -1,15 +1,26 @@
 package com.nuvio.app.features.search
 
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import kotlinx.coroutines.flow.filterIsInstance
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlin.time.TimeSource
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import com.nuvio.app.core.ui.rememberPinnedHeaderFiller
 import com.nuvio.app.core.ui.pinnedHeaderFiller
 import com.nuvio.app.core.ui.nuvioNoTopOverscroll
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -18,14 +29,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,26 +40,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
-import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
-import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvio
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
@@ -71,7 +74,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.graphicsLayer
-import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.features.addons.AddonRepository
@@ -81,7 +83,6 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
-import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.homeSectionHorizontalPaddingForWidth
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
@@ -95,7 +96,6 @@ import kotlinx.coroutines.flow.map
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_retry
 import nuvio.composeapp.generated.resources.compose_nav_search
-import nuvio.composeapp.generated.resources.compose_search_clear
 import nuvio.composeapp.generated.resources.compose_search_empty_failed_message
 import nuvio.composeapp.generated.resources.compose_search_empty_failed_title
 import nuvio.composeapp.generated.resources.compose_search_empty_no_active_addons_message
@@ -105,8 +105,6 @@ import nuvio.composeapp.generated.resources.compose_search_empty_no_results_titl
 import nuvio.composeapp.generated.resources.compose_search_empty_no_search_catalogs_message
 import nuvio.composeapp.generated.resources.compose_search_empty_no_search_catalogs_title
 import nuvio.composeapp.generated.resources.compose_search_placeholder
-import nuvio.composeapp.generated.resources.compose_search_recent_searches
-import nuvio.composeapp.generated.resources.compose_search_remove_recent_search
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -275,6 +273,28 @@ fun SearchScreen(
             }
         }
 
+        // Restarts whenever Discover's filter changes or its first results land, so those rows
+        // stagger in; rows reached later by scrolling or paging just show.
+        val discoverEntrance = remember(
+            discoverUiState.selectedCatalogKey,
+            discoverUiState.selectedGenre,
+            discoverUiState.items.isNotEmpty(),
+        ) { TimeSource.Monotonic.markNow() }
+
+        // Like iOS, starting to drag the list puts the keyboard away.
+        val focusManager = LocalFocusManager.current
+        val keyboard = LocalSoftwareKeyboardController.current
+        LaunchedEffect(listState) {
+            listState.interactionSource.interactions
+                .filterIsInstance<DragInteraction.Start>()
+                .collect {
+                    if (isSearchFocused) {
+                        focusManager.clearFocus()
+                        keyboard?.hide()
+                    }
+                }
+        }
+
         // A few results still scroll far enough for the header to pin.
         val headerFiller = rememberPinnedHeaderFiller(
             listState = listState,
@@ -319,10 +339,11 @@ fun SearchScreen(
                 if (query.isBlank()) {
                     if (isSearchFocused && recentSearches.isNotEmpty()) {
                         item(key = "recent_searches") {
-                            SearchRecentSection(
+                            SearchRecentChips(
                                 recentSearches = recentSearches,
                                 onSearchPress = { recentQuery -> query = recentQuery },
                                 onRemoveSearch = SearchHistoryRepository::removeSearch,
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     }
@@ -349,30 +370,26 @@ fun SearchScreen(
                         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                         onPosterClick = onPosterClick,
                         onPosterLongClick = onPosterLongClick,
+                        entranceBatch = discoverEntrance,
                     )
                 } else {
                     val normalizedQuery = query.trim()
                     val isWaitingForSearch = normalizedQuery.isNotBlank() && lastRequestedQuery != normalizedQuery
                     when {
-                        isWaitingForSearch -> {
-                            items(2) {
+                        isWaitingForSearch ||
+                            ((uiState.isLoading || addonManifestsLoading) && uiState.sections.isEmpty()) -> {
+                            items(2, key = { "search_skeleton_$it" }) {
                                 HomeSkeletonRow(
                                     horizontalPadding = homeSectionPadding,
-                                )
-                            }
-                        }
-
-                        (uiState.isLoading || addonManifestsLoading) && uiState.sections.isEmpty() -> {
-                            items(2) {
-                                HomeSkeletonRow(
-                                    horizontalPadding = homeSectionPadding,
+                                    modifier = Modifier.animateItem(),
                                 )
                             }
                         }
 
                         uiState.sections.isEmpty() -> {
-                            item {
+                            item(key = "search_empty") {
                                 SearchEmptyStateCard(
+                                    query = normalizedQuery,
                                     reason = uiState.emptyStateReason,
                                     errorMessage = uiState.errorMessage,
                                     networkCondition = networkStatusUiState.condition,
@@ -390,7 +407,7 @@ fun SearchScreen(
                                             }
                                         }
                                     },
-                                    modifier = Modifier.padding(horizontal = homeSectionPadding),
+                                    modifier = Modifier.animateItem(),
                                 )
                             }
                         }
@@ -403,10 +420,20 @@ fun SearchScreen(
                                 val section = keyedSection.value
                                 HomeCatalogRowSection(
                                     section = section,
-                                    modifier = Modifier.padding(bottom = 12.dp),
+                                    // Addons answer one by one: each section fades in as it lands.
+                                    modifier = Modifier
+                                        .animateItem()
+                                        .padding(bottom = 12.dp),
                                     watchedKeys = watchedUiState.watchedKeys,
                                     fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                                    onPosterClick = onPosterClick,
+                                    // Opening a result proves the search worked: remember it now
+                                    // rather than waiting on addons that may still be loading.
+                                    onPosterClick = onPosterClick?.let { open ->
+                                        { preview ->
+                                            SearchHistoryRepository.recordSearch(query)
+                                            open(preview)
+                                        }
+                                    },
                                     onPosterLongClick = onPosterLongClick,
                                 )
                             }
@@ -414,6 +441,7 @@ fun SearchScreen(
                                 item(key = "search_loading_more") {
                                     HomeSkeletonRow(
                                         horizontalPadding = homeSectionPadding,
+                                        modifier = Modifier.animateItem(),
                                     )
                                 }
                             }
@@ -485,43 +513,36 @@ fun SearchScreen(
                         .padding(top = statusBarTop)
                         .onSizeChanged { controlsHeightPx = it.height },
                 ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        NuvioInputField(
-                            value = query,
-                            onValueChange = { query = it },
-                            placeholder = stringResource(Res.string.compose_search_placeholder),
-                            modifier = Modifier
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { isSearchFocused = it.isFocused },
-                            shape = RoundedCornerShape(NuvioTokens.Radius.full),
-                            trailingContent = if (query.isNotBlank()) {
-                                {
-                                    IconButton(onClick = { query = "" }) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Close,
-                                            contentDescription = stringResource(Res.string.compose_search_clear),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            } else {
-                                null
-                            },
-                        )
-                    }
-                    if (query.isBlank()) {
+                    SearchBar(
+                        query = query,
+                        onQueryChange = { query = it },
+                        placeholder = stringResource(Res.string.compose_search_placeholder),
+                        focusRequester = focusRequester,
+                        onFocusChanged = { isSearchFocused = it },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        // Submitting a search that already has results keeps it, even if a slow
+                        // addon hasn't answered yet.
+                        onSearch = {
+                            if (uiState.sections.isNotEmpty()) SearchHistoryRepository.recordSearch(query)
+                        },
+                        isSearching = query.isNotBlank() &&
+                            (lastRequestedQuery != query.trim() || uiState.isLoading),
+                    )
+                    // Folds away while typing, since the filters only apply to Discover.
+                    AnimatedVisibility(
+                        visible = query.isBlank(),
+                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                    ) {
                         DiscoverFilterRow(
                             state = discoverUiState,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(top = 12.dp, bottom = 14.dp),
+                            modifier = Modifier.padding(top = 12.dp),
                             onTypeSelected = SearchRepository::selectDiscoverType,
                             onCatalogSelected = SearchRepository::selectDiscoverCatalog,
                             onGenreSelected = SearchRepository::selectDiscoverGenre,
                         )
-                    } else {
-                        Spacer(modifier = Modifier.height(14.dp))
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             }
         }
@@ -534,6 +555,7 @@ private val SearchHeaderFadeHeight = 28.dp
 
 @Composable
 private fun SearchEmptyStateCard(
+    query: String,
     reason: SearchEmptyStateReason?,
     errorMessage: String?,
     networkCondition: NetworkCondition,
@@ -546,114 +568,54 @@ private fun SearchEmptyStateCard(
     ) {
         NuvioNetworkOfflineCard(
             condition = networkCondition,
-            modifier = modifier,
+            modifier = modifier.padding(horizontal = 16.dp),
             onRetry = onRetry,
         )
         return
     }
 
+    val icon: ImageVector
     val title: String
     val message: String
 
     when (reason) {
         SearchEmptyStateReason.NoActiveAddons -> {
+            icon = Icons.Rounded.Extension
             title = stringResource(Res.string.compose_search_empty_no_active_addons_title)
             message = stringResource(Res.string.compose_search_empty_no_active_addons_message)
         }
 
         SearchEmptyStateReason.NoSearchCatalogs -> {
+            icon = Icons.Rounded.Extension
             title = stringResource(Res.string.compose_search_empty_no_search_catalogs_title)
             message = stringResource(Res.string.compose_search_empty_no_search_catalogs_message)
         }
 
         SearchEmptyStateReason.RequestFailed -> {
+            icon = Icons.Rounded.ErrorOutline
             title = stringResource(Res.string.compose_search_empty_failed_title)
             message = errorMessage ?: stringResource(Res.string.compose_search_empty_failed_message)
         }
 
         SearchEmptyStateReason.NoResults, null -> {
+            icon = Icons.Rounded.SearchOff
             title = stringResource(Res.string.compose_search_empty_no_results_title)
             message = stringResource(Res.string.compose_search_empty_no_results_message)
         }
     }
 
-    HomeEmptyStateCard(
-        modifier = modifier,
+    SearchEmptyState(
+        icon = icon,
         title = title,
         message = message,
+        // Echoing the query only makes sense when it's what came up empty.
+        query = query.takeIf { reason == SearchEmptyStateReason.NoResults || reason == null },
         actionLabel = if (reason == SearchEmptyStateReason.RequestFailed) {
             stringResource(Res.string.action_retry)
         } else {
             null
         },
-        onActionClick = if (reason == SearchEmptyStateReason.RequestFailed) onRetry else null,
+        onAction = if (reason == SearchEmptyStateReason.RequestFailed) onRetry else null,
+        modifier = modifier,
     )
-}
-
-@Composable
-private fun SearchRecentSection(
-    recentSearches: List<String>,
-    onSearchPress: (String) -> Unit,
-    onRemoveSearch: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            text = stringResource(Res.string.compose_search_recent_searches),
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        recentSearches.forEach { recentQuery ->
-            SearchRecentRow(
-                query = recentQuery,
-                onSearchPress = { onSearchPress(recentQuery) },
-                onRemovePress = { onRemoveSearch(recentQuery) },
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-    }
-}
-
-@Composable
-private fun SearchRecentRow(
-    query: String,
-    onSearchPress: () -> Unit,
-    onRemovePress: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSearchPress)
-            .padding(vertical = 2.dp)
-            .background(
-                color = MaterialTheme.colorScheme.background,
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(start = 2.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = query,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        IconButton(onClick = onRemovePress) {
-            Icon(
-                imageVector = Icons.Rounded.Close,
-                contentDescription = stringResource(Res.string.compose_search_remove_recent_search),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }

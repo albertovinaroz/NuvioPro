@@ -1,5 +1,16 @@
 package com.nuvio.app.core.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.unit.dp
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.action_clear
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,16 +58,33 @@ fun NuvioDropdownChip(
     enabled: Boolean = true,
     onSelected: (NuvioDropdownOption) -> Unit,
     modifier: Modifier = Modifier,
+    /** Set when the chip narrows results away from its default, tinting it with the accent. */
+    active: Boolean = false,
+    /** While [active], swaps the arrow for a clear button that resets the filter. */
+    onClear: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     var isSheetVisible by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
+    val background by animateColorAsState(
+        targetValue = if (active) {
+            tokens.colors.accent.copy(alpha = 0.22f).compositeOver(tokens.colors.surface)
+        } else {
+            tokens.colors.surface
+        },
+        label = "dropdownChipBackground",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (active) tokens.colors.accent.copy(alpha = 0.55f) else Color.Transparent,
+        label = "dropdownChipBorder",
+    )
 
     Row(
         modifier = modifier
             .clip(tokens.shapes.compactCard)
-            .background(tokens.colors.surface)
+            .background(background)
+            .border(1.dp, borderColor, tokens.shapes.compactCard)
             .then(
                 if (enabled) {
                     Modifier.clickable { isSheetVisible = true }
@@ -75,12 +103,27 @@ fun NuvioDropdownChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Icon(
-            imageVector = Icons.Rounded.KeyboardArrowDown,
-            contentDescription = null,
-            modifier = Modifier.size(NuvioTokens.Icon.sm + NuvioTokens.Space.s2),
-            tint = if (enabled) tokens.colors.textMuted else tokens.colors.borderDefault,
-        )
+        val showClear = active && onClear != null
+        Crossfade(targetState = showClear, label = "dropdownChipTrailing") { clear ->
+            if (clear) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(Res.string.action_clear),
+                    modifier = Modifier
+                        .size(NuvioTokens.Icon.sm + NuvioTokens.Space.s2)
+                        .clip(CircleShape)
+                        .clickable { onClear?.invoke() },
+                    tint = tokens.colors.textPrimary,
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(NuvioTokens.Icon.sm + NuvioTokens.Space.s2),
+                    tint = if (enabled) tokens.colors.textMuted else tokens.colors.borderDefault,
+                )
+            }
+        }
     }
 
     if (isSheetVisible) {
