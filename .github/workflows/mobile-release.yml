@@ -169,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      # Social server address, kept apart from the properties secret so either can change alone.
+      SOCIAL_URL: ${{ secrets.NUVIO_SOCIAL_URL }}
     steps:
       - name: Check out source
         uses: actions/checkout@v6
@@ -185,6 +187,7 @@ jobs:
       - name: Configure runtime properties
         run: |
           printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          if [ -n "${SOCIAL_URL}" ]; then printf '\nNUVIO_SOCIAL_URL=%s\n' "${SOCIAL_URL}" >> local.properties; fi
           sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE|NUVIO_IOS_DISTRIBUTION)[[:space:]]*=/d' local.properties
           printf '\nNUVIO_IOS_DISTRIBUTION=appstore\n' >> local.properties
 
@@ -209,6 +212,7 @@ jobs:
     env:
       RELEASE_VERSION: ${{ needs.prepare.outputs.tag }}
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      SOCIAL_URL: ${{ secrets.NUVIO_SOCIAL_URL }}
       RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
 
     steps:
@@ -229,6 +233,7 @@ jobs:
           keystore_path="${RUNNER_TEMP}/nuvio-release.jks"
           printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
           printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          if [ -n "${SOCIAL_URL}" ]; then printf '\nNUVIO_SOCIAL_URL=%s\n' "${SOCIAL_URL}" >> local.properties; fi
 
           sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
           printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
@@ -273,6 +278,7 @@ jobs:
       NUVIO_GRADLE_JVMARGS: -Xmx4608M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768M
       NUVIO_KOTLIN_NATIVE_JVMARGS: -Xmx4608M
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      SOCIAL_URL: ${{ secrets.NUVIO_SOCIAL_URL }}
 
     steps:
       - name: Check out source
@@ -303,6 +309,7 @@ jobs:
       - name: Configure runtime properties
         run: |
           printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          if [ -n "${SOCIAL_URL}" ]; then printf '\nNUVIO_SOCIAL_URL=%s\n' "${SOCIAL_URL}" >> local.properties; fi
           sed -i '' -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
 
       - name: Prepare iOS dependencies
