@@ -1,6 +1,17 @@
 package com.nuvio.app.core.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -92,13 +103,25 @@ internal actual fun NuvioNativeModalBottomSheet(
                     CompositionLocalProvider(
                         LocalContentColor provides latestContentColor.value,
                     ) {
-                        Column(
-                            modifier = latestModifier.value
-                                .fillMaxSize()
-                                .background(latestContainerColor.value)
-                                .padding(top = NuvioTokens.Space.s20),
-                        ) {
-                            latestContent.value(this)
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            Column(
+                                modifier = latestModifier.value
+                                    .fillMaxSize()
+                                    .background(latestContainerColor.value)
+                                    .padding(top = NuvioTokens.Space.s20),
+                            ) {
+                                latestContent.value(this)
+                            }
+                            // Landscape iPhone has no room for the grabber and the content takes
+                            // the drag, so a sheet could not be closed at all: always offer an X.
+                            if (maxWidth > maxHeight) {
+                                SheetCloseButton(
+                                    onClick = { latestOnDismissRequest.value() },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = NuvioTokens.Space.s10, end = NuvioTokens.Space.s14),
+                                )
+                            }
                         }
                     }
                 }
@@ -119,6 +142,10 @@ internal actual fun NuvioNativeModalBottomSheet(
             }
             prefersGrabberVisible = showDragHandle
             prefersScrollingExpandsWhenScrolledToEdge = false
+            // In landscape (compact height) a page sheet otherwise goes full screen with no
+            // grabber; attached to the bottom edge it keeps the grabber and swipe-to-dismiss.
+            prefersEdgeAttachedInCompactHeight = true
+            widthFollowsPreferredContentSizeWhenEdgeAttached = false
         }
 
         val dismissalDelegate = NuvioNativeBottomSheetDelegate {
@@ -177,6 +204,26 @@ private class NuvioNativeBottomSheetDelegate(
         if (didNotifyDismissal) return
         didNotifyDismissal = true
         onDismissRequest()
+    }
+}
+
+@Composable
+private fun SheetCloseButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val tokens = MaterialTheme.nuvio
+    Box(
+        modifier = modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(tokens.colors.textPrimary.copy(alpha = 0.12f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Close,
+            contentDescription = null,
+            tint = tokens.colors.textPrimary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
