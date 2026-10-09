@@ -1,0 +1,18 @@
+name = "nuvio-social"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Verifies Nuvio account tokens against NuvioMedia's auth server (the same one the app signs in
+# to). The anon key is public: it ships inside every Nuvio build.
+[vars]
+SUPABASE_URL = "https://api.nuvio.tv"
+SUPABASE_ANON_KEY = "sb_publishable_1Clq8rlTVACkdcZuqr6_AD__xUUC_EN"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nuvio-social"
+database_id = "144ef2e9-2169-4e39-b2b1-5ec7b209a8ad"
+
+# Daily cleanup of expired sessions and old activity.
+[triggers]
+crons = ["17 4 * * *"]
