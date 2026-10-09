@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.LocalCafe
+import nuvio.composeapp.generated.resources.kofi_logo
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -82,10 +82,10 @@ internal fun SupportProSheet(onDismiss: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.LocalCafe,
+                    painter = painterResource(Res.drawable.kofi_logo),
                     contentDescription = null,
                     tint = KofiBrandColor,
-                    modifier = Modifier.size(34.dp),
+                    modifier = Modifier.size(36.dp),
                 )
             }
             Spacer(modifier = Modifier.height(18.dp))
@@ -115,10 +115,10 @@ internal fun SupportProSheet(onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.LocalCafe,
+                    painter = painterResource(Res.drawable.kofi_logo),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(

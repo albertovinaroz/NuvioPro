@@ -1,6 +1,5 @@
 package com.nuvio.app.features.settings
 
-import androidx.compose.material.icons.rounded.LocalCafe
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -847,7 +846,6 @@ internal fun settingsTileColor(icon: ImageVector): Color = when (icon) {
     Icons.Rounded.Notifications -> Color(0xFFFF375F)
     Icons.Rounded.CloudDownload -> Color(0xFF0A84FF)
     Icons.Rounded.Favorite -> Color(0xFFFF2D55)
-    Icons.Rounded.LocalCafe -> KofiBrandColor
     Icons.Rounded.Policy -> Color(0xFF64D2FF)
     Icons.Rounded.Info -> Color(0xFF8E8E93)
     Icons.Rounded.NewReleases -> Color(0xFFFF9F0A)

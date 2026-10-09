@@ -1,6 +1,7 @@
 package com.nuvio.app.features.settings
 
-import androidx.compose.material.icons.rounded.LocalCafe
+import nuvio.composeapp.generated.resources.kofi_logo
+import org.jetbrains.compose.resources.vectorResource
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nuvio.app.core.build.AppFeaturePolicy
@@ -280,7 +281,8 @@ internal fun LazyListScope.settingsRootContent(
                     if (AppFeaturePolicy.donationActionsEnabled) {
                         SettingsNavigationRow(
                             title = stringResource(Res.string.support_pro_title),
-                            icon = Icons.Rounded.LocalCafe,
+                            icon = vectorResource(Res.drawable.kofi_logo),
+                            iconTint = KofiBrandColor,
                             iconTile = true,
                             isTablet = isTablet,
                             onClick = { showSupportSheet = true },
