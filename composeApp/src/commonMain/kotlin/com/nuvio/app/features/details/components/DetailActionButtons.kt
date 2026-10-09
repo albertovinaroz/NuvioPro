@@ -1,5 +1,8 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material.icons.automirrored.rounded.Send
 import nuvio.composeapp.generated.resources.social_recommend
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -110,6 +113,8 @@ fun DetailActionButtons(
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
     showRatingHint: Boolean = false,
+    /** Social "Recommend to friends"; shown beside the rating stars, never among the "..." actions. */
+    onRecommendClick: (() -> Unit)? = null,
 ) {
     val playPainter = appIconPainter(AppIconResource.PlayerPlay)
     val buttonHeight = if (isTablet) 56.dp else 52.dp
@@ -175,16 +180,12 @@ fun DetailActionButtons(
                     }
                 }
             }
-            onRateClick?.let { rate ->
-                UserRatingStars(
-                    rating = userRating,
-                    onClick = rate,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-            }
-            if (showRatingHint && onRateClick == null) {
-                RatingsUnavailableBanner(modifier = Modifier.align(Alignment.CenterHorizontally))
-            }
+            RatingAndRecommendRow(
+                userRating = userRating,
+                onRateClick = onRateClick,
+                showRatingHint = showRatingHint,
+                onRecommendClick = onRecommendClick,
+            )
             return@Column
         }
 
@@ -317,16 +318,69 @@ fun DetailActionButtons(
         }
     }
 
-        onRateClick?.let { rate ->
-            UserRatingStars(
-                rating = userRating,
-                onClick = rate,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
-        }
-        if (showRatingHint && onRateClick == null) {
-            RatingsUnavailableBanner(modifier = Modifier.align(Alignment.CenterHorizontally))
-        }
+        RatingAndRecommendRow(
+            userRating = userRating,
+            onRateClick = onRateClick,
+            showRatingHint = showRatingHint,
+            onRecommendClick = onRecommendClick,
+        )
+    }
+}
+
+/**
+ * The row under the Play button: the user's rating stars (or why rating is unavailable) and,
+ * when social is on, "Recommend". Kept out of the "..." actions so it never squeezes Play.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RatingAndRecommendRow(
+    userRating: Int?,
+    onRateClick: (() -> Unit)?,
+    showRatingHint: Boolean,
+    onRecommendClick: (() -> Unit)?,
+) {
+    val showHint = showRatingHint && onRateClick == null
+    if (onRateClick == null && !showHint && onRecommendClick == null) return
+    // Wraps to a second line rather than overflowing when the unavailable-rating banner is long.
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        onRateClick?.let { rate -> UserRatingStars(rating = userRating, onClick = rate) }
+        if (showHint) RatingsUnavailableBanner()
+        onRecommendClick?.let { recommend -> RecommendChip(onClick = recommend) }
+    }
+}
+
+@Composable
+private fun RecommendChip(onClick: () -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .clickable(role = Role.Button) {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.Send,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = stringResource(Res.string.social_recommend),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -413,15 +467,6 @@ fun DetailActions(
                     ),
                 )
             }
-            onRecommendClick?.let { recommend ->
-                add(
-                    DetailSecondaryAction(
-                        label = stringResource(Res.string.social_recommend),
-                        icon = Icons.AutoMirrored.Rounded.Send,
-                        onClick = recommend,
-                    ),
-                )
-            }
             add(
                 DetailSecondaryAction(
                     label = stringResource(if (isWatched) Res.string.hero_mark_unwatched else Res.string.hero_mark_watched),
@@ -446,6 +491,7 @@ fun DetailActions(
         userRating = userRating,
         onRateClick = onRateClick,
         showRatingHint = showRatingHint,
+        onRecommendClick = onRecommendClick,
     )
 }
 

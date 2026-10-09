@@ -1,10 +1,12 @@
 package com.nuvio.app.features.details
 
-import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.ui.unit.LayoutDirection
+import com.nuvio.app.core.ui.nuvioLandscapeSideInsets
 import com.nuvio.app.features.social.RecommendSheetController
 import com.nuvio.app.features.social.RecommendSheetHost
 import com.nuvio.app.features.social.SocialRepository
-import nuvio.composeapp.generated.resources.social_recommend
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -1173,7 +1175,19 @@ fun MetaDetailsScreen(
                     val colorScheme = MaterialTheme.colorScheme
                     val useTabletLayout = minOf(maxWidth, maxHeight) >= 600.dp
                     val isTablet = useTabletLayout || maxWidth >= 720.dp
-                    val contentHorizontalPadding = if (isTablet) 32.dp else 18.dp
+                    // A phone on its side: short and wide, with the Dynamic Island / notch on one side.
+                    val isCompactHeight = !useTabletLayout && maxWidth > maxHeight && maxHeight < 500.dp
+                    val viewportHeight = maxHeight
+                    val landscapeSideInsets = nuvioLandscapeSideInsets()
+                    val landscapeSideInset = maxOf(
+                        landscapeSideInsets.calculateStartPadding(LayoutDirection.Ltr),
+                        landscapeSideInsets.calculateEndPadding(LayoutDirection.Ltr),
+                    )
+                    val contentHorizontalPadding = maxOf(
+                        if (isTablet) 32.dp else 18.dp,
+                        // Keeps text clear of the Dynamic Island whichever way the phone is turned.
+                        landscapeSideInset + 16.dp,
+                    )
                     val contentMaxWidth = detailTabletContentMaxWidth(maxWidth, isTablet)
                     val backdropUrl = meta.background ?: meta.poster
                     val backgroundMode = metaScreenSettingsUiState.backgroundMode
@@ -1351,6 +1365,9 @@ fun MetaDetailsScreen(
                                         DetailHero(
                                             meta = meta,
                                             isTablet = isTablet,
+                                            // Leaves room under the hero for the Play row, so it isn't
+                                            // pushed off a landscape phone's short screen.
+                                            maxHeroHeight = if (isCompactHeight) viewportHeight - 112.dp else Dp.Unspecified,
                                             contentMaxWidth = contentMaxWidth,
                                             scrollOffset = heroScrollOffset,
                                             stretchPx = { heroStretchState.stretchPx },
@@ -1506,6 +1523,11 @@ fun MetaDetailsScreen(
                             backgroundColor = dominantBackdropColor.takeIf { dominantColorEnabled },
                             onBack = onBackFromDetails,
                             onToggleSaved = toggleSaved,
+                            onRecommend = if (SocialRepository.isAvailable) {
+                                { RecommendSheetController.open(metaPreview) }
+                            } else {
+                                null
+                            },
                         )
 
                         selectedEpisodeForActions
@@ -2075,6 +2097,7 @@ private fun DetailHeaderOverlay(
     backgroundColor: Color?,
     onBack: () -> Unit,
     onToggleSaved: () -> Unit,
+    onRecommend: (() -> Unit)? = null,
 ) {
     val headerTarget = if (isHeroCollapsed.value) 1f else 0f
     val headerProgress by animateFloatAsState(
@@ -2107,6 +2130,7 @@ private fun DetailHeaderOverlay(
         backgroundColor = backgroundColor,
         onBack = onBack,
         onToggleSaved = onToggleSaved,
+        onRecommend = onRecommend,
         modifier = Modifier.zIndex(2f),
     )
 }
@@ -2508,18 +2532,13 @@ private fun ConfiguredMetaSections(
                         onClick = onClick,
                     )
                 }
-                val recommendAction = if (SocialRepository.isAvailable) {
-                    DetailSecondaryAction(
-                        label = stringResource(Res.string.social_recommend),
-                        icon = Icons.AutoMirrored.Rounded.Send,
-                        onClick = { RecommendSheetController.open(meta.toMetaPreview()) },
-                    )
+                val onRecommendClick: (() -> Unit)? = if (SocialRepository.isAvailable) {
+                    { RecommendSheetController.open(meta.toMetaPreview()) }
                 } else {
                     null
                 }
                 val iconActions = buildList {
                     shuffleAction?.let(::add)
-                    recommendAction?.let(::add)
                     onDownloadClick?.let { download ->
                         add(DetailSecondaryAction(
                             label = stringResource(Res.string.details_download_action),
@@ -2572,7 +2591,6 @@ private fun ConfiguredMetaSections(
                     iconActions = iconActions,
                     secondaryActions = buildList {
                         if (!shuffleEnabled) shuffleAction?.let(::add)
-                        recommendAction?.let(::add)
                         onDownloadClick?.let { download ->
                             add(DetailSecondaryAction(
                                 label = stringResource(Res.string.details_download_action),
@@ -2613,6 +2631,7 @@ private fun ConfiguredMetaSections(
                     userRating = userRating,
                     onRateClick = onRateClick,
                     showRatingHint = showRatingHint,
+                    onRecommendClick = onRecommendClick,
                 )
             }
             MetaScreenSectionKey.OVERVIEW -> {

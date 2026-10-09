@@ -1,5 +1,6 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -67,6 +68,8 @@ import org.jetbrains.compose.resources.stringResource
 fun DetailHero(
     meta: MetaDetails,
     isTablet: Boolean = false,
+    /** Caps the hero's height (landscape phones), so what's under it stays on screen. */
+    maxHeroHeight: Dp = Dp.Unspecified,
     scrollOffset: () -> Int = { 0 },
     stretchPx: () -> Float = { 0f },
     contentMaxWidth: Dp = 560.dp,
@@ -88,7 +91,10 @@ fun DetailHero(
         modifier = modifier.fillMaxWidth(),
     ) {
         val heroHazeState = remember { HazeState() }
-        val heroHeight = detailHeroHeight(maxWidth, isTablet)
+        val isHeightCapped = maxHeroHeight.isSpecified
+        val heroHeight = detailHeroHeight(maxWidth, isTablet).let { natural ->
+            if (isHeightCapped) minOf(natural, maxHeroHeight.coerceAtLeast(200.dp)) else natural
+        }
         val trailerAlpha by animateFloatAsState(
             targetValue = if (heroTrailerReady) 1f else 0f,
             animationSpec = tween(durationMillis = 300),
@@ -281,7 +287,13 @@ fun DetailHero(
                             modifier = Modifier
                                 .fillMaxWidth(if (isTablet) 0.56f else 0.6f)
                                 .widthIn(max = contentMaxWidth)
-                                .height(if (isTablet) 72.dp else 80.dp),
+                                .height(
+                                    when {
+                                        isHeightCapped -> 56.dp
+                                        isTablet -> 72.dp
+                                        else -> 80.dp
+                                    },
+                                ),
                             alignment = Alignment.Center,
                             contentScale = ContentScale.Fit,
                             onError = { logoLoadError = true },

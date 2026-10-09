@@ -1,5 +1,9 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.material.icons.automirrored.rounded.Send
+import nuvio.composeapp.generated.resources.social_recommend
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +59,8 @@ fun DetailFloatingHeader(
     onBack: () -> Unit,
     onToggleSaved: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Social "Recommend to friends", next to save; null hides it. */
+    onRecommend: (() -> Unit)? = null,
 ) {
     val useNativeNavigation = LocalUseNativeNavigation.current
     val safeAreaTop = if (useNativeNavigation) {
@@ -62,7 +68,14 @@ fun DetailFloatingHeader(
     } else {
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     }
+    // On a landscape phone there's no status bar inset, but iOS still sets its back button a
+    // little down from the top edge; without this the bar ended above the button's bottom half.
+    val windowSize = LocalWindowInfo.current.containerSize
+    val isLandscapePhone = with(LocalDensity.current) {
+        windowSize.width > windowSize.height && windowSize.height.toDp() < 500.dp
+    }
     val headerTopPadding = (safeAreaTop - 6.dp).coerceAtLeast(safeAreaTop * 0.8f)
+        .let { if (isLandscapePhone && useNativeNavigation) maxOf(it, 18.dp) else it }
     val interactive = progress > 0.05f
     val surfaceColor = backgroundColor ?: if (isIos) {
         MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
@@ -145,6 +158,21 @@ fun DetailFloatingHeader(
                     }
                 }
 
+                if (onRecommend != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable(enabled = interactive, onClick = onRecommend),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Send,
+                            contentDescription = stringResource(Res.string.social_recommend),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
                 DetailFloatingHeaderAction(
                     isSaved = isSaved,
                     enabled = interactive,
