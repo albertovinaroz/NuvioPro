@@ -1,10 +1,7 @@
 package com.nuvio.app.features.settings
 
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.asPaddingValues
@@ -16,10 +13,6 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
@@ -100,7 +93,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,6 +111,32 @@ import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaLookupOutcome
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.journal.Achievement
+import com.nuvio.app.features.journal.DiaryMonth
+import com.nuvio.app.features.journal.AchievementsPreview
+import com.nuvio.app.features.journal.DiaryPreview
+import com.nuvio.app.features.journal.ProfileAchievementsContent
+import com.nuvio.app.features.social.SocialFriendsPreview
+import nuvio.composeapp.generated.resources.profile_insights_summary_genre
+import nuvio.composeapp.generated.resources.profile_insights_summary_watched
+import com.nuvio.app.features.journal.ProfileDiaryContent
+import com.nuvio.app.features.journal.achievementsSummary
+import com.nuvio.app.features.journal.diarySummary
+import com.nuvio.app.features.social.ProfileFriendsContent
+import com.nuvio.app.features.social.SocialAutoRefresh
+import com.nuvio.app.features.social.SocialRepository
+import com.nuvio.app.features.social.rememberSocialBadgeCount
+import com.nuvio.app.features.social.socialSummary
+import nuvio.composeapp.generated.resources.social_title
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Insights
+import nuvio.composeapp.generated.resources.journal_achievements_title
+import nuvio.composeapp.generated.resources.journal_diary_title
+import nuvio.composeapp.generated.resources.profile_insights_section_stats
+import com.nuvio.app.features.journal.buildAchievements
+import com.nuvio.app.features.journal.buildDiary
+import kotlinx.datetime.TimeZone
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibraryUiState
@@ -326,6 +344,28 @@ private fun ProfileInsightsBody(
     val stats = remember(resolvedStats, upcomingEpisodes) {
         (resolvedStats ?: emptyProfileInsightsStats()).copy(upcomingCount = upcomingEpisodes.size)
     }
+    // Diary and achievements: computed off the main thread from this profile's watched marks.
+    val journal by produceState<ProfileJournalSnapshot?>(
+        null,
+        watchedState.items,
+        stats.completedCount,
+    ) {
+        val watchedSnapshot = watchedState.items
+        val completedSeries = stats.completedCount
+        value = withContext(Dispatchers.Default) {
+            val items = watchedSnapshot.filter { item -> item.isProfileInsightContent() }
+            val timeZone = TimeZone.currentSystemDefault()
+            ProfileJournalSnapshot(
+                diary = buildDiary(items, timeZone),
+                achievements = buildAchievements(
+                    items = items,
+                    completedSeriesCount = completedSeries,
+                    nowEpochMs = WatchedClock.nowEpochMs(),
+                    timeZone = timeZone,
+                ),
+            )
+        }
+    }
     val hydrationRequest = activeCore?.hydrationRequest
     LaunchedEffect(hydrationRequest) {
         hydrationRequest?.let { request -> ProfileTitleFactsStore.hydrate(request) }
@@ -428,13 +468,92 @@ private fun ProfileInsightsBody(
                     onEditProfile = inlineEditProfile,
                 )
             }
-            ProfileInsightsRefreshStatusRow(
-                refreshedAtEpochMs = refreshedAtByProfile[activeProfileIndex],
-                failedGenreTitleCount = failedGenreTitleCount,
-                isRefreshing = isRefreshing,
-                onRefresh = ProfileInsightsRefresher::refresh,
-            )
-            if (stats.hasNoActivity()) {
+            // Builds made without NUVIO_SOCIAL_URL have no social server: no Friends section.
+            val showFriends = SocialRepository.isConfigured
+            val hasActivity = !stats.hasNoActivity()
+            if (showFriends) SocialAutoRefresh()
+            if (showFriends || hasActivity) {
+                ProfileSectionGroup(isTablet = isTablet) {
+                    if (showFriends) {
+                        ProfileCollapsibleSection(
+                            section = ProfileSection.Friends,
+                            title = stringResource(Res.string.social_title),
+                            summary = socialSummary(),
+                            icon = Icons.Rounded.People,
+                            tileColor = Color(0xFFFF375F),
+                            isTablet = isTablet,
+                            badgeCount = rememberSocialBadgeCount(),
+                            preview = { SocialFriendsPreview() },
+                        ) {
+                            ProfileFriendsContent(isTablet = isTablet, onPosterClick = onPosterClick)
+                        }
+                    }
+                    if (hasActivity) {
+                        ProfileCollapsibleSection(
+                            section = ProfileSection.Stats,
+                            title = stringResource(Res.string.profile_insights_section_stats),
+                            summary = profileStatsSummary(stats),
+                            icon = Icons.Rounded.Insights,
+                            tileColor = Color(0xFF0A84FF),
+                            isTablet = isTablet,
+                            showDivider = showFriends,
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                                ProfileSecondaryMetricRow(
+                                    stats = stats,
+                                    isCollectionAvailable = isCollectionAvailable,
+                                    onCollectionClick = onCollectionClick,
+                                )
+                                ProfileWatchTimeRow(stats = stats)
+                                ProfileTasteCard(stats = stats)
+                                // When these numbers were last recomputed, and a way to redo it.
+                                ProfileInsightsRefreshStatusRow(
+                                    refreshedAtEpochMs = refreshedAtByProfile[activeProfileIndex],
+                                    failedGenreTitleCount = failedGenreTitleCount,
+                                    isRefreshing = isRefreshing,
+                                    onRefresh = ProfileInsightsRefresher::refresh,
+                                )
+                            }
+                        }
+                        journal?.let { snapshot ->
+                            ProfileCollapsibleSection(
+                                section = ProfileSection.Achievements,
+                                title = stringResource(Res.string.journal_achievements_title),
+                                summary = achievementsSummary(snapshot.achievements),
+                                icon = Icons.Rounded.EmojiEvents,
+                                tileColor = Color(0xFFFF9F0A),
+                                isTablet = isTablet,
+                                showDivider = true,
+                                preview = { AchievementsPreview(snapshot.achievements) },
+                            ) {
+                                ProfileAchievementsContent(
+                                    achievements = snapshot.achievements,
+                                    isTablet = isTablet,
+                                )
+                            }
+                            if (snapshot.diary.isNotEmpty()) {
+                                ProfileCollapsibleSection(
+                                    section = ProfileSection.Diary,
+                                    title = stringResource(Res.string.journal_diary_title),
+                                    summary = diarySummary(snapshot.diary),
+                                    icon = Icons.Rounded.AutoStories,
+                                    tileColor = Color(0xFF30D158),
+                                    isTablet = isTablet,
+                                    showDivider = true,
+                                    preview = { DiaryPreview(snapshot.diary) },
+                                ) {
+                                    ProfileDiaryContent(
+                                        diary = snapshot.diary,
+                                        isTablet = isTablet,
+                                        onPosterClick = onPosterClick,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!hasActivity) {
                 Text(
                     text = stringResource(Res.string.profile_insights_empty),
                     style = MaterialTheme.typography.bodyLarge,
@@ -444,14 +563,6 @@ private fun ProfileInsightsBody(
                         .fillMaxWidth()
                         .padding(vertical = 32.dp),
                 )
-            } else {
-                ProfileWatchTimeRow(stats = stats)
-                SettingsSection(
-                    title = null,
-                    isTablet = isTablet,
-                ) {
-                    ProfileTasteCard(stats = stats)
-                }
             }
         }
     }
@@ -721,7 +832,9 @@ private fun ProfileInsightsHeroCinematic(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
+            // A little shorter than square, so the name sits right above the counts instead of
+            // leaving a band of empty backdrop between them.
+            .aspectRatio(1.1f),
     ) {
         BoxWithConstraints(modifier = Modifier.matchParentSize()) {
             val leftInset = tokens.spacing.screenHorizontal + 40.dp
@@ -786,7 +899,7 @@ private fun ProfileInsightsHeroCinematic(
                     .fillMaxWidth()
                     .align(Alignment.BottomStart)
                     .padding(horizontal = 18.dp)
-                    .padding(bottom = 140.dp),
+                    .padding(bottom = ProfileHeroNameBottomPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -812,18 +925,13 @@ private fun ProfileInsightsHeroCinematic(
                 )
             }
 
-            // No side padding: flush to the hero's own true edges (the hero Box is already
-            // full-width), matching the Airy Grid content below it. No end padding either — the
-            // row's own scroll clipping already cuts the last pill mid-way when they don't all
-            // fit, which is exactly the "there's more, scroll" affordance; reserving matching
-            // space on the right would just hide that peek.
             ProfileMetricPillRow(
                 stats = stats,
                 isCollectionAvailable = isCollectionAvailable,
                 onCollectionClick = onCollectionClick,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(bottom = 18.dp),
+                    .padding(bottom = 10.dp),
             )
 
             if (onEditProfile != null && !hasNativeTrailingMenu) {
@@ -876,7 +984,7 @@ private fun ProfileInsightsHeroCinematic(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = 140.dp, end = 18.dp),
+                        .padding(bottom = ProfileHeroNameBottomPadding, end = 18.dp),
                 ) {
                     ProfileHeaderIconButton(
                         icon = Icons.Rounded.People,
@@ -888,6 +996,9 @@ private fun ProfileInsightsHeroCinematic(
         }
     }
 }
+
+/** How far above the hero's bottom edge the avatar/name column ends: just clear of the counts row. */
+private val ProfileHeroNameBottomPadding = 92.dp
 
 @Composable
 private fun ProfileHeroAvatar(
@@ -948,6 +1059,8 @@ private fun ProfileMetricPillRow(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
+    // Only the four headline counts, so they always fit across the hero with nothing cut off or
+    // hidden behind a scroll; Completed / Ongoing / Episodes live in the Stats section.
     val pills = listOf(
         ProfileMetricPillSpec(
             value = stats.continueCount.toString(),
@@ -969,86 +1082,71 @@ private fun ProfileMetricPillRow(
             label = stringResource(Res.string.profile_insights_hero_watched),
             collectionKind = ProfileInsightCollectionKind.Watched,
         ),
-        ProfileMetricPillSpec(
-            value = stats.completedCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_completed),
-            collectionKind = ProfileInsightCollectionKind.Completed,
-        ),
-        ProfileMetricPillSpec(
-            value = stats.ongoingSeriesCount.toString(),
-            label = stringResource(Res.string.profile_insights_stat_ongoing),
-            collectionKind = ProfileInsightCollectionKind.Ongoing,
-        ),
-        ProfileMetricPillSpec(
-            value = stats.episodesWatchedCount.toString(),
-            label = stringResource(Res.string.profile_insights_hero_episodes),
-            collectionKind = null,
-        ),
     )
-
-    val scrollState = rememberScrollState()
-
-    Box(modifier = modifier.fillMaxWidth()) {
-        // A plain scrollable Row instead of LazyRow: with contentPadding this wide (it reaches
-        // past the true screen edge to match the bled photo behind it), LazyRow was starting at a
-        // nonzero initial scroll offset on iOS, clipping the first pill until the user nudged it —
-        // a Row's scroll position is simply 0 at rest, with no such quirk.
-        // The start/end insets are real Spacer children, not an outer .padding() — padding applied
-        // after .horizontalScroll() resizes the viewport, it doesn't add space inside the
-        // scrollable content, so it was leaving the first pill flush against (and clipped by) the
-        // true edge.
-        // Edges fade out (only on a side that can still scroll) instead of overlaying chevrons,
-        // which were drawn on top of the clipped pill's label.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    val fadePx = ProfileMetricPillEdgeFade.toPx().coerceAtMost(size.width / 2f)
-                    if (scrollState.canScrollBackward) {
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(Color.Transparent, Color.Black),
-                                startX = 0f,
-                                endX = fadePx,
-                            ),
-                            size = Size(fadePx, size.height),
-                            blendMode = BlendMode.DstIn,
-                        )
-                    }
-                    if (scrollState.canScrollForward) {
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(Color.Black, Color.Transparent),
-                                startX = size.width - fadePx,
-                                endX = size.width,
-                            ),
-                            topLeft = Offset(size.width - fadePx, 0f),
-                            size = Size(fadePx, size.height),
-                            blendMode = BlendMode.DstIn,
-                        )
-                    }
-                }
-                .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.spacedBy(22.dp),
-        ) {
-            Spacer(modifier = Modifier.width(contentPadding.calculateStartPadding(LayoutDirection.Ltr)))
-            pills.forEach { pill ->
-                ProfileMetricPill(
-                    spec = pill,
-                    onClick = pill.collectionKind
-                        ?.takeIf(isCollectionAvailable)
-                        ?.let { kind -> { onCollectionClick(kind) } },
-                )
-            }
-            Spacer(modifier = Modifier.width(contentPadding.calculateEndPadding(LayoutDirection.Ltr)))
-        }
-
-    }
+    ProfileMetricRow(
+        pills = pills,
+        isCollectionAvailable = isCollectionAvailable,
+        onCollectionClick = onCollectionClick,
+        modifier = modifier.padding(contentPadding),
+    )
 }
 
-private val ProfileMetricPillEdgeFade = 40.dp
+/** Completed / Ongoing / Episodes: the secondary counts, shown at the top of the Stats section. */
+@Composable
+private fun ProfileSecondaryMetricRow(
+    stats: ProfileInsightsStats,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    ProfileMetricRow(
+        pills = listOf(
+            ProfileMetricPillSpec(
+                value = stats.completedCount.toString(),
+                label = stringResource(Res.string.profile_insights_stat_completed),
+                collectionKind = ProfileInsightCollectionKind.Completed,
+            ),
+            ProfileMetricPillSpec(
+                value = stats.ongoingSeriesCount.toString(),
+                label = stringResource(Res.string.profile_insights_stat_ongoing),
+                collectionKind = ProfileInsightCollectionKind.Ongoing,
+            ),
+            ProfileMetricPillSpec(
+                value = stats.episodesWatchedCount.toString(),
+                label = stringResource(Res.string.profile_insights_hero_episodes),
+                collectionKind = null,
+            ),
+        ),
+        isCollectionAvailable = isCollectionAvailable,
+        onCollectionClick = onCollectionClick,
+        valueColor = tokens.colors.textPrimary,
+        labelColor = tokens.colors.textMuted,
+    )
+}
+
+@Composable
+private fun ProfileMetricRow(
+    pills: List<ProfileMetricPillSpec>,
+    isCollectionAvailable: (ProfileInsightCollectionKind) -> Boolean,
+    onCollectionClick: (ProfileInsightCollectionKind) -> Unit,
+    modifier: Modifier = Modifier,
+    valueColor: Color = Color.White,
+    labelColor: Color = Color.White.copy(alpha = 0.6f),
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        pills.forEach { pill ->
+            ProfileMetricPill(
+                spec = pill,
+                onClick = pill.collectionKind
+                    ?.takeIf(isCollectionAvailable)
+                    ?.let { kind -> { onCollectionClick(kind) } },
+                valueColor = valueColor,
+                labelColor = labelColor,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
 
 private data class ProfileMetricPillSpec(
     val value: String,
@@ -1060,46 +1158,47 @@ private data class ProfileMetricPillSpec(
 private fun ProfileMetricPill(
     spec: ProfileMetricPillSpec,
     onClick: (() -> Unit)?,
+    valueColor: Color,
+    labelColor: Color,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
-            .widthIn(min = 58.dp)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .then(if (onClick != null) Modifier.settingsRowClickable(onClick = onClick) else Modifier)
+            .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Text(
-                text = spec.value,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 16.sp,
-                    maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                ),
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
-            Text(
-                text = spec.label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.6f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .width(28.dp)
-                .height(2.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(MaterialTheme.themePalette.accentBrush(alpha = 0.55f)),
+        Text(
+            text = spec.value,
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = 16.sp,
+                maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
+            ),
+            style = MaterialTheme.typography.titleLarge,
+            color = valueColor,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+        Text(
+            text = spec.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = labelColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+/** "~13d 13h watched · mostly Horror": the Stats section's collapsed summary. */
+@Composable
+private fun profileStatsSummary(stats: ProfileInsightsStats): String = listOfNotNull(
+    stats.trackedDurationMs.takeIf { it > 0L }?.let { durationMs ->
+        stringResource(Res.string.profile_insights_summary_watched, profileInsightDurationLabel(durationMs))
+    },
+    stats.topGenre?.let { genre -> stringResource(Res.string.profile_insights_summary_genre, genre) },
+).joinToString(" · ")
 
 @Composable
 private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
@@ -2226,7 +2325,7 @@ private fun WatchProgressEntry.profileArtworkUrl(): String? =
         ?: background?.takeIf { it.isNotBlank() }
         ?: episodeThumbnail?.takeIf { it.isNotBlank() }
 
-private suspend fun profileFetchPosterMetadata(type: String?, id: String?): Pair<String?, String?> {
+internal suspend fun profileFetchPosterMetadata(type: String?, id: String?): Pair<String?, String?> {
     var artwork: String? = null
     var releaseInfo: String? = null
 
@@ -2327,6 +2426,9 @@ private fun profileFallbackDurationMs(kind: String?, isEpisode: Boolean): Long =
     kind == "series" && isEpisode -> ProfileInsightsFallbackEpisodeMinutes * ProfileInsightsMinuteMs
     else -> 0L
 }
+
+internal fun profileCachedArtwork(type: String?, id: String?): String? =
+    profileCachedMeta(type, id).profileMetaArtworkUrl()
 
 private fun profileCachedMeta(type: String?, id: String?): MetaDetails? {
     for ((lookupType, lookupId) in profileMetaLookupCandidates(type, id)) {
@@ -3119,6 +3221,11 @@ private data class ProfileInsightCollection(
     val title: String,
     val subtitle: String,
     val items: List<ProfileInsightPosterItem>,
+)
+
+private data class ProfileJournalSnapshot(
+    val diary: List<DiaryMonth>,
+    val achievements: List<Achievement>,
 )
 
 private data class ProfileInsightPosterItem(

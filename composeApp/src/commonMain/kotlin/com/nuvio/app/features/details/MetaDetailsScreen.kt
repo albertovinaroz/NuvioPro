@@ -1,5 +1,10 @@
 package com.nuvio.app.features.details
 
+import androidx.compose.material.icons.automirrored.rounded.Send
+import com.nuvio.app.features.social.RecommendSheetController
+import com.nuvio.app.features.social.RecommendSheetHost
+import com.nuvio.app.features.social.SocialRepository
+import nuvio.composeapp.generated.resources.social_recommend
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -1328,6 +1333,11 @@ fun MetaDetailsScreen(
                                                         onDownloadClick = onDownloadClick,
                                                         onPlayFromStartClick = onPlayFromStartClick,
                                                         onPlayExternallyClick = onPlayExternallyClick,
+                                                        onRecommendClick = if (SocialRepository.isAvailable) {
+                                                            { RecommendSheetController.open(metaPreview) }
+                                                        } else {
+                                                            null
+                                                        },
                                                         userRating = titleUserRating,
                                                         onRateClick = openTitleRating,
                                                         showRatingHint = titleRatingTarget != null && !canRateTitle,
@@ -2053,6 +2063,7 @@ fun MetaDetailsScreen(
                 },
             )
         }
+        RecommendSheetHost()
     }
 }
 
@@ -2497,8 +2508,18 @@ private fun ConfiguredMetaSections(
                         onClick = onClick,
                     )
                 }
+                val recommendAction = if (SocialRepository.isAvailable) {
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.social_recommend),
+                        icon = Icons.AutoMirrored.Rounded.Send,
+                        onClick = { RecommendSheetController.open(meta.toMetaPreview()) },
+                    )
+                } else {
+                    null
+                }
                 val iconActions = buildList {
                     shuffleAction?.let(::add)
+                    recommendAction?.let(::add)
                     onDownloadClick?.let { download ->
                         add(DetailSecondaryAction(
                             label = stringResource(Res.string.details_download_action),
@@ -2551,6 +2572,7 @@ private fun ConfiguredMetaSections(
                     iconActions = iconActions,
                     secondaryActions = buildList {
                         if (!shuffleEnabled) shuffleAction?.let(::add)
+                        recommendAction?.let(::add)
                         onDownloadClick?.let { download ->
                             add(DetailSecondaryAction(
                                 label = stringResource(Res.string.details_download_action),

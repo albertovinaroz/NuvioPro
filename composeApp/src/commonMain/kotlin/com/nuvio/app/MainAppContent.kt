@@ -1,5 +1,9 @@
 package com.nuvio.app
 
+import com.nuvio.app.features.settings.ProfileSection
+import com.nuvio.app.features.settings.ProfileSectionsState
+import com.nuvio.app.features.social.SocialNoticeContentType
+import com.nuvio.app.features.social.SocialRepository
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.MutableTransitionState
@@ -400,6 +404,8 @@ internal fun MainAppContent(
     val editProfileTitle = stringResource(Res.string.profile_edit_edit_title)
     val pushEditProfile: () -> Unit = { navController.navigate(ProfileEditRoute(editProfileTitle)) }
     val profileMenuActions = profileEditSwitchMenuActions()
+    val profilePageTitle = stringResource(Res.string.compose_settings_page_profile)
+    LaunchedEffect(Unit) { SocialRepository.startNotificationPolling() }
     // Only the pushed screen instance that IS the Profile page reacts — initialRoute is unique to
     // whichever ScreenViewController the user currently has open, so this never fires for other
     // screens' instances of MainAppContent.
@@ -1855,6 +1861,23 @@ internal fun MainAppContent(
                                         // (usually Home) — unlike the Settings-menu entry point,
                                         // which deliberately does force the Settings tab.
                                         navController.navigate(WhatsNewRoute(forceSettingsTab = false))
+                                    }
+                                    feedItem.contentType == SocialNoticeContentType -> {
+                                        // Friend notices land on the Profile page, Friends open.
+                                        ProfileSectionsState.expand(ProfileSection.Friends)
+                                        if (useNativeNavigation) {
+                                            activateTab(AppScreenTab.Settings)
+                                            navController.navigate(
+                                                SettingsPageRoute(
+                                                    pageName = SettingsPage.Profile.name,
+                                                    title = profilePageTitle,
+                                                    trailingMenuActions = profileMenuActions,
+                                                ),
+                                            )
+                                        } else {
+                                            requestedSettingsPageName = SettingsPage.Profile.name
+                                            activateTab(AppScreenTab.Settings)
+                                        }
                                     }
                                     linkUrl != null -> uriHandler.openUri(linkUrl)
                                     else -> {

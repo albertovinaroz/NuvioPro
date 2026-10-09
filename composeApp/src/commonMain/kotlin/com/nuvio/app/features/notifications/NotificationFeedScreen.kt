@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.settings.NotificationsSettingsScreen
+import com.nuvio.app.features.social.SocialNoticeContentType
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_remove
 import nuvio.composeapp.generated.resources.app_icon_original
@@ -209,6 +211,31 @@ private fun NotificationFeedRowContent(
                         .clip(RoundedCornerShape(9.dp)),
                     contentScale = ContentScale.Fit,
                 )
+            } else if (item.contentType == SocialNoticeContentType) {
+                // Friend notices show the friend's avatar, round, instead of a cropped backdrop.
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val avatar = item.backdropUrl
+                    if (avatar != null) {
+                        AsyncImage(
+                            model = avatar,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.People,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             } else {
                 item.backdropUrl?.let { url ->
                     AsyncImage(

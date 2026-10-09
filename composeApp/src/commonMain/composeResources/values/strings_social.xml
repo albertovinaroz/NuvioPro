@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="social_title">Friends</string>
+    <plurals name="social_summary_friends">
+        <item quantity="one">%1$d friend</item>
+        <item quantity="other">%1$d friends</item>
+    </plurals>
+    <string name="social_summary_watching">%1$d watching now</string>
+    <plurals name="social_summary_requests">
+        <item quantity="one">%1$d request</item>
+        <item quantity="other">%1$d requests</item>
+    </plurals>
+    <string name="social_summary_empty">Add friends with your code</string>
+    <string name="social_unavailable">Friends needs a Nuvio account. Sign in from Settings → Account to add friends and share recommendations.</string>
+    <string name="social_load_failed">Couldn\'t reach the friends server.</string>
+    <string name="social_retry">Try again</string>
+
+    <string name="social_your_code">Your friend code</string>
+    <string name="social_copy">Copy</string>
+    <string name="social_code_copied">Friend code copied</string>
+    <string name="social_add_friend">Add friend</string>
+    <string name="social_add_friend_title">Add a friend</string>
+    <string name="social_add_friend_message">Ask your friend for their code. They\'ll find it in Profile → Friends.</string>
+    <string name="social_add_friend_placeholder">ABCD-2345</string>
+    <string name="social_add_friend_send">Send request</string>
+    <string name="social_add_friend_requested">Request sent to %1$s</string>
+    <string name="social_add_friend_added">You and %1$s are now friends</string>
+    <string name="social_someone">your friend</string>
+    <string name="social_error_code_not_found">No one has that code</string>
+    <string name="social_error_own_code">That\'s your own code</string>
+    <string name="social_error_bad_code">Codes look like ABCD-2345</string>
+    <string name="social_error_generic">Something went wrong. Try again.</string>
+
+    <string name="social_requests_header">Friend requests</string>
+    <string name="social_accept">Accept</string>
+    <string name="social_decline">Decline</string>
+    <string name="social_pending_header">Waiting for them</string>
+    <string name="social_cancel">Cancel</string>
+    <string name="social_friends_header">Your friends</string>
+    <string name="social_no_friends">No friends yet. Share your code, or add someone else\'s.</string>
+    <string name="social_status_watching">Watching %1$s</string>
+    <string name="social_status_finished">Finished %1$s · %2$s</string>
+    <string name="social_episode_suffix">%1$s · S%2$d E%3$d</string>
+    <string name="social_remove_friend">Remove friend</string>
+    <string name="social_remove_friend_confirm">Tap again to remove</string>
+    <string name="social_friend_activity_header">Recent activity</string>
+    <string name="social_friend_activity_empty">Nothing shared in the last two weeks.</string>
+    <string name="social_live">Live</string>
+
+    <string name="social_sharing_title">Share what I watch</string>
+    <string name="social_sharing_description">Friends see what you\'re watching and what you finished recently</string>
+
+    <string name="social_recommendations">Recommendations</string>
+    <string name="social_recommendations_new">%1$d new</string>
+    <string name="social_recommendations_received">Received</string>
+    <string name="social_recommendations_sent">Sent</string>
+    <string name="social_recommendations_empty_received">Nothing yet. When a friend recommends something, it shows up here.</string>
+    <string name="social_recommendations_empty_sent">Recommend a title from its details page.</string>
+    <string name="social_recommended_by">From %1$s · %2$s</string>
+    <string name="social_recommended_to">To %1$s · %2$s</string>
+    <string name="social_reply_placeholder">Reply…</string>
+    <string name="social_reply_send">Send</string>
+    <string name="social_your_reply">You: %1$s</string>
+    <string name="social_their_reply">%1$s: %2$s</string>
+    <string name="social_no_reply_yet">No reply yet</string>
+
+    <string name="social_recommend">Recommend</string>
+    <string name="social_recommend_title">Recommend to friends</string>
+    <string name="social_recommend_note_placeholder">Add a note (optional)</string>
+    <string name="social_recommend_send">Send</string>
+    <string name="social_recommend_send_count">Send to %1$d</string>
+    <string name="social_recommend_sent">Recommendation sent</string>
+    <string name="social_recommend_no_friends">Add friends from your Profile to recommend titles to them.</string>
+
+    <string name="social_notice_request_title">New friend request</string>
+    <string name="social_notice_request_body">%1$s wants to be your friend</string>
+    <string name="social_notice_accepted_title">Friend request accepted</string>
+    <string name="social_notice_accepted_body">You and %1$s are now friends</string>
+    <string name="social_notice_recommendation_title">%1$s recommended %2$s</string>
+    <string name="social_notice_recommendation_body">Tap to take a look</string>
+    <string name="social_notice_reply_title">%1$s replied about %2$s</string>
+
+    <string name="social_time_now">just now</string>
+    <string name="social_time_minutes">%1$d min ago</string>
+    <string name="social_time_hours">%1$d h ago</string>
+    <string name="social_time_days">%1$d d ago</string>
+</resources>

@@ -10,6 +10,8 @@ import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +36,7 @@ import com.nuvio.app.core.ui.ThemeAccentRing
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.social.rememberSocialBadgeCount
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.features.profiles.profileAvatarImageUrl
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -420,6 +423,7 @@ private fun SettingsProfileCardRow(isTablet: Boolean, onClick: () -> Unit) {
         ?: stringResource(Res.string.compose_settings_root_profile_title)
     val avatarSize = if (isTablet) 64.dp else 58.dp
     val ringSize = avatarSize + 8.dp
+    val socialBadgeCount = rememberSocialBadgeCount()
 
     Row(
         modifier = Modifier
@@ -453,6 +457,15 @@ private fun SettingsProfileCardRow(isTablet: Boolean, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                 )
             }
+        }
+        if (socialBadgeCount > 0) {
+            // Friend requests, recommendations and replies waiting on the Profile page.
+            CountBadge(
+                count = socialBadgeCount,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .border(2.dp, tokens.colors.surface, RoundedCornerShape(999.dp)),
+            )
         }
         }
         Spacer(modifier = Modifier.width(14.dp))

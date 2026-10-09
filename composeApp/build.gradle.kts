@@ -165,6 +165,19 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
             )
         }
 
+        outDir.resolve("com/nuvio/app/features/social").apply {
+            mkdirs()
+            resolve("SocialConfig.kt").writeText(
+                """
+                |package com.nuvio.app.features.social
+                |
+                |object SocialConfig {
+                |    const val URL = "${props.getProperty("NUVIO_SOCIAL_URL", "")}"
+                |}
+                """.trimMargin()
+            )
+        }
+
         outDir.resolve("com/nuvio/app/features/debrid").apply {
             mkdirs()
             resolve("PremiumizeConfig.kt").writeText(

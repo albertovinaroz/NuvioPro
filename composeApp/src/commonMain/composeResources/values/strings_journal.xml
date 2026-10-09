@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="journal_achievements_title">Achievements</string>
+    <string name="journal_achievements_unlocked">%1$d of %2$d unlocked</string>
+    <string name="journal_achievement_level">Level %1$d</string>
+    <string name="journal_achievement_level_of">Level %1$d of %2$d</string>
+    <string name="journal_achievement_locked">Locked</string>
+    <string name="journal_achievement_maxed">All levels complete</string>
+    <string name="journal_achievement_progress">%1$d / %2$d</string>
+    <string name="journal_achievement_progress_maxed">%1$d · Max</string>
+    <string name="journal_achievement_next">Next: %1$s</string>
+    <string name="journal_achievement_levels_header">Levels</string>
+
+    <string name="journal_achievement_movies">Cinephile</string>
+    <string name="journal_achievement_episodes">Episode Hunter</string>
+    <string name="journal_achievement_completed_series">Finisher</string>
+    <string name="journal_achievement_binge">Binge Watcher</string>
+    <string name="journal_achievement_streak">On a Roll</string>
+    <string name="journal_achievement_night_owl">Night Owl</string>
+    <string name="journal_achievement_anniversary">Veteran</string>
+
+    <plurals name="journal_achievement_movies_goal">
+        <item quantity="one">Watch %1$d movie</item>
+        <item quantity="other">Watch %1$d movies</item>
+    </plurals>
+    <plurals name="journal_achievement_episodes_goal">
+        <item quantity="one">Watch %1$d episode</item>
+        <item quantity="other">Watch %1$d episodes</item>
+    </plurals>
+    <plurals name="journal_achievement_completed_series_goal">
+        <item quantity="one">Finish %1$d series</item>
+        <item quantity="other">Finish %1$d series</item>
+    </plurals>
+    <plurals name="journal_achievement_binge_goal">
+        <item quantity="one">Watch %1$d episode of one series in a day</item>
+        <item quantity="other">Watch %1$d episodes of one series in a day</item>
+    </plurals>
+    <plurals name="journal_achievement_streak_goal">
+        <item quantity="one">Watch something %1$d day in a row</item>
+        <item quantity="other">Watch something %1$d days in a row</item>
+    </plurals>
+    <plurals name="journal_achievement_night_owl_goal">
+        <item quantity="one">Finish %1$d title between midnight and 5 am</item>
+        <item quantity="other">Finish %1$d titles between midnight and 5 am</item>
+    </plurals>
+    <plurals name="journal_achievement_anniversary_goal">
+        <item quantity="one">Keep watching for %1$d day</item>
+        <item quantity="other">Keep watching for %1$d days</item>
+    </plurals>
+
+    <string name="journal_diary_title">Diary</string>
+    <string name="journal_diary_see_all">See full diary</string>
+    <string name="journal_diary_summary">%1$s · %2$s</string>
+    <plurals name="journal_diary_titles">
+        <item quantity="one">%1$d title</item>
+        <item quantity="other">%1$d titles</item>
+    </plurals>
+    <string name="journal_diary_today">Today</string>
+    <string name="journal_diary_yesterday">Yesterday</string>
+    <string name="journal_diary_day">%1$d %2$s</string>
+    <string name="journal_diary_day_year">%1$d %2$s %3$d</string>
+    <string name="journal_diary_month">%1$s %2$d</string>
+    <string name="journal_diary_movie">Movie</string>
+    <string name="journal_diary_series">Series</string>
+    <string name="journal_diary_episode">S%1$d · E%2$d</string>
+    <string name="journal_diary_episode_range">S%1$d · E%2$d–%3$d</string>
+    <plurals name="journal_diary_episodes">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="journal_diary_month_movies">
+        <item quantity="one">%1$d movie</item>
+        <item quantity="other">%1$d movies</item>
+    </plurals>
+</resources>

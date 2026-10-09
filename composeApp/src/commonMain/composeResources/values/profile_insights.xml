@@ -11,6 +11,9 @@
 
     <string name="profile_insights_section_overview">Overview</string>
     <string name="profile_insights_section_taste">Taste</string>
+    <string name="profile_insights_section_stats">Stats</string>
+    <string name="profile_insights_summary_watched">%1$s watched</string>
+    <string name="profile_insights_summary_genre">mostly %1$s</string>
 
     <string name="profile_insights_hero_continue">Watching</string>
     <string name="profile_insights_hero_library">Saved</string>

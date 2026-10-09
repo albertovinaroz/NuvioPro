@@ -1,5 +1,6 @@
 package com.nuvio.app.features.watchprogress
 
+import com.nuvio.app.features.social.SocialRepository
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
@@ -1105,6 +1106,7 @@ object WatchProgressRepository {
     ) {
         ensureLoaded()
         upsert(session = session, snapshot = snapshot, persist = true, syncRemote = syncRemote)
+        SocialRepository.reportPlayback(session, snapshot)
     }
 
     fun flushPlaybackProgress(
@@ -1114,6 +1116,7 @@ object WatchProgressRepository {
     ) {
         ensureLoaded()
         upsert(session = session, snapshot = snapshot, persist = true, syncRemote = syncRemote)
+        SocialRepository.reportPlayback(session, snapshot)
     }
 
     fun applyExternalProgress(entries: List<WatchProgressEntry>) {

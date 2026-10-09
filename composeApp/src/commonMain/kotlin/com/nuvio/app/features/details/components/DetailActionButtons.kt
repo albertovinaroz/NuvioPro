@@ -1,5 +1,7 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.material.icons.automirrored.rounded.Send
+import nuvio.composeapp.generated.resources.social_recommend
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -365,6 +367,7 @@ fun DetailActions(
     onDownloadClick: (() -> Unit)? = null,
     onPlayFromStartClick: (() -> Unit)? = null,
     onPlayExternallyClick: (() -> Unit)? = null,
+    onRecommendClick: (() -> Unit)? = null,
     userRating: Int? = null,
     onRateClick: (() -> Unit)? = null,
     showRatingHint: Boolean = false,
@@ -407,6 +410,15 @@ fun DetailActions(
                         label = stringResource(Res.string.streams_open_external_player),
                         icon = Icons.AutoMirrored.Rounded.OpenInNew,
                         onClick = playExternally,
+                    ),
+                )
+            }
+            onRecommendClick?.let { recommend ->
+                add(
+                    DetailSecondaryAction(
+                        label = stringResource(Res.string.social_recommend),
+                        icon = Icons.AutoMirrored.Rounded.Send,
+                        onClick = recommend,
                     ),
                 )
             }
