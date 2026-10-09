@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_licenses_attributions_nuvio_pro_title">Nuvio Pro</string>
+    <string name="settings_licenses_attributions_nuvio_pro_body">An independent fork of Nuvio Mobile by NuvioMedia. Source code and license terms are available in its repository.</string>
+</resources>

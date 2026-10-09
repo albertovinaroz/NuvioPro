@@ -51,6 +51,7 @@ private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioMobil
 private const val MpvKitUrl = "https://github.com/mpvkit/MPVKit"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
+private const val NuvioProRepositoryUrl = "https://github.com/albertovinaroz/NuvioPro"
 
 private data class AttributionItem(
     val titleRes: StringResource,
@@ -106,6 +107,16 @@ private fun LicensesAttributionsBody(
         ) {
             LicenseRow(
                 item = appLicenseItem(),
+                isTablet = isTablet,
+            )
+            PlainStackDivider()
+            LicenseRow(
+                item = LicenseItem(
+                    titleRes = Res.string.settings_licenses_attributions_nuvio_pro_title,
+                    bodyRes = Res.string.settings_licenses_attributions_nuvio_pro_body,
+                    licenseRes = Res.string.settings_licenses_attributions_nuvio_license,
+                    link = NuvioProRepositoryUrl,
+                ),
                 isTablet = isTablet,
             )
         }
