@@ -1,5 +1,8 @@
 package com.nuvio.app.features.settings
 
+import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.CancellationException
+import kotlin.time.Clock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -165,33 +168,92 @@ internal data class SupportersResult(
     val progress: DonationProgress?,
 )
 
+@Serializable
+private data class ContributorsCache(
+    val url: String,
+    val fetchedAtMillis: Long,
+    val etag: String? = null,
+    val body: String,
+)
+
+private const val CONTRIBUTORS_CACHE_KEY = "contributors"
+private const val CONTRIBUTORS_CACHE_TTL_MILLIS = 24L * 60L * 60L * 1000L
+
 private object SupportersContributorsRepository {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    /**
+     * GitHub's unauthenticated API allows 60 requests an hour per IP, shared with What's New, so
+     * the list is kept on disk for a day and refreshed with the cached ETag (a 304 doesn't count
+     * against the limit). When GitHub refuses or the network is down, the last list still shows.
+     */
     suspend fun getContributors(): Result<List<CommunityContributor>> = runCatching {
         val contributionsUrl = CommunityConfig.CONTRIBUTIONS_URL.trim()
         check(contributionsUrl.isNotBlank()) {
             getString(Res.string.community_error_unable_load_contributors)
         }
 
-        val response = httpRequestRaw(
-            method = "GET",
-            url = contributionsUrl,
-            headers = mapOf(
-                "Accept" to "application/vnd.github+json",
-                "User-Agent" to "NuvioMobile",
-            ),
-            body = "",
-        )
-        if (response.status !in 200..299) {
-            error(getString(Res.string.community_error_contributors_request_failed))
+        val cached = readContributorsCache()?.takeIf { it.url == contributionsUrl }
+        val now = Clock.System.now().toEpochMilliseconds()
+        if (cached != null && now - cached.fetchedAtMillis < CONTRIBUTORS_CACHE_TTL_MILLIS) {
+            return@runCatching parseContributors(cached.body).sortedForDisplay()
         }
 
-        parseContributors(response.body)
-            .sortedWith(
-                compareByDescending<CommunityContributor> { it.totalContributions }
-                    .thenBy { it.login.lowercase() },
+        val response = try {
+            httpRequestRaw(
+                method = "GET",
+                url = contributionsUrl,
+                headers = buildMap {
+                    put("Accept", "application/vnd.github+json")
+                    put("User-Agent", "NuvioMobile")
+                    cached?.etag?.let { put("If-None-Match", it) }
+                },
+                body = "",
             )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            if (cached != null) return@runCatching parseContributors(cached.body).sortedForDisplay()
+            throw error
+        }
+
+        val body = when {
+            response.status == 304 && cached != null -> {
+                writeContributorsCache(cached.copy(fetchedAtMillis = now))
+                cached.body
+            }
+            response.status in 200..299 -> {
+                writeContributorsCache(
+                    ContributorsCache(
+                        url = contributionsUrl,
+                        fetchedAtMillis = now,
+                        etag = response.headers.entries
+                            .firstOrNull { it.key.equals("etag", ignoreCase = true) }
+                            ?.value,
+                        body = response.body,
+                    ),
+                )
+                response.body
+            }
+            // Rate limited or failing: the last known list beats an error.
+            cached != null -> cached.body
+            else -> error(getString(Res.string.community_error_contributors_request_failed))
+        }
+        parseContributors(body).sortedForDisplay()
+    }
+
+    private fun List<CommunityContributor>.sortedForDisplay(): List<CommunityContributor> =
+        sortedWith(
+            compareByDescending<CommunityContributor> { it.totalContributions }
+                .thenBy { it.login.lowercase() },
+        )
+
+    private fun readContributorsCache(): ContributorsCache? =
+        CommunityCacheStorage.load(CONTRIBUTORS_CACHE_KEY)
+            ?.let { raw -> runCatching { json.decodeFromString<ContributorsCache>(raw) }.getOrNull() }
+
+    private fun writeContributorsCache(cache: ContributorsCache) {
+        runCatching { CommunityCacheStorage.save(CONTRIBUTORS_CACHE_KEY, json.encodeToString(cache)) }
     }
 
     private fun parseContributors(body: String): List<CommunityContributor> {
