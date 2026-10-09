@@ -15,7 +15,8 @@
     <a href="https://github.com/albertovinaroz/NuvioPro/releases/latest">Releases</a> ·
     <a href="https://github.com/NuvioMedia/NuvioMobile">Upstream project</a> ·
     <a href="https://nuvio.tv">nuvio.tv</a> ·
-    <a href="https://nuvio.tv/support">Support Nuvio</a>
+    <a href="https://nuvio.tv/support">Support Nuvio</a> ·
+    <a href="https://ko-fi.com/albertovinaroz">Support Nuvio Pro</a>
   </p>
 
 </div>
@@ -102,13 +103,30 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 
 | Feature | Where | Default |
 |---|---|---|
-| **Profile Insights** — total watch time plus tappable stat counts (in progress, saved, upcoming, watched, completed, ongoing series, episodes watched); tapping a number opens a poster grid of exactly those titles. | Settings → **Profile** | Always available |
-| **Taste DNA** — your top genres ranked by share of what you watch, plus a Movies vs Series balance. | Settings → Profile → scroll down | Always available |
+| **Profile Insights** — four headline counts under your avatar (watching, saved, upcoming, watched); tapping one opens a poster grid of exactly those titles. | Settings → **Profile** | Always available |
+| **Foldable Profile** — Friends, Stats, Achievements and Diary sit in one grouped card, each a row you fold open. Folded rows show a one-line summary and a small preview (friends' avatars, top badges, latest posters), and the app remembers which ones you left open. | Settings → Profile | All folded |
+| **Stats** — total watch time, completed / ongoing series and episodes watched, plus **Taste DNA**: your top genres ranked by share of what you watch and a Movies vs Series balance. | Settings → Profile → **Stats** | Always available |
+| **Achievements** — seven tiered badges (Cinephile, Episode Hunter, Finisher, Binge Watcher, On a Roll, Night Owl, Veteran) worked out from what you've watched. Each fills a ring towards its next level; tap one to see every level. | Settings → Profile → **Achievements** | Always available |
+| **Diary** — what you watched each day, newest first, with a series' episodes from the same day merged into one entry. Open the full diary to browse it month by month, and tap any title to open it. | Settings → Profile → **Diary** | Always available |
 | **Custom profile background** — point a profile at any `http(s)` image URL. | Edit Profile → **Choose Profile Background** → Custom → **Custom background URL** | None |
 | **Animated profile switch** — tapping a profile glides its avatar to the center of the screen into the loading transition, instead of a hard cut. | Profile selection screen | Always on |
 | **Branded launch intro** — a quick wordmark reveal plays while the app resolves your session on cold start, replacing the old loading spinner. | App launch | Always on |
 | **Smooth theme color transitions** — the Nuvio wordmark crossfades between Supporter+ color themes instead of cutting abruptly when a profile uses a different one. | — | Always on |
 | **Haptic feedback on profile selection** — a light vibration on tap and again when the transition into the app starts. | Profile selection screen | Always on |
+
+### Friends
+
+Upstream Nuvio has no social features. This fork adds them, backed by its own small server. Friends uses your Nuvio
+account, and every profile counts as its own person, so two profiles on one account can be friends too.
+
+| Feature | Where | Default |
+|---|---|---|
+| **Friends by code** — every profile gets a friend code to share; enter someone else's to send a request they can accept or decline. Tap a friend to see what they've watched lately. | Settings → Profile → **Friends** | — |
+| **Recommend to a friend** — send a title to one or more friends with an optional note. | Details page → **Recommend** (next to the rating stars) | — |
+| **Recommendations inbox** — what friends sent you and what you sent them; react with an emoji or reply. | Settings → Profile → Friends → **Recommendations** | — |
+| **Watching now** — see what friends are watching right now and what they finished recently. | Settings → Profile → Friends | — |
+| **Share what I watch** — turn it off and nothing you watch is sent at all. | Settings → Profile → Friends → **Share what I watch** | On |
+| **Friend notifications** — friend requests, accepted requests, recommendations and replies land in the notification feed, and a red badge on your profile card in Settings counts what's waiting. | Notification feed / Settings | Always on |
 
 ### Details & discovery
 
@@ -123,6 +141,15 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **Trailer start with sound** — start the details-page trailer unmuted. Appears once trailer playback is on. | Settings → Layout → Detail Page → **Start with sound** | Off |
 | **Episode shuffle** — shuffle through a series instead of watching in order: pick whether already-watched episodes are included, preview the episode it lands on, then start. Once on, a pinned Shuffle button sits next to Play and stays on for that series until you switch it off. | Settings → Layout → Detail Page → **Shuffle** | Off |
 | **Season-complete celebration** — a haptic tap and a toast when marking the last unwatched episode of a season as watched. | Episode watched-status sheet | Always on |
+| **Recommend button** — sits beside the rating stars and in the compact header while scrolling, never among the Play row's actions, so Play keeps its width. | Details page | Shown with Friends available |
+| **Landscape details** — on a phone turned sideways the hero fits the screen with Play in view, and text keeps clear of the Dynamic Island. | Details page | Always on |
+
+### Search
+
+| Feature | Where | Default |
+|---|---|---|
+| **Rebuilt Search tab** — iOS large title, a search bar with Cancel and a loading spinner, filters that fold away while you type and highlight when active, and results that fade in row by row. | Search tab | Always on |
+| **Recent searches** — saved reliably even when an addon is slow to answer; swipe a chip away to forget it. | Search tab | Always on |
 
 ### Streams
 
@@ -139,6 +166,9 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **"Recently added" indicator** — a small dot marks posters saved to the library within the last 3 days; opening the poster clears it early. | Library screen | Always on |
 | **Downloads shortcut** — opens the Downloads screen; the icon animates while something's actively downloading and stays highlighted after a download finishes until you check it. | Library screen → **downloads icon** | Always on |
 | **Rate titles & filter by rating** — rate any movie or show, then filter the Library down to just what you've rated. | Library screen → **Rated** | — |
+| **Rebuilt Library tab** — Saved / Cloud / Servers segmented control, filters pinned under a compact Liquid Glass capsule (calendar, downloads, ratings), filter chips that show when they're active, and a 7-wide grid in landscape. | Library tab | Always on |
+| **Readable Cloud files** — "Title (Year)" instead of raw release names, quality tags (4K, HDR, HEVC…), and a file picker that tags each file's episode, resolution and codec. | Library → **Cloud** | Always on |
+| **iOS-style release calendar** — circular days, today highlighted, haptics as you move around. | Library screen → **calendar icon** | — |
 
 ### Downloads
 
@@ -166,7 +196,9 @@ Upstream Nuvio has no Live TV. This fork adds the whole feature.
 | **Morphed Liquid Glass tab bar** — shrinks to a compact pill, with native drag-across-tabs and the system glass highlight (requires an **iPhone on iOS 26 or newer**). | Settings → Layout → **Liquid Glass tab bar** | Morphed |
 | **Skia graphics engine** — rebuilt graphics engine for animated artwork rendering with shared codecs and bounded memory. Fixes a crash on large animated collections; supports animated avatars and badges. | — | — |
 | **Bundled CJK font** — fixes Chinese subtitle rendering. | — | — |
-| **Native-style Settings rows** — plain icon and chevron, no colored chips or section labels, matching the stock iOS/WhatsApp settings list look. | Settings | Always on |
+| **Rebuilt Settings tab** — iOS large title, an always-visible search, colored icon tiles per category, compact rows with the current value on the right, the iOS grey press highlight, and a theme picker that folds away. | Settings | Always on |
+| **Pinned blurred headers** — Library, Search and Settings share one look: the title bar stays pinned over a blurred, theme-tinted backdrop as you scroll. | Library / Search / Settings | Always on |
+| **Landscape that fits** — layouts keep clear of the Dynamic Island, landscape Settings scrolls to every category, and sheets can always be closed (swipe down, or the ✕ that appears in landscape). | — | Always on |
 | **Pill-shaped search bars** — every search field (Settings, Search, Live TV, Player live channels, Cloud Library) uses a fully rounded pill, matching iOS conventions. | — | Always on |
 | **Liquid Glass mute button** — mutes the hero trailer without leaving Home, in the app's Liquid Glass style. | Top-right of the hero, while a trailer is playing | — |
 | **Filled/outlined tab bar icons** — Home, Search, Library and Live TV glyphs swap between filled and outlined artwork based on selection instead of only changing tint. | — | Always on |
@@ -229,6 +261,8 @@ git merge upstream/cmp-rewrite
 
 Nuvio is built by [NuvioMedia](https://github.com/NuvioMedia) — all credit for the app itself belongs to them and its
 contributors. This repository only adds to their work. If you enjoy Nuvio, [support the upstream project](https://nuvio.tv/support).
+If Nuvio Pro's own additions are useful to you, you can also [support Nuvio Pro on Ko-fi](https://ko-fi.com/albertovinaroz)
+(also in the app: Settings → **Support Nuvio Pro**).
 
 Thanks also to [luqmanfadlli](https://github.com/luqmanfadlli/NuvioMobile-Enhanced) for maintaining a sibling fork
 (Nuvio Enhanced) we regularly trade improvements with.
