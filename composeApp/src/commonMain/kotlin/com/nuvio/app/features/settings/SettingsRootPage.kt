@@ -1,5 +1,10 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.material.icons.rounded.LocalCafe
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.nuvio.app.core.build.AppFeaturePolicy
+import nuvio.composeapp.generated.resources.support_pro_title
 import com.nuvio.app.core.ui.labelRes
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.tracking.TrackingProviderId
@@ -258,12 +263,27 @@ internal fun LazyListScope.settingsRootContent(
         val sectionModifier4 = nextSectionModifier()
         item {
             val uriHandler = LocalUriHandler.current
+            var showSupportSheet by remember { mutableStateOf(false) }
+            if (showSupportSheet) {
+                SupportProSheet(onDismiss = { showSupportSheet = false })
+            }
             SettingsSection(
                 title = null,
                 isTablet = isTablet,
                 modifier = sectionModifier4,
             ) {
                 SettingsGroup(isTablet = isTablet) {
+                    // Only where donation links are allowed (not App Store / Play Store builds).
+                    if (AppFeaturePolicy.donationActionsEnabled) {
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.support_pro_title),
+                            icon = Icons.Rounded.LocalCafe,
+                            iconTile = true,
+                            isTablet = isTablet,
+                            onClick = { showSupportSheet = true },
+                        )
+                        SettingsGroupDivider(isTablet = isTablet)
+                    }
                     if (showSupportersContributorsPage) {
                         SettingsNavigationRow(
                             title = stringResource(Res.string.compose_settings_page_supporters_contributors),

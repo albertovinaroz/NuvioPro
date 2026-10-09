@@ -2806,4 +2806,9 @@
     <string name="whats_new_status_updates_available">%1$d newer releases are available.</string>
     <string name="whats_new_unavailable">Release history unavailable</string>
     <string name="stream_info_server">Server</string>
+    <string name="support_pro_title">Support Nuvio Pro</string>
+    <string name="support_pro_heading">Enjoying Nuvio Pro?</string>
+    <string name="support_pro_message">Nuvio Pro is built and maintained in my spare time. If it\'s made your watching better, a coffee helps keep it going. Thank you!</string>
+    <string name="support_pro_kofi_button">Support on Ko-fi</string>
+    <string name="support_pro_upstream_note">Nuvio Pro is an independent fork of Nuvio by NuvioMedia. Support given here goes to the Nuvio Pro developer.</string>
 </resources>
