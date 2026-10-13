@@ -2,13 +2,17 @@ package com.nuvio.app.features.livetv
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
+import com.nuvio.app.features.profiles.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
@@ -20,10 +24,22 @@ object LiveTvRepository {
     val uiState: StateFlow<LiveTvUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+    private var loadedProfileId: Int? = null
+    private var refreshJob: Job? = null
+    private var profileObserverJob: Job? = null
 
     fun ensureLoaded() {
         if (hasLoaded) return
         hasLoaded = true
+        loadedProfileId = ProfileRepository.activeProfileId
+        if (profileObserverJob == null) {
+            profileObserverJob = scope.launch {
+                ProfileRepository.state
+                    .map { it.activeProfile?.profileIndex }
+                    .distinctUntilChanged()
+                    .collect { onProfileChanged() }
+            }
+        }
         val playlists = loadSavedPlaylists()
         _uiState.value = LiveTvUiState(
             playlistUrl = playlists.firstEnabledUrlSource(),
@@ -38,6 +54,18 @@ object LiveTvRepository {
         if (_uiState.value.hasPlaylist) {
             refresh()
         }
+    }
+
+    /**
+     * Live TV settings are stored per profile. Reload them when the active profile changes,
+     * otherwise the tab bar keeps the previous profile's (or the default) visibility.
+     */
+    fun onProfileChanged() {
+        if (!hasLoaded || loadedProfileId == ProfileRepository.activeProfileId) return
+        refreshJob?.cancel()
+        refreshJob = null
+        hasLoaded = false
+        ensureLoaded()
     }
 
     fun savePlaylistUrl(url: String) {
@@ -273,7 +301,8 @@ object LiveTvRepository {
         }
 
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-        scope.launch {
+        refreshJob?.cancel()
+        refreshJob = scope.launch {
             val loadedChannels = mutableListOf<LiveTvChannel>()
             val failedPlaylistNames = mutableListOf<String>()
 
