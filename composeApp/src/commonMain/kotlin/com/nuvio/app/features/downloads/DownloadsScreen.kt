@@ -1,5 +1,7 @@
 package com.nuvio.app.features.downloads
 
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.i18n.localizedByteUnit
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.StaggeredEntrance
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
@@ -91,6 +95,7 @@ fun DownloadsScreen(
     }
 
     val tokens = MaterialTheme.nuvio
+    val entrance = remember(selectedShowId) { TimeSource.Monotonic.markNow() }
 
     NuvioScreen {
         stickyHeader {
@@ -142,6 +147,7 @@ fun DownloadsScreen(
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
                 },
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                entrance = entrance,
             )
         } else {
             downloadsShowContent(
@@ -149,6 +155,7 @@ fun DownloadsScreen(
                 episodes = completedEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                entrance = entrance,
             )
         }
     }
@@ -176,6 +183,7 @@ private fun LazyListScope.downloadsRootContent(
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    entrance: TimeMark,
 ) {
     val activeItems = uiState.activeItems
     val completedMovies = uiState.completedItems.filterNot(DownloadItem::isEpisode)
@@ -193,7 +201,8 @@ private fun LazyListScope.downloadsRootContent(
         item {
             SectionTitle(stringResource(Res.string.downloads_section_active))
         }
-        items(
+        staggeredItems(
+            entrance = entrance,
             items = activeItems,
             key = { it.id },
         ) { item ->
@@ -212,7 +221,8 @@ private fun LazyListScope.downloadsRootContent(
         item {
             SectionTitle(stringResource(Res.string.downloads_section_movies))
         }
-        items(
+        staggeredItems(
+            entrance = entrance,
             items = completedMovies,
             key = { it.id },
         ) { item ->
@@ -231,7 +241,8 @@ private fun LazyListScope.downloadsRootContent(
         item {
             SectionTitle(stringResource(Res.string.downloads_section_shows))
         }
-        items(
+        staggeredItems(
+            entrance = entrance,
             items = completedShows,
             key = { (item, _) -> item.parentMetaId },
         ) { (item, episodes) ->
@@ -302,6 +313,7 @@ private fun LazyListScope.downloadsShowContent(
     episodes: List<DownloadItem>,
     onOpenDownload: (DownloadItem) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    entrance: TimeMark,
 ) {
     val showEpisodes = episodes
         .filter { it.parentMetaId == showId }
@@ -347,7 +359,8 @@ private fun LazyListScope.downloadsShowContent(
 
         val sortedEpisodes = entries.sortedForSeriesDownloads()
 
-        items(
+        staggeredItems(
+            entrance = entrance,
             items = sortedEpisodes,
             key = { it.id },
         ) { item ->
@@ -360,6 +373,18 @@ private fun LazyListScope.downloadsShowContent(
                 onDelete = { onDeleteDownload(item.id) },
             )
         }
+    }
+}
+
+/** [items] whose rows fade and lift in one after another when the list first appears. */
+private fun <T> LazyListScope.staggeredItems(
+    entrance: TimeMark,
+    items: List<T>,
+    key: (T) -> Any,
+    content: @Composable (T) -> Unit,
+) {
+    itemsIndexed(items = items, key = { _, item -> key(item) }) { index, item ->
+        StaggeredEntrance(batch = entrance, index = index) { content(item) }
     }
 }
 

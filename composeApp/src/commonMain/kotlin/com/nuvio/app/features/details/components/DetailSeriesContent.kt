@@ -71,6 +71,8 @@ import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
 import com.nuvio.app.core.ui.NuvioDownloadedBadge
+import com.nuvio.app.core.ui.StaggeredEntrance
+import kotlin.time.TimeSource
 import com.nuvio.app.features.downloads.rememberIsEpisodeDownloaded
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioProgressBar
@@ -258,10 +260,11 @@ fun DetailSeriesContent(
                         } else {
                             seasonEpisodes.take(VerticalEpisodesInitialVisibleCount)
                         }
+                        val episodesEntrance = remember(seasonForContent) { TimeSource.Monotonic.markNow() }
                         Column(
                             verticalArrangement = Arrangement.spacedBy(sizing.cardGap),
                         ) {
-                            visibleEpisodes.forEach { episode ->
+                            visibleEpisodes.forEachIndexed { episodeIndex, episode ->
                                 val episodeVideoId = buildPlaybackVideoId(
                                     parentMetaId = meta.id,
                                     seasonNumber = episode.season,
@@ -269,6 +272,7 @@ fun DetailSeriesContent(
                                     fallbackVideoId = episode.id,
                                 )
                                 val userRatingTarget = remember(meta, episode) { meta.episodeUserRatingTarget(episode) }
+                                StaggeredEntrance(batch = episodesEntrance, index = episodeIndex) {
                                 EpisodeListCard(
                                     video = episode,
                                     userRating = rememberUserRating(userRatingTarget),
@@ -291,6 +295,7 @@ fun DetailSeriesContent(
                                     onClick = { onEpisodeClick?.invoke(episode) },
                                     onLongPress = { onEpisodeLongPress?.invoke(episode) },
                                 )
+                                }
                             }
                             if (!episodesExpanded && seasonEpisodes.size > VerticalEpisodesInitialVisibleCount) {
                                 Text(
@@ -763,6 +768,11 @@ private fun EpisodeHorizontalRow(
     val rowMetrics = rememberEpisodeHorizontalCardMetrics(maxWidthDp)
     val listState = rememberLazyListState()
     var hasPositioned by remember(episodes) { mutableStateOf(false) }
+    val episodesEntrance = remember(episodes) { TimeSource.Monotonic.markNow() }
+    // The row opens scrolled to the preferred episode; stagger from there rather than from the first.
+    val entranceStartIndex = remember(episodes, preferredEpisodeNumber) {
+        episodes.indexOfFirst { it.episode == preferredEpisodeNumber }.coerceAtLeast(0)
+    }
 
     LaunchedEffect(episodes, preferredEpisodeNumber) {
         val targetIndex = if (preferredEpisodeNumber != null) {
@@ -794,7 +804,7 @@ private fun EpisodeHorizontalRow(
         itemsIndexed(
             items = episodes,
             key = { index, episode -> "${episode.season}:${episode.episode}:${episode.id}#$index" },
-        ) { _, episode ->
+        ) { episodeIndex, episode ->
             val episodeVideoId = buildPlaybackVideoId(
                 parentMetaId = parentMetaId,
                 seasonNumber = episode.season,
@@ -802,6 +812,10 @@ private fun EpisodeHorizontalRow(
                 fallbackVideoId = episode.id,
             )
             val userRatingTarget = remember(episode) { userRatingTargetFor(episode) }
+            StaggeredEntrance(
+                batch = episodesEntrance,
+                index = (episodeIndex - entranceStartIndex).coerceAtLeast(0),
+            ) {
             EpisodeHorizontalCard(
                 video = episode,
                 userRating = rememberUserRating(userRatingTarget),
@@ -824,6 +838,7 @@ private fun EpisodeHorizontalRow(
                 onClick = { onEpisodeClick?.invoke(episode) },
                 onLongPress = { onEpisodeLongPress?.invoke(episode) },
             )
+            }
         }
     }
 }
