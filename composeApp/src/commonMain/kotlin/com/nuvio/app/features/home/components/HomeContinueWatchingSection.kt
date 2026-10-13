@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home.components
 
+import com.nuvio.app.core.ui.animateCountUp
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -838,7 +839,8 @@ private fun ContinueWatchingCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(item.progressFraction.coerceIn(0f, 1f))
+                        // Fills up to where you left off when the row appears.
+                        .fillMaxWidth(animateCountUp(item.progressFraction.coerceIn(0f, 1f), durationMillis = 700))
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(999.dp))
                         .background(MaterialTheme.colorScheme.primary),
@@ -995,7 +997,7 @@ private fun ContinueWatchingWideCard(
             if (item.progressFraction > 0f) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     NuvioProgressBar(
-                        progress = item.progressFraction,
+                        progress = animateCountUp(item.progressFraction, durationMillis = 700),
                         modifier = Modifier.fillMaxWidth(),
                         height = layout.progressHeight,
                         trackColor = Color.White.copy(alpha = 0.10f),
@@ -1101,7 +1103,7 @@ private fun ContinueWatchingPosterCard(
                         .padding(horizontal = 6.dp, vertical = 6.dp),
                 ) {
                     NuvioProgressBar(
-                        progress = item.progressFraction,
+                        progress = animateCountUp(item.progressFraction, durationMillis = 700),
                         modifier = Modifier.width(layout.posterCardWidth - 32.dp),
                         height = layout.progressHeight,
                         trackColor = MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.16f),

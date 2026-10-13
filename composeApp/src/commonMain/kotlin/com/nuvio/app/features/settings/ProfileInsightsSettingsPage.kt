@@ -1,5 +1,8 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.StaggeredEntrance
+import kotlin.time.TimeSource
+import com.nuvio.app.core.ui.animateCountUp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -1170,8 +1173,12 @@ private fun ProfileMetricPill(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
+        // Counts up to its number when the stats come into view.
+        val shownValue = spec.value.toIntOrNull()
+            ?.let { count -> animateCountUp(count.toFloat()).roundToInt().toString() }
+            ?: spec.value
         Text(
-            text = spec.value,
+            text = shownValue,
             autoSize = TextAutoSize.StepBased(
                 minFontSize = 16.sp,
                 maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
@@ -1209,7 +1216,7 @@ private fun ProfileWatchTimeRow(stats: ProfileInsightsStats) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = profileInsightDurationLabel(stats.trackedDurationMs),
+            text = profileInsightDurationLabel(animateCountUp(stats.trackedDurationMs.toFloat()).toLong()),
             style = MaterialTheme.typography.displaySmall,
             color = tokens.colors.textPrimary,
             fontWeight = FontWeight.SemiBold,
@@ -1449,6 +1456,7 @@ private fun ProfileTasteGenreGrid(segments: List<ProfileTasteSegment>) {
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
+        val tilesEntrance = remember { TimeSource.Monotonic.markNow() }
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             segments.chunked(2).forEachIndexed { rowIndex, row ->
                 Row(
@@ -1456,11 +1464,16 @@ private fun ProfileTasteGenreGrid(segments: List<ProfileTasteSegment>) {
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     row.forEachIndexed { columnIndex, segment ->
-                        ProfileTasteGenreTile(
-                            segment = segment,
-                            rank = rowIndex * 2 + columnIndex,
-                            modifier = Modifier.weight(1f),
-                        )
+                        val rank = rowIndex * 2 + columnIndex
+                        Box(modifier = Modifier.weight(1f)) {
+                            StaggeredEntrance(batch = tilesEntrance, index = rank) {
+                                ProfileTasteGenreTile(
+                                    segment = segment,
+                                    rank = rank,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
                     }
                     if (row.size < 2) {
                         Spacer(modifier = Modifier.weight(1f))
@@ -1508,7 +1521,7 @@ private fun ProfileTasteGenreTile(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = "${(segment.share * 100f).roundToInt().coerceIn(1, 100)}%",
+            text = "${(animateCountUp(segment.share) * 100f).roundToInt().coerceIn(1, 100)}%",
             style = MaterialTheme.typography.headlineSmall,
             color = tokens.colors.accent.copy(alpha = valueAlpha),
             fontWeight = FontWeight.Light,
@@ -1554,7 +1567,7 @@ private fun ProfileTasteBalanceNumber(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            text = "${(percent * 100f).roundToInt().coerceIn(0, 100)}%",
+            text = "${(animateCountUp(percent) * 100f).roundToInt().coerceIn(0, 100)}%",
             style = MaterialTheme.typography.headlineMedium,
             color = valueColor,
             fontWeight = FontWeight.Light,
