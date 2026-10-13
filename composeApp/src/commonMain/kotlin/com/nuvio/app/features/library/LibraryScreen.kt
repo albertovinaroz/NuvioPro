@@ -229,6 +229,7 @@ import kotlinx.serialization.json.Json
 import com.nuvio.app.core.poster.CustomPosterScreen
 import com.nuvio.app.core.poster.CustomPosterUrlRepository
 import com.nuvio.app.core.poster.withCustomPosterUrl
+import com.nuvio.app.features.downloads.rememberDownloadedMetaIds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -2362,6 +2363,7 @@ private fun LazyListScope.librarySections(
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                             ),
                             isRecentlyAdded = item.isRecentlyAdded(),
+                            isDownloaded = item.id.trim() in rememberDownloadedMetaIds(),
                             onClick = if (entry.exiting) null else onPosterClick?.let { { it(item) } },
                             onLongClick = if (entry.exiting || entrySource == null) {
                                 null

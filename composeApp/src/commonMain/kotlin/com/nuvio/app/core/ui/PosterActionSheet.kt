@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -19,14 +20,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.compose_player_downloaded
 import nuvio.composeapp.generated.resources.episodes_cd_watched
 import org.jetbrains.compose.resources.stringResource
 
+/** A small round status badge in the theme's accent gradient — shared by watched and downloaded. */
 @Composable
-fun NuvioWatchedBadge(
+private fun NuvioAccentStatusBadge(
+    icon: ImageVector,
+    contentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -39,12 +45,23 @@ fun NuvioWatchedBadge(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = Icons.Default.Visibility,
-            contentDescription = stringResource(Res.string.episodes_cd_watched),
+            imageVector = icon,
+            contentDescription = contentDescription,
             tint = palette.onSecondary,
             modifier = Modifier.size(NuvioTokens.Icon.xs),
         )
     }
+}
+
+@Composable
+fun NuvioWatchedBadge(
+    modifier: Modifier = Modifier,
+) {
+    NuvioAccentStatusBadge(
+        icon = Icons.Default.Visibility,
+        contentDescription = stringResource(Res.string.episodes_cd_watched),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -119,6 +136,39 @@ fun BoxScope.NuvioPosterRecentlyAddedOverlay(
         isVisible = isRecentlyAdded,
         modifier = modifier
             .align(Alignment.TopStart)
+            .padding(padding),
+    )
+}
+
+/** Marks a poster or episode that's available offline, styled like the watched badge. */
+@Composable
+fun NuvioDownloadedBadge(
+    isVisible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier,
+    ) {
+        NuvioAccentStatusBadge(
+            icon = Icons.Rounded.DownloadDone,
+            contentDescription = stringResource(Res.string.compose_player_downloaded),
+        )
+    }
+}
+
+@Composable
+fun BoxScope.NuvioPosterDownloadedOverlay(
+    isDownloaded: Boolean,
+    modifier: Modifier = Modifier,
+    padding: Dp = NuvioTokens.Space.s6,
+) {
+    NuvioDownloadedBadge(
+        isVisible = isDownloaded,
+        modifier = modifier
+            .align(Alignment.BottomEnd)
             .padding(padding),
     )
 }

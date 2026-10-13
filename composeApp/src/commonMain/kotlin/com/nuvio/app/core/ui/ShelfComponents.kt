@@ -140,6 +140,7 @@ fun NuvioPosterCard(
     bottomLeftText: String? = null,
     isWatched: Boolean = false,
     isRecentlyAdded: Boolean = false,
+    isDownloaded: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -254,6 +255,7 @@ fun NuvioPosterCard(
 
             NuvioPosterWatchedOverlay(isWatched = isWatched)
             NuvioPosterRecentlyAddedOverlay(isRecentlyAdded = isRecentlyAdded)
+            NuvioPosterDownloadedOverlay(isDownloaded = isDownloaded)
         }
         if (shouldShowTitleBelow) {
             Text(

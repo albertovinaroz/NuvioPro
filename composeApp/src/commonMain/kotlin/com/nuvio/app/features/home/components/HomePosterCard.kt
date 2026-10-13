@@ -17,6 +17,7 @@ fun HomePosterCard(
     useLandscapeBackdropMode: Boolean = false,
     isWatched: Boolean = false,
     isRecentlyAdded: Boolean = false,
+    isDownloaded: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     showLandscapeOverlay: Boolean = true,
@@ -50,6 +51,7 @@ fun HomePosterCard(
         bottomLeftText = if (isLandscapeMode && showLandscapeOverlay && effectiveLandscapePoster.isNullOrBlank() && item.logo.isNullOrBlank() && !posterCardStyle.hideLabelsEnabled) item.name else null,
         isWatched = isWatched,
         isRecentlyAdded = isRecentlyAdded,
+        isDownloaded = isDownloaded,
         onClick = onClick,
         onLongClick = onLongClick,
     )

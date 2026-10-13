@@ -87,6 +87,19 @@ data class DownloadsUiState(
     val completedItems: List<DownloadItem>
         get() = items.filter { it.status == DownloadStatus.Completed }
 
+    /**
+     * Ids of movies with a finished download. Series are left out: one downloaded episode would
+     * make the poster read as the whole show being offline — episodes carry their own badge.
+     */
+    val downloadedMetaIds: Set<String> by lazy {
+        completedItems.filterNot(DownloadItem::isEpisode).mapTo(HashSet()) { it.parentMetaId.trim() }
+    }
+
+    /** [DownloadItem.logicalContentKey]s of finished episode downloads. */
+    val downloadedEpisodeKeys: Set<String> by lazy {
+        completedItems.filter(DownloadItem::isEpisode).mapTo(HashSet(), DownloadItem::logicalContentKey)
+    }
+
     /** Byte-weighted progress of the downloads currently running, or null when none is. */
     val downloadingProgress: Float?
         get() {

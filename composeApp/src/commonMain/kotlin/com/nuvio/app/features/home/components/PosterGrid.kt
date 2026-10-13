@@ -28,6 +28,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.DefaultPosterCardWidthDp
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
+import com.nuvio.app.core.ui.NuvioPosterDownloadedOverlay
 import com.nuvio.app.core.ui.NuvioPosterRecentlyAddedOverlay
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
@@ -58,6 +59,7 @@ internal fun PosterGridRow(
     watchedKeys: Set<String> = emptySet(),
     fullyWatchedSeriesKeys: Set<String> = emptySet(),
     isRecentlyAdded: (MetaPreview) -> Boolean = { false },
+    isDownloaded: (MetaPreview) -> Boolean = { false },
     onPosterClick: ((MetaPreview) -> Unit)? = null,
     onPosterLongClick: ((MetaPreview) -> Unit)? = null,
 ) {
@@ -80,6 +82,7 @@ internal fun PosterGridRow(
                     fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                 ),
                 isRecentlyAdded = isRecentlyAdded(item),
+                isDownloaded = isDownloaded(item),
                 onClick = onPosterClick?.let { { it(item) } },
                 onLongClick = onPosterLongClick?.let { { it(item) } },
             )
@@ -120,6 +123,7 @@ private fun PosterGridTile(
     modifier: Modifier = Modifier,
     isWatched: Boolean = false,
     isRecentlyAdded: Boolean = false,
+    isDownloaded: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
@@ -168,6 +172,7 @@ private fun PosterGridTile(
             }
             NuvioPosterWatchedOverlay(isWatched = isWatched)
             NuvioPosterRecentlyAddedOverlay(isRecentlyAdded = isRecentlyAdded)
+            NuvioPosterDownloadedOverlay(isDownloaded = isDownloaded)
         }
         if (!hideLabels) {
             Text(

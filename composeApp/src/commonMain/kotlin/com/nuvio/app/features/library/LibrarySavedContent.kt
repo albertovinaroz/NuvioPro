@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.i18n.localizedMediaTypeLabel
 import com.nuvio.app.core.poster.withCustomPosterUrl
+import com.nuvio.app.features.downloads.rememberDownloadedMetaIds
 import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.features.home.MetaPreview
@@ -254,6 +255,7 @@ private fun LibraryVerticalRow(
                 .let { if (posterPattern.isNotBlank()) it.withCustomPosterUrl(posterPattern) else it }
         }
     }
+    val downloadedMetaIds = rememberDownloadedMetaIds()
     PosterGridRow(
         items = resolvedItems,
         columns = columns,
@@ -261,6 +263,7 @@ private fun LibraryVerticalRow(
         watchedKeys = watchedKeys,
         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
         isRecentlyAdded = { preview -> rowEntries.findEntry(preview)?.item?.isRecentlyAdded() == true },
+        isDownloaded = { preview -> preview.id.trim() in downloadedMetaIds },
         onPosterClick = onPosterClick?.let { callback ->
             { preview -> rowEntries.findEntry(preview)?.item?.let(callback) }
         },

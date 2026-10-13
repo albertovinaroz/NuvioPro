@@ -70,6 +70,8 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
+import com.nuvio.app.core.ui.NuvioDownloadedBadge
+import com.nuvio.app.features.downloads.rememberIsEpisodeDownloaded
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioProgressBar
 import com.nuvio.app.core.ui.nuvio
@@ -282,6 +284,7 @@ fun DetailSeriesContent(
                                             metaId = meta.id,
                                             episode = episode,
                                         ),
+                                    isDownloaded = rememberIsEpisodeDownloaded(meta.id, episode.season, episode.episode),
                                     episodeRatingsVisibility = episodeRatingsVisibility,
                                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                                     sizing = sizing,
@@ -386,6 +389,7 @@ internal fun DetailSeriesListEpisode(
                     metaId = meta.id,
                     episode = episode,
                 ),
+            isDownloaded = rememberIsEpisodeDownloaded(meta.id, episode.season, episode.episode),
             episodeRatingsVisibility = episodeRatingsVisibility,
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
             sizing = sizing,
@@ -813,6 +817,7 @@ private fun EpisodeHorizontalRow(
                         metaId = parentMetaId,
                         episode = episode,
                     ),
+                isDownloaded = rememberIsEpisodeDownloaded(parentMetaId, episode.season, episode.episode),
                 episodeRatingsVisibility = episodeRatingsVisibility,
                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                 metrics = rowMetrics,
@@ -833,6 +838,7 @@ private fun EpisodeHorizontalCard(
     tmdbRating: Double?,
     imdbRating: Double?,
     isWatched: Boolean,
+    isDownloaded: Boolean,
     episodeRatingsVisibility: EpisodeRatingsVisibility,
     blurUnwatchedEpisodes: Boolean,
     metrics: EpisodeHorizontalCardMetrics,
@@ -907,12 +913,15 @@ private fun EpisodeHorizontalCard(
                 ),
         )
 
-        NuvioAnimatedWatchedBadge(
-            isVisible = isWatched,
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(metrics.contentPadding),
-        )
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            NuvioDownloadedBadge(isVisible = isDownloaded)
+            NuvioAnimatedWatchedBadge(isVisible = isWatched)
+        }
 
         Column(
             modifier = Modifier
@@ -1287,6 +1296,7 @@ private fun EpisodeListCard(
     tmdbRating: Double?,
     imdbRating: Double?,
     isWatched: Boolean,
+    isDownloaded: Boolean,
     episodeRatingsVisibility: EpisodeRatingsVisibility,
     blurUnwatchedEpisodes: Boolean,
     sizing: SeriesContentSizing,
@@ -1369,6 +1379,15 @@ private fun EpisodeListCard(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp),
+                )
+
+                // Bottom-right, clear of the watched badge; lifted above the resume bar when there is one.
+                val hasResumeBar = progressEntry?.let { it.durationMs > 0L && !it.isCompleted } == true
+                NuvioDownloadedBadge(
+                    isVisible = isDownloaded,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 8.dp, bottom = if (hasResumeBar) 22.dp else 8.dp),
                 )
             }
 
