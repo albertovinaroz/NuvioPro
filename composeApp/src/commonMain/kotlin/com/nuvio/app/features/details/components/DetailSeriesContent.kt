@@ -1,5 +1,18 @@
 package com.nuvio.app.features.details.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import kotlin.math.floor
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.scale
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
@@ -557,11 +570,41 @@ private fun SeasonTextChipScrollRow(
         }
     }
 
+    // One highlight that glides between chips (following the row's scroll) instead of each chip
+    // switching its own background: its position is a fractional chip index, eased with a spring.
+    val selectedIndex = seasons.indexOf(currentSeason).coerceAtLeast(0)
+    val indicatorPosition = remember(seasons) { Animatable(selectedIndex.toFloat()) }
+    LaunchedEffect(selectedIndex) {
+        indicatorPosition.animateTo(
+            selectedIndex.toFloat(),
+            spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow),
+        )
+    }
+    val indicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+
     LazyRow(
         state = seasonListState,
         modifier = Modifier
             .nuvioHorizontalScrollBleed(horizontalScrollPadding)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .drawBehind {
+                val layoutInfo = seasonListState.layoutInfo
+                val position = indicatorPosition.value
+                val lowerIndex = floor(position).toInt()
+                val fraction = position - lowerIndex
+                val lower = layoutInfo.visibleItemsInfo.firstOrNull { it.index == lowerIndex }
+                val upper = layoutInfo.visibleItemsInfo.firstOrNull { it.index == lowerIndex + 1 } ?: lower
+                val from = lower ?: upper ?: return@drawBehind
+                val to = upper ?: from
+                val start = from.offset + (to.offset - from.offset) * fraction - layoutInfo.viewportStartOffset
+                val width = from.size + (to.size - from.size) * fraction
+                drawRoundRect(
+                    color = indicatorColor,
+                    topLeft = Offset(start, 0f),
+                    size = Size(width, size.height),
+                    cornerRadius = CornerRadius(sizing.seasonChipRadius.toPx()),
+                )
+            },
         contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
         horizontalArrangement = Arrangement.spacedBy(sizing.seasonChipGap),
     ) {
@@ -570,13 +613,6 @@ private fun SeasonTextChipScrollRow(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(sizing.seasonChipRadius))
-                    .background(
-                        if (isSelected) {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-                        } else {
-                            Color.Transparent
-                        },
-                    )
                     .combinedClickable(
                         onClick = { onSelect(season) },
                         onLongClick = onLongPress?.let { handler -> { handler(season) } },
@@ -1332,8 +1368,16 @@ private fun EpisodeListCard(
     }
     val hasAnyRating = tmdbRatingLabel != null || imdbRatingLabel != null || userRating != null
     val formattedDate = remember(video.released) { video.released?.let { formatReleaseDateForDisplay(it) } }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMedium),
+        label = "episodePressScale",
+    )
     Box(
         modifier = modifier
+            .scale(pressScale)
             .fillMaxWidth()
             .height(sizing.cardHeight)
             .clip(cardShape)
@@ -1344,6 +1388,8 @@ private fun EpisodeListCard(
                 shape = cardShape,
             )
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
                 enabled = onClick != null || onLongPress != null,
                 onClick = { onClick?.invoke() },
                 onLongClick = onLongPress,
