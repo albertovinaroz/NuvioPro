@@ -1,6 +1,9 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -9,12 +12,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +37,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,6 +47,7 @@ import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.downloads.DownloadsRepository
+import kotlinx.coroutines.delay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
 import org.jetbrains.compose.resources.stringResource
@@ -49,9 +59,14 @@ internal fun LibraryDownloadsButton(onClick: () -> Unit) {
         DownloadsRepository.uiState
     }.collectAsStateWithLifecycle()
     val hasUnseenCompleted by DownloadsRepository.hasUnseenCompleted.collectAsStateWithLifecycle()
+    val justCompleted = rememberJustCompletedDownload(
+        completedCount = downloads.completedItems.size,
+        isDownloading = downloads.downloadingProgress != null,
+    )
 
     IconButton(onClick = onClick) {
         when {
+            justCompleted -> DownloadProgressRing(progress = 1f) { CompletedCheckIcon() }
             downloads.downloadingProgress != null -> DownloadProgressRing(progress = downloads.downloadingProgress ?: 0f) {
                 FlowingDownloadIcon(iconSize = 15.dp)
             }
@@ -62,6 +77,55 @@ internal fun LibraryDownloadsButton(onClick: () -> Unit) {
             else -> DownloadIcon(tint = Color.White)
         }
     }
+}
+
+/**
+ * True for a moment after a running download finishes while this is on screen (the completed
+ * count grows right after something was downloading — not on a profile switch), with a confirming
+ * haptic: the ring closes into a check before settling back.
+ */
+@Composable
+private fun rememberJustCompletedDownload(completedCount: Int, isDownloading: Boolean): Boolean {
+    val haptics = LocalHapticFeedback.current
+    var previousCount by remember { mutableStateOf(completedCount) }
+    var wasDownloading by remember { mutableStateOf(isDownloading) }
+    var completions by remember { mutableStateOf(0) }
+    var justCompleted by remember { mutableStateOf(false) }
+    LaunchedEffect(completedCount, isDownloading) {
+        if (completedCount > previousCount && wasDownloading) completions++
+        previousCount = completedCount
+        wasDownloading = isDownloading
+    }
+    // Its own effect, so a download starting or finishing mid-celebration can't cancel the reset.
+    LaunchedEffect(completions) {
+        if (completions == 0) return@LaunchedEffect
+        justCompleted = true
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        delay(1_400)
+        justCompleted = false
+    }
+    return justCompleted
+}
+
+/** A check that pops in with a small overshoot, in the theme accent. */
+@Composable
+private fun CompletedCheckIcon() {
+    val scale = remember { Animatable(0.3f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+    }
+    Icon(
+        imageVector = Icons.Rounded.Check,
+        contentDescription = stringResource(Res.string.compose_settings_root_downloads_title),
+        modifier = Modifier
+            .size(16.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+            .gradientMask(MaterialTheme.themePalette.accentBrush()),
+        tint = Color.White,
+    )
 }
 
 /** The usual download ring around [content], filling clockwise in the theme accent as [progress] (0–1) grows. */

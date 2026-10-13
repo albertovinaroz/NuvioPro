@@ -1341,6 +1341,7 @@ struct TabContentView: View {
                     isDownloading: downloadsButtonViewModel.isDownloading,
                     hasUnseenCompletedDownload: downloadsButtonViewModel.hasUnseenCompleted,
                     downloadProgress: downloadsButtonViewModel.progress,
+                    downloadCompletionTick: downloadsButtonViewModel.completionTick,
                     // The release calendar is a panel inside the Compose screen, not a route.
                     onCalendar: {
                         NativeTabBridgeKt.nativeLibraryCalendarOpen()
@@ -1664,15 +1665,24 @@ private final class LibraryHeaderTopViewModel: ObservableObject {
 private final class NativeDownloadsButtonViewModel: ObservableObject {
     @Published private(set) var isDownloading = false
     @Published private(set) var progress: Double = 0
+    /// Bumped each time a running download finishes, for the button's check animation.
+    @Published private(set) var completionTick = 0
+    private var lastCompletedCount: Int?
     @Published private(set) var hasUnseenCompleted = false
 
     private let controller = NativeDownloadsButtonController()
 
     func startObserving() {
-        controller.observeState { [weak self] isDownloading, hasUnseenCompleted, progress in
-            self?.isDownloading = isDownloading.boolValue
-            self?.progress = Double(progress.floatValue)
-            self?.hasUnseenCompleted = hasUnseenCompleted.boolValue
+        controller.observeState { [weak self] isDownloading, hasUnseenCompleted, progress, completedCount in
+            guard let self else { return }
+            let count = completedCount.intValue
+            if let last = self.lastCompletedCount, count > last, self.isDownloading {
+                self.completionTick += 1
+            }
+            self.lastCompletedCount = count
+            self.isDownloading = isDownloading.boolValue
+            self.progress = Double(progress.floatValue)
+            self.hasUnseenCompleted = hasUnseenCompleted.boolValue
         }
     }
 
@@ -1823,6 +1833,7 @@ private struct LibraryHeaderGlassButtons: View {
     let isDownloading: Bool
     let hasUnseenCompletedDownload: Bool
     let downloadProgress: Double
+    let downloadCompletionTick: Int
     let onCalendar: () -> Void
     let onDownloads: () -> Void
     let onRated: () -> Void
@@ -1860,7 +1871,8 @@ private struct LibraryHeaderGlassButtons: View {
                     DownloadsGlassIcon(
                         isDownloading: isDownloading,
                         hasUnseenCompleted: hasUnseenCompletedDownload,
-                        progress: downloadProgress
+                        progress: downloadProgress,
+                        completionTick: downloadCompletionTick
                     )
                 }
                 glassButton(label: ratedTitle, action: onRated) { ratedIcon }
@@ -1876,7 +1888,8 @@ private struct LibraryHeaderGlassButtons: View {
                     DownloadsGlassIcon(
                         isDownloading: isDownloading,
                         hasUnseenCompleted: hasUnseenCompletedDownload,
-                        progress: downloadProgress
+                        progress: downloadProgress,
+                        completionTick: downloadCompletionTick
                     )
                 }
                 plainButton(label: ratedTitle, action: onRated) { ratedIcon }
@@ -2026,33 +2039,64 @@ private struct DownloadsGlassIcon: View {
     let isDownloading: Bool
     let hasUnseenCompleted: Bool
     let progress: Double
+    /// Bumped when a running download finishes: the ring closes into a check for a moment.
+    let completionTick: Int
 
     @StateObject private var tabIconStore = NativeTabIconStore()
     @State private var pulse = false
+    @State private var showsCompletion = false
+    @State private var checkScale: CGFloat = 0.3
+    @State private var celebratingTick = 0
 
     var body: some View {
         ZStack {
-            if isDownloading {
+            if isDownloading || showsCompletion {
                 Circle()
                     .stroke(Color.white.opacity(0.18), lineWidth: 2)
                 Circle()
-                    .trim(from: 0, to: min(max(progress, 0), 1))
+                    .trim(from: 0, to: showsCompletion ? 1 : min(max(progress, 0), 1))
                     .stroke(tabIconStore.accentStyle(), style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.easeOut(duration: 0.3), value: progress)
+                    .animation(.easeOut(duration: 0.3), value: showsCompletion)
             }
-            // Same weight and outline style as its calendar/star neighbours in the capsule,
-            // shrunk to sit inside the ring while a download runs.
-            Image(systemName: "arrow.down.to.line")
-                .font(.system(size: isDownloading ? 12 : 17, weight: isDownloading ? .semibold : .medium))
-                .foregroundStyle(
-                    hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
-                )
-                .opacity(isDownloading && pulse ? 0.35 : 1)
+            if showsCompletion {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(tabIconStore.accentStyle())
+                    .scaleEffect(checkScale)
+            } else {
+                // Same weight and outline style as its calendar/star neighbours in the capsule,
+                // shrunk to sit inside the ring while a download runs.
+                Image(systemName: "arrow.down.to.line")
+                    .font(.system(size: isDownloading ? 12 : 17, weight: isDownloading ? .semibold : .medium))
+                    .foregroundStyle(
+                        hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
+                    )
+                    .opacity(isDownloading && pulse ? 0.35 : 1)
+            }
         }
         .frame(width: 26, height: 26)
         .onAppear { updatePulse() }
         .onChange(of: isDownloading) { _ in updatePulse() }
+        .onChange(of: completionTick) { tick in celebrate(tick) }
+    }
+
+    private func celebrate(_ tick: Int) {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        celebratingTick = tick
+        checkScale = 0.3
+        showsCompletion = true
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) {
+            checkScale = 1
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            // A newer completion restarts the moment; only the latest one ends it.
+            guard tick == celebratingTick else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showsCompletion = false
+            }
+        }
     }
 
     private func updatePulse() {
