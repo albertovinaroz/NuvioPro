@@ -1081,6 +1081,12 @@ fun HomeScreen(
                             contentType = { "skeleton" },
                         ) {
                             HomeSkeletonRow(
+                                // Fades out as the real rows rise in, rather than vanishing in one frame.
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    placementSpec = null,
+                                    fadeOutSpec = tween(durationMillis = 260),
+                                ),
                                 horizontalPadding = homeSectionPadding,
                             )
                         }
