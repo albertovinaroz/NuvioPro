@@ -226,6 +226,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.nuvio.app.core.poster.CustomPosterScreen
+import com.nuvio.app.core.poster.CustomPosterUrlRepository
+import com.nuvio.app.core.poster.withCustomPosterUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -262,6 +265,14 @@ fun LibraryScreen(
             LibraryRepository.markPosterOpened(item)
             callback(item)
         }
+    }
+    val libraryPosterPattern by remember {
+        CustomPosterUrlRepository.ensureLoaded()
+        CustomPosterUrlRepository.pattern
+    }.collectAsStateWithLifecycle()
+    val libraryPosterScreens by CustomPosterUrlRepository.enabledScreens.collectAsStateWithLifecycle()
+    val effectivePosterPattern = remember(libraryPosterPattern, libraryPosterScreens) {
+        if (CustomPosterScreen.LIBRARY in libraryPosterScreens) libraryPosterPattern else ""
     }
     val cloudUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
     val cloudSettings by remember {
@@ -798,6 +809,7 @@ fun LibraryScreen(
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                                 sortOption = effectiveSortOption,
+                                posterPattern = effectivePosterPattern,
                                 onPosterClick = wrappedOnPosterClick,
                                 onSectionViewAllClick = onSectionViewAllClick,
                                 onPosterLongClick = onPosterLongClick,
@@ -810,6 +822,7 @@ fun LibraryScreen(
                                 releaseInfoFor = releaseInfoFor,
                                 watchedKeys = watchedUiState.watchedKeys,
                                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                posterPattern = effectivePosterPattern,
                                 onPosterClick = wrappedOnPosterClick,
                                 onPosterLongClick = onPosterLongClick,
                                 entranceBatch = libraryEntrance,
@@ -2304,6 +2317,7 @@ private fun LazyListScope.librarySections(
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
     sortOption: LibrarySortOption,
+    posterPattern: String,
     onPosterClick: ((LibraryItem) -> Unit)?,
     onSectionViewAllClick: ((LibrarySection, LibrarySortOption) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
@@ -2330,7 +2344,11 @@ private fun LazyListScope.librarySections(
                     animatePlacement = true,
                 ) { entry ->
                     val item = entry.item
-                    val posterItem = item.toMetaPreview().copy(releaseInfo = releaseInfoFor(item))
+                    val posterItem = remember(item, posterPattern, releaseInfoFor) {
+                        item.toMetaPreview()
+                            .copy(releaseInfo = releaseInfoFor(item))
+                            .let { if (posterPattern.isNotBlank()) it.withCustomPosterUrl(posterPattern) else it }
+                    }
                     val entrySource = entry.section
                     DisintegratingContainer(
                         disintegrating = entry.exiting,

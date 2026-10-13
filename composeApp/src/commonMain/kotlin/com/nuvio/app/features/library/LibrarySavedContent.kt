@@ -29,9 +29,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.i18n.localizedMediaTypeLabel
+import com.nuvio.app.core.poster.withCustomPosterUrl
 import com.nuvio.app.core.ui.NuvioDropdownChip
 import com.nuvio.app.core.ui.NuvioDropdownOption
 import com.nuvio.app.features.home.MetaPreview
@@ -199,6 +201,7 @@ internal fun LazyListScope.libraryVerticalContent(
     releaseInfoFor: (LibraryItem) -> String,
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
+    posterPattern: String,
     onPosterClick: ((LibraryItem) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
     /** When the current filter's rows first appeared, for their staggered entrance. */
@@ -218,6 +221,7 @@ internal fun LazyListScope.libraryVerticalContent(
                 releaseInfoFor = releaseInfoFor,
                 watchedKeys = watchedKeys,
                 fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                posterPattern = posterPattern,
                 onPosterClick = onPosterClick,
                 onPosterLongClick = onPosterLongClick,
             )
@@ -239,13 +243,19 @@ private fun LibraryVerticalRow(
     releaseInfoFor: (LibraryItem) -> String,
     watchedKeys: Set<String>,
     fullyWatchedSeriesKeys: Set<String>,
+    posterPattern: String,
     onPosterClick: ((LibraryItem) -> Unit)?,
     onPosterLongClick: ((LibraryItem, LibrarySection) -> Unit)?,
 ) {
+    val resolvedItems = remember(rowEntries, posterPattern, releaseInfoFor) {
+        rowEntries.map { entry ->
+            entry.item.toMetaPreview()
+                .copy(releaseInfo = releaseInfoFor(entry.item))
+                .let { if (posterPattern.isNotBlank()) it.withCustomPosterUrl(posterPattern) else it }
+        }
+    }
     PosterGridRow(
-        items = rowEntries.map { entry ->
-            entry.item.toMetaPreview().copy(releaseInfo = releaseInfoFor(entry.item))
-        },
+        items = resolvedItems,
         columns = columns,
         modifier = Modifier.padding(horizontal = 16.dp),
         watchedKeys = watchedKeys,
