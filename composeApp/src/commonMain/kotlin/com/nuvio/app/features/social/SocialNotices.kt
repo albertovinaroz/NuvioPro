@@ -77,6 +77,7 @@ private suspend fun SocialNotification.toFeedItem(): NotificationFeedItem? {
                     ?: getString(Res.string.social_notice_recommendation_body),
                 releaseDateIso = date,
                 backdropUrl = poster,
+                avatarUrl = person.avatar,
             )
         }
         "recommendation_reply" -> {
@@ -89,11 +90,45 @@ private suspend fun SocialNotification.toFeedItem(): NotificationFeedItem? {
                 title = getString(Res.string.social_notice_reply_title, who, title.orEmpty()),
                 body = response,
                 releaseDateIso = date,
-                backdropUrl = person.avatar,
+                // The title's poster with the friend's avatar on top; just the avatar if there's no poster.
+                backdropUrl = poster ?: person.avatar,
+                avatarUrl = person.avatar.takeIf { poster != null },
             )
         }
         else -> null
     }
+}
+
+/**
+ * Replies from one friend about one recommendation share a group: the feed shows them as a single
+ * row. The title already names both the friend and the recommended title, and works for replies
+ * recorded before this grouping existed too.
+ */
+internal fun NotificationFeedItem.socialReplyGroupKey(): String? =
+    if (id.startsWith(SocialNoticeIdPrefix) && contentType == SocialNoticeContentType && contentId == "recommendation_reply") {
+        "reply:$title"
+    } else {
+        null
+    }
+
+/**
+ * What a group of replies (newest first) adds up to, the way the server keeps it: the latest
+ * reaction plus the latest text reply.
+ */
+internal fun mergedSocialReplyBody(newestFirst: List<NotificationFeedItem>): String {
+    val parts = newestFirst.map { it.body.splitReplyBody() }
+    val reaction = parts.firstNotNullOfOrNull { it.first }
+    val reply = parts.firstNotNullOfOrNull { it.second }
+    return listOfNotNull(reaction, reply).joinToString("  ")
+}
+
+/** Splits a reply notice's "emoji  text" body back into its reaction emoji and text. */
+private fun String.splitReplyBody(): Pair<String?, String?> {
+    val emoji = SocialReaction.entries
+        .map(SocialReaction::emoji)
+        .firstOrNull { this == it || startsWith("$it  ") }
+    val text = (if (emoji != null) removePrefix(emoji) else this).trim().ifBlank { null }
+    return emoji to text
 }
 
 private fun NotificationFeedItem.isUnreadSocialInfo(): Boolean =

@@ -25,6 +25,8 @@ data class NotificationFeedItem(
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
     val backdropUrl: String? = null,
+    /** A friend's avatar on social notices about a title, shown over that title's poster in [backdropUrl]. */
+    val avatarUrl: String? = null,
     val isRead: Boolean = false,
     /** Set only for items that don't point at real app content (e.g. an app-update alert) — tapping
      * opens this externally instead of navigating to [contentType]/[contentId] as a details route. */

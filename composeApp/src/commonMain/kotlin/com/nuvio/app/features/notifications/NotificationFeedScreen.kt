@@ -2,6 +2,7 @@ package com.nuvio.app.features.notifications
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
@@ -35,6 +37,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,6 +53,8 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.settings.NotificationsSettingsScreen
 import com.nuvio.app.features.social.SocialNoticeContentType
+import com.nuvio.app.features.social.mergedSocialReplyBody
+import com.nuvio.app.features.social.socialReplyGroupKey
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_remove
 import nuvio.composeapp.generated.resources.app_icon_original
@@ -82,6 +87,7 @@ fun NotificationFeedScreen(
     }
 
     val tokens = MaterialTheme.nuvio
+    val entries = remember(uiState.items) { uiState.items.toFeedEntries() }
 
     NuvioScreen(modifier = Modifier.fillMaxSize()) {
         stickyHeader {
@@ -121,17 +127,47 @@ fun NotificationFeedScreen(
                 )
             }
         } else {
-            items(uiState.items, key = NotificationFeedItem::id) { feedItem ->
+            items(entries, key = { entry -> entry.ids.first() }) { entry ->
                 NotificationFeedRow(
-                    item = feedItem,
+                    item = entry.item,
+                    count = entry.ids.size,
                     onClick = {
-                        NotificationFeedRepository.markRead(feedItem.id)
-                        onItemClick(feedItem)
+                        entry.ids.forEach(NotificationFeedRepository::markRead)
+                        onItemClick(entry.item)
                     },
-                    onRemoveClick = { NotificationFeedRepository.remove(feedItem.id) },
+                    onRemoveClick = { entry.ids.forEach(NotificationFeedRepository::remove) },
                 )
             }
         }
+    }
+}
+
+/** One feed row: a single item, or several repeated replies collapsed into the newest one. */
+private data class NotificationFeedEntry(
+    val item: NotificationFeedItem,
+    val ids: List<String>,
+)
+
+private fun List<NotificationFeedItem>.toFeedEntries(): List<NotificationFeedEntry> {
+    val groups = LinkedHashMap<String, MutableList<NotificationFeedItem>>()
+    forEach { item ->
+        groups.getOrPut(item.socialReplyGroupKey() ?: "item:${item.id}") { mutableListOf() } += item
+    }
+    return groups.values.map { group ->
+        val newest = group.first()
+        val item = if (group.size == 1) {
+            newest
+        } else {
+            // Replies recorded before posters were attached only carry the avatar.
+            val artwork = group.firstOrNull { it.avatarUrl != null } ?: newest
+            newest.copy(
+                body = mergedSocialReplyBody(group),
+                backdropUrl = artwork.backdropUrl,
+                avatarUrl = artwork.avatarUrl,
+                isRead = group.all(NotificationFeedItem::isRead),
+            )
+        }
+        NotificationFeedEntry(item = item, ids = group.map(NotificationFeedItem::id))
     }
 }
 
@@ -139,6 +175,7 @@ fun NotificationFeedScreen(
 @Composable
 private fun NotificationFeedRow(
     item: NotificationFeedItem,
+    count: Int,
     onClick: () -> Unit,
     onRemoveClick: () -> Unit,
 ) {
@@ -171,13 +208,14 @@ private fun NotificationFeedRow(
             }
         },
     ) {
-        NotificationFeedRowContent(item = item, onClick = onClick)
+        NotificationFeedRowContent(item = item, count = count, onClick = onClick)
     }
 }
 
 @Composable
 private fun NotificationFeedRowContent(
     item: NotificationFeedItem,
+    count: Int,
     onClick: () -> Unit,
 ) {
     Row(
@@ -211,6 +249,8 @@ private fun NotificationFeedRowContent(
                         .clip(RoundedCornerShape(9.dp)),
                     contentScale = ContentScale.Fit,
                 )
+            } else if (item.avatarUrl != null && item.backdropUrl != null) {
+                PosterWithAvatar(posterUrl = item.backdropUrl, avatarUrl = item.avatarUrl)
             } else if (item.contentType == SocialNoticeContentType) {
                 // Friend notices show the friend's avatar, round, instead of a cropped backdrop.
                 Box(
@@ -268,7 +308,9 @@ private fun NotificationFeedRowContent(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = formatReleaseDateForDisplay(item.releaseDateIso),
+                text = formatReleaseDateForDisplay(item.releaseDateIso).let { date ->
+                    if (count > 1) "$date · ×$count" else date
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -282,5 +324,40 @@ private fun NotificationFeedRowContent(
                     .background(MaterialTheme.colorScheme.primary),
             )
         }
+    }
+}
+
+/** A title's poster over a blurred fill of itself, with the friend's avatar on its corner. */
+@Composable
+private fun PosterWithAvatar(posterUrl: String, avatarUrl: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        AsyncImage(
+            model = posterUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(16.dp),
+            contentScale = ContentScale.Crop,
+            alpha = 0.5f,
+        )
+        AsyncImage(
+            model = posterUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(width = 36.dp, height = 54.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            contentScale = ContentScale.Crop,
+        )
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .offset(x = 22.dp, y = 12.dp)
+                .size(24.dp)
+                .clip(CircleShape)
+                .border(1.5.dp, MaterialTheme.colorScheme.background, CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop,
+        )
     }
 }
