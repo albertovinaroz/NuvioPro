@@ -1,5 +1,9 @@
 package com.nuvio.app.features.library
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import com.nuvio.app.core.ui.NuvioPullRefreshIndicator
 import com.nuvio.app.core.ui.nuvioPullToRefresh
 import com.nuvio.app.core.ui.rememberNuvioPullRefreshController
@@ -2614,7 +2618,38 @@ private fun LibraryCalendarMonthGrid(
 ) {
     val cells = remember(month) { libraryCalendarCells(month) }
     val haptics = LocalHapticFeedback.current
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // The selected day's circle is one bubble that springs from day to day (in grid cells: x is
+    // the weekday column, y the week row) instead of each day filling its own background.
+    val selectedCell = cells.indexOfFirst { it?.iso == selectedDateIso }.takeIf { it >= 0 }
+    val bubble = remember(month) { Animatable(Offset.Zero, Offset.VectorConverter) }
+    var bubblePlaced by remember(month) { mutableStateOf(false) }
+    LaunchedEffect(month, selectedCell) {
+        val cell = selectedCell ?: return@LaunchedEffect
+        val target = Offset((cell % 7).toFloat(), (cell / 7).toFloat())
+        if (bubblePlaced) {
+            bubble.animateTo(target, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow))
+        } else {
+            bubble.snapTo(target)
+            bubblePlaced = true
+        }
+    }
+    val bubbleColor = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = Modifier.drawBehind {
+            if (selectedCell == null || !bubblePlaced) return@drawBehind
+            val rowPitch = (44.dp + 4.dp).toPx()
+            val radius = 17.dp.toPx()
+            drawCircle(
+                color = bubbleColor,
+                radius = radius,
+                center = Offset(
+                    x = (bubble.value.x + 0.5f) * size.width / 7f,
+                    y = bubble.value.y * rowPitch + radius,
+                ),
+            )
+        },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         cells.chunked(7).forEach { week ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2648,10 +2683,7 @@ private fun LibraryCalendarMonthGrid(
                             contentAlignment = Alignment.TopCenter,
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) accent else Color.Transparent),
+                                modifier = Modifier.size(34.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
