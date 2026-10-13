@@ -1,5 +1,8 @@
 package com.nuvio.app.features.library
 
+import com.nuvio.app.core.ui.NuvioPullRefreshIndicator
+import com.nuvio.app.core.ui.nuvioPullToRefresh
+import com.nuvio.app.core.ui.rememberNuvioPullRefreshController
 import com.nuvio.app.core.ui.nuvioLandscapeSideInsets
 import com.nuvio.app.core.ui.publishLibraryHeaderEnd
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -131,9 +134,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.stopScroll
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -530,6 +531,17 @@ fun LibraryScreen(
         if (sourceMode == LibraryViewMode.Servers) serverShelves = loadServerShelves()
     }
 
+    val pullRefresh = rememberNuvioPullRefreshController {
+        when (sourceMode) {
+            LibraryViewMode.Saved -> LibraryRepository.pullFromServer(
+                profileId = ProfileRepository.activeProfileId,
+                refreshIntent = TrackingRefreshIntent.USER_INITIATED,
+            )
+            LibraryViewMode.Cloud -> CloudLibraryRepository.refresh()
+            LibraryViewMode.Servers -> serverShelves = loadServerShelves()
+        }
+    }
+
     ScreenActivityEffect(sourceMode, cloudSettings.cloudLibraryEnabled, cloudSettings.providerApiKeys) { screenActive ->
         if (screenActive && sourceMode == LibraryViewMode.Cloud) {
             CloudLibraryRepository.ensureLoaded()
@@ -667,6 +679,7 @@ fun LibraryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .nuvioNoTopOverscroll()
+                    .nuvioPullToRefresh(pullRefresh)
                     .hazeSource(state = headerHazeState),
                 horizontalPadding = 0.dp,
                 topPadding = 0.dp,
@@ -1029,6 +1042,14 @@ fun LibraryScreen(
                     }
                 }
             }
+
+            // Last, so it draws over the pinned header's blur.
+            NuvioPullRefreshIndicator(
+                controller = pullRefresh,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = statusBarTop + 8.dp),
+            )
     }
 
     if (showReleaseCalendar) {

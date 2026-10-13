@@ -29,6 +29,8 @@ private val HERO_STRETCH_MAX = 200.dp
 private const val HERO_STRETCH_DRAG_RESISTANCE = 0.55f
 private const val HERO_STRETCH_RELEASE_ABSORB = 0.35f
 private const val HERO_STRETCH_FRAME_TO_VELOCITY = 60f
+/** Letting go of a hero stretched this far (of [HERO_STRETCH_MAX]) refreshes. */
+private const val HERO_STRETCH_REFRESH_FRACTION = 0.35f
 private val HeroStretchReleaseSpring = spring<Float>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = 320f,
@@ -49,6 +51,14 @@ class HeroStretchState internal constructor(
     private var flingAbsorbed = false
 
     val stretchPx: Float get() = stretchAnim.value
+
+    private val refreshThresholdPx = maxStretchPx * HERO_STRETCH_REFRESH_FRACTION
+
+    /** How far the current stretch is toward a refresh: 1 at the threshold. */
+    val refreshPullFraction: Float get() = stretchAnim.value / refreshThresholdPx
+
+    /** Called when the hero is let go stretched past the refresh threshold — pull to refresh. */
+    var onPullRefresh: (() -> Unit)? = null
 
     val nestedScrollConnection: NestedScrollConnection = object : NestedScrollConnection {
         override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -87,6 +97,7 @@ class HeroStretchState internal constructor(
 
         override suspend fun onPreFling(available: Velocity): Velocity {
             if (stretchAnim.value <= 0.5f) return Velocity.Zero
+            if (stretchAnim.value >= refreshThresholdPx) onPullRefresh?.invoke()
             if (settleJob?.isActive != true) {
                 settle(available.y * HERO_STRETCH_RELEASE_ABSORB, HeroStretchReleaseSpring)
             }

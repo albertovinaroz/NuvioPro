@@ -1,5 +1,8 @@
 package com.nuvio.app.features.notifications
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,12 +11,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +56,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioScreen
+import com.nuvio.app.core.ui.NuvioPullRefreshIndicator
 import com.nuvio.app.core.ui.NuvioScreenHeader
+import com.nuvio.app.core.ui.nuvioPullToRefresh
+import com.nuvio.app.core.ui.rememberNuvioPullRefreshController
+import com.nuvio.app.features.social.SocialRepository
+import com.nuvio.app.core.ui.StaggeredEntrance
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.settings.NotificationsSettingsScreen
@@ -65,7 +78,9 @@ import nuvio.composeapp.generated.resources.notifications_feed_empty_title
 import nuvio.composeapp.generated.resources.notifications_feed_mark_all_read
 import nuvio.composeapp.generated.resources.notifications_feed_title
 import org.jetbrains.compose.resources.painterResource
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.TimeSource
 
 @Composable
 fun NotificationFeedScreen(
@@ -88,8 +103,14 @@ fun NotificationFeedScreen(
 
     val tokens = MaterialTheme.nuvio
     val entries = remember(uiState.items) { uiState.items.toFeedEntries() }
+    val entrance = remember { TimeSource.Monotonic.markNow() }
+    val pullRefresh = rememberNuvioPullRefreshController {
+        EpisodeReleaseNotificationsRepository.refreshAsync()
+        SocialRepository.pollNotifications()
+    }
 
-    NuvioScreen(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+    NuvioScreen(modifier = Modifier.fillMaxSize().nuvioPullToRefresh(pullRefresh)) {
         stickyHeader {
             NuvioScreenHeader(
                 title = stringResource(Res.string.notifications_feed_title),
@@ -127,7 +148,10 @@ fun NotificationFeedScreen(
                 )
             }
         } else {
-            items(entries, key = { entry -> entry.ids.first() }) { entry ->
+            itemsIndexed(entries, key = { _, entry -> entry.ids.first() }) { index, entry ->
+                // A removed row fades out and the ones below slide up into its place.
+                Box(modifier = Modifier.animateItem()) {
+                StaggeredEntrance(batch = entrance, index = index) {
                 NotificationFeedRow(
                     item = entry.item,
                     count = entry.ids.size,
@@ -137,8 +161,17 @@ fun NotificationFeedScreen(
                     },
                     onRemoveClick = { entry.ids.forEach(NotificationFeedRepository::remove) },
                 )
+                }
+                }
             }
         }
+    }
+    NuvioPullRefreshIndicator(
+        controller = pullRefresh,
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp),
+    )
     }
 }
 
@@ -317,12 +350,7 @@ private fun NotificationFeedRowContent(
         }
 
         if (!item.isRead) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
+            UnreadDot()
         }
     }
 }
@@ -361,3 +389,30 @@ private fun PosterWithAvatar(posterUrl: String, avatarUrl: String) {
         )
     }
 }
+
+/** The unread dot, sending out one soft ring shortly after it appears to draw the eye. */
+@Composable
+private fun UnreadDot() {
+    val color = MaterialTheme.colorScheme.primary
+    val ring = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(350)
+        ring.animateTo(1f, tween(durationMillis = 800, easing = FastOutSlowInEasing))
+    }
+    Box(
+        modifier = Modifier
+            .size(8.dp)
+            .drawBehind {
+                val p = ring.value
+                if (p in 0.001f..0.999f) {
+                    drawCircle(
+                        color = color.copy(alpha = 0.55f * (1f - p)),
+                        radius = size.minDimension / 2f * (1f + 1.6f * p),
+                    )
+                }
+            }
+            .clip(CircleShape)
+            .background(color),
+    )
+}
+

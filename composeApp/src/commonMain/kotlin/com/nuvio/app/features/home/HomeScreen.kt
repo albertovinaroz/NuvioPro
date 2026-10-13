@@ -1,5 +1,14 @@
 package com.nuvio.app.features.home
 
+import com.nuvio.app.core.ui.NuvioPullRefreshIndicator
+import com.nuvio.app.core.ui.rememberNuvioPullRefreshController
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import com.nuvio.app.core.ui.StaggeredEntrance
+import kotlin.time.TimeSource
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MutatePriority
@@ -893,6 +902,8 @@ fun HomeScreen(
     val enabledHomeItems = remember(homeSettingsUiState.items) {
         homeSettingsUiState.items.filter { it.enabled }
     }
+    // Catalog rows rise in one after another when the first ones arrive; later ones just show.
+    val catalogRowsEntrance = remember(homeUiState.sections.isNotEmpty()) { TimeSource.Monotonic.markNow() }
     val keyedEnabledHomeItems = remember(enabledHomeItems) {
         enabledHomeItems.withDuplicateSafeLazyKeys(HomeCatalogSettingsItem::key)
     }
@@ -979,6 +990,12 @@ fun HomeScreen(
         }
 
         val heroStretchState = rememberHeroStretchState(homeListState)
+        // Pull to refresh rides the hero stretch: letting go past its threshold reloads the catalogs.
+        val homePullRefresh = rememberNuvioPullRefreshController {
+            HomeRepository.refresh(addonsUiState.addons.enabledAddons(), force = true)
+            withTimeoutOrNull(10_000) { HomeRepository.uiState.first { !it.isLoading } }
+        }
+        heroStretchState.onPullRefresh = homePullRefresh::refresh
         val heroStretchModifier = if (showHeroSlot) {
             Modifier.nestedScroll(heroStretchState.nestedScrollConnection)
         } else {
@@ -1175,25 +1192,28 @@ fun HomeScreen(
                         disintegrationRequest = continueWatchingDisintegrationRequest,
                         )
 
-                        keyedEnabledHomeItems.forEach { keyedSettingsItem ->
+                        keyedEnabledHomeItems.forEachIndexed { rowIndex, keyedSettingsItem ->
                             val settingsItem = keyedSettingsItem.value
                             if (settingsItem.isCollection) {
                                 val collection = collectionsMap[settingsItem.key]
                                 if (collection != null) {
                                     item(key = keyedSettingsItem.lazyKey, contentType = "collection") {
-                                        HomeCollectionRowSection(
-                                            collection = collection,
-                                            modifier = Modifier.padding(bottom = 12.dp),
-                                            sectionPadding = homeSectionPadding,
-                                            animateGifs = animateCollectionGifs,
-                                            onFolderClick = onFolderClick,
-                                        )
+                                        StaggeredEntrance(batch = catalogRowsEntrance, index = rowIndex) {
+                                            HomeCollectionRowSection(
+                                                collection = collection,
+                                                modifier = Modifier.padding(bottom = 12.dp),
+                                                sectionPadding = homeSectionPadding,
+                                                animateGifs = animateCollectionGifs,
+                                                onFolderClick = onFolderClick,
+                                            )
+                                        }
                                     }
                                 }
                             } else {
                                 val section = sectionsMap[settingsItem.key]
                                 if (section != null && section.items.isNotEmpty()) {
                                     item(key = keyedSettingsItem.lazyKey, contentType = "catalog") {
+                                        StaggeredEntrance(batch = catalogRowsEntrance, index = rowIndex) {
                                         HomeCatalogRowSection(
                                             section = section,
                                             entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
@@ -1209,6 +1229,7 @@ fun HomeScreen(
                                             onPosterClick = onPosterClick,
                                             onPosterLongClick = onPosterLongClick,
                                         )
+                                        }
                                     }
                                 }
                             }
@@ -1216,6 +1237,16 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        if (showHeroSlot) {
+            NuvioPullRefreshIndicator(
+                pullFraction = heroStretchState.refreshPullFraction,
+                isRefreshing = homePullRefresh.isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp),
+            )
         }
 
         HomeTopNotificationsBar(
