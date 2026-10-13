@@ -1,5 +1,12 @@
 package com.nuvio.app.features.social
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.Stroke
 import com.nuvio.app.core.ui.SkeletonBlock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -446,7 +453,7 @@ private fun PersonRow(
 @Composable
 internal fun SocialAvatar(person: SocialPerson, size: Dp, live: Boolean = false) {
     val tokens = MaterialTheme.nuvio
-    Box(modifier = Modifier.size(size)) {
+    Box(modifier = Modifier.size(size).then(if (live) Modifier.liveRipple(tokens.colors.accent) else Modifier)) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -833,3 +840,22 @@ private fun FriendsSkeleton() {
         }
     }
 }
+
+/** A ring that keeps swelling out of the avatar and fading, like a "live" signal, for friends watching now. */
+@Composable
+private fun Modifier.liveRipple(color: Color): Modifier {
+    val progress by rememberInfiniteTransition(label = "liveRipple").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 1_800, easing = LinearOutSlowInEasing)),
+        label = "liveRippleProgress",
+    )
+    return drawBehind {
+        drawCircle(
+            color = color.copy(alpha = 0.45f * (1f - progress)),
+            radius = size.minDimension / 2f * (1f + 0.4f * progress),
+            style = Stroke(width = 2.dp.toPx()),
+        )
+    }
+}
+
