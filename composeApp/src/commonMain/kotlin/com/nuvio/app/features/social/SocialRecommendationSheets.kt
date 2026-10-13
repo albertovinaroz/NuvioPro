@@ -166,6 +166,8 @@ private fun RecommendationItem(
     val tokens = MaterialTheme.nuvio
     val scope = rememberCoroutineScope()
     var reply by remember(rec.id) { mutableStateOf("") }
+    var pendingReaction by remember(rec.id) { mutableStateOf<SocialReaction?>(null) }
+    var sending by remember(rec.id) { mutableStateOf(false) }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(modifier = if (onOpen != null) Modifier.clickable { onOpen(rec) } else Modifier) {
             SocialPoster(title = rec.title, poster = rec.poster, contentType = rec.contentType, contentId = rec.contentId, width = 64.dp)
@@ -213,36 +215,51 @@ private fun RecommendationItem(
                     color = if (response.isBlank()) tokens.colors.textMuted else tokens.colors.textPrimary,
                 )
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SocialReaction.entries.forEach { option ->
-                        val selected = option == reaction
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (selected) tokens.colors.accent.copy(alpha = 0.22f) else tokens.colors.textPrimary.copy(alpha = 0.06f),
-                                )
-                                .then(if (selected) Modifier.border(1.dp, tokens.colors.accent, CircleShape) else Modifier)
-                                .clickable { scope.launch { SocialRepository.respond(rec.id, option, null) } },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(text = option.emoji, style = MaterialTheme.typography.bodyMedium)
+                // One response per recommendation: the reaction is picked locally and goes out
+                // together with the reply on Send; after that both are read-only.
+                val isFinal = rec.reaction != null || rec.reply != null
+                val shownReaction = if (isFinal) reaction else pendingReaction
+                val options = if (isFinal) listOfNotNull(reaction) else SocialReaction.entries
+                if (options.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        options.forEach { option ->
+                            val selected = option == shownReaction
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (selected) tokens.colors.accent.copy(alpha = 0.22f) else tokens.colors.textPrimary.copy(alpha = 0.06f),
+                                    )
+                                    .then(if (selected) Modifier.border(1.dp, tokens.colors.accent, CircleShape) else Modifier)
+                                    .then(
+                                        if (isFinal || sending) {
+                                            Modifier
+                                        } else {
+                                            Modifier.clickable { pendingReaction = if (selected) null else option }
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(text = option.emoji, style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
                 }
-                if (rec.reply != null) {
-                    Text(
-                        text = stringResource(Res.string.social_your_reply, rec.reply),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = tokens.colors.textMuted,
-                    )
+                if (isFinal) {
+                    rec.reply?.let { sentReply ->
+                        Text(
+                            text = stringResource(Res.string.social_your_reply, sentReply),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = tokens.colors.textMuted,
+                        )
+                    }
                 } else {
                     NuvioInputField(
                         value = reply,
                         onValueChange = { reply = it.take(280) },
                         placeholder = stringResource(Res.string.social_reply_placeholder),
-                        trailingContent = if (reply.isNotBlank()) {
+                        trailingContent = if ((reply.isNotBlank() || pendingReaction != null) && !sending) {
                             {
                                 Text(
                                     text = stringResource(Res.string.social_reply_send),
@@ -253,10 +270,16 @@ private fun RecommendationItem(
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable {
                                             val text = reply
+                                            val chosen = pendingReaction
+                                            sending = true
                                             scope.launch {
-                                                SocialRepository.respond(rec.id, null, text)
-                                                    .onSuccess { reply = "" }
+                                                SocialRepository.respond(rec.id, chosen, text)
+                                                    .onSuccess {
+                                                        reply = ""
+                                                        pendingReaction = null
+                                                    }
                                                     .onFailure { NuvioToastController.show(getString(Res.string.social_error_generic)) }
+                                                sending = false
                                             }
                                         }
                                         .padding(horizontal = 10.dp, vertical = 6.dp),
