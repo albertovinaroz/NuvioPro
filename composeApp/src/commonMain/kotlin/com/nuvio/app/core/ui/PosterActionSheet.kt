@@ -3,6 +3,10 @@ package com.nuvio.app.core.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -16,10 +20,17 @@ import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -64,17 +75,45 @@ fun NuvioWatchedBadge(
     )
 }
 
+/**
+ * Pops [content] in with a small overshoot when [isVisible] turns on while it's on screen (with a
+ * light haptic if [haptic]), and fades it out when it turns off. Badges that are already on when
+ * first composed — opening a screen, scrolling a list — just show, so browsing never bounces.
+ */
+@Composable
+private fun PoppingStatusBadge(
+    isVisible: Boolean,
+    haptic: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    var wasVisible by remember { mutableStateOf(isVisible) }
+    LaunchedEffect(isVisible) {
+        if (haptic && isVisible && !wasVisible) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+        wasVisible = isVisible
+    }
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = scaleIn(
+            animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
+            initialScale = 0.3f,
+        ) + fadeIn(),
+        exit = scaleOut(targetScale = 0.6f) + fadeOut(),
+        modifier = modifier,
+    ) {
+        content()
+    }
+}
+
 @Composable
 fun NuvioAnimatedWatchedBadge(
     isVisible: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier,
-    ) {
+    PoppingStatusBadge(isVisible = isVisible, haptic = true, modifier = modifier) {
         NuvioWatchedBadge()
     }
 }
@@ -146,12 +185,7 @@ fun NuvioDownloadedBadge(
     isVisible: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier,
-    ) {
+    PoppingStatusBadge(isVisible = isVisible, haptic = false, modifier = modifier) {
         NuvioAccentStatusBadge(
             icon = Icons.Rounded.DownloadDone,
             contentDescription = stringResource(Res.string.compose_player_downloaded),
