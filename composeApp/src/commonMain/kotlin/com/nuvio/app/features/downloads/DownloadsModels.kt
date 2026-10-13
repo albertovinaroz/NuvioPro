@@ -86,6 +86,19 @@ data class DownloadsUiState(
 
     val completedItems: List<DownloadItem>
         get() = items.filter { it.status == DownloadStatus.Completed }
+
+    /** Byte-weighted progress of the downloads currently running, or null when none is. */
+    val downloadingProgress: Float?
+        get() {
+            val downloading = items.filter { it.status == DownloadStatus.Downloading }
+            if (downloading.isEmpty()) return null
+            val sized = downloading.filter { (it.totalBytes ?: 0L) > 0L }
+            val totalBytes = sized.sumOf { it.totalBytes ?: 0L }
+            if (totalBytes <= 0L) return 0f
+            return (sized.sumOf { it.downloadedBytes }.toDouble() / totalBytes.toDouble())
+                .toFloat()
+                .coerceIn(0f, 1f)
+        }
 }
 
 enum class DownloadEnqueueResult {

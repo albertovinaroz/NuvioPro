@@ -18,7 +18,8 @@ class NativeDownloadsButtonController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var observationJob: Job? = null
 
-    fun observeState(callback: (isDownloading: Boolean, hasUnseenCompleted: Boolean) -> Unit) {
+    /** [callback]'s `progress` is the running downloads' overall 0–1 progress, 0 when none is running. */
+    fun observeState(callback: (isDownloading: Boolean, hasUnseenCompleted: Boolean, progress: Float) -> Unit) {
         DownloadsRepository.ensureLoaded()
         observationJob?.cancel()
         observationJob = scope.launch {
@@ -26,9 +27,11 @@ class NativeDownloadsButtonController {
                 DownloadsRepository.uiState,
                 DownloadsRepository.hasUnseenCompleted,
             ) { uiState, hasUnseenCompleted ->
-                val isDownloading = uiState.items.any { it.status == DownloadStatus.Downloading }
-                isDownloading to hasUnseenCompleted
-            }.collect { (isDownloading, hasUnseenCompleted) -> callback(isDownloading, hasUnseenCompleted) }
+                val progress = uiState.downloadingProgress
+                Triple(progress != null, hasUnseenCompleted, progress ?: 0f)
+            }.collect { (isDownloading, hasUnseenCompleted, progress) ->
+                callback(isDownloading, hasUnseenCompleted, progress)
+            }
         }
     }
 

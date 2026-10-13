@@ -1340,6 +1340,7 @@ struct TabContentView: View {
                     ratedTitle: appCoordinator.localizedLibraryRatedTitle,
                     isDownloading: downloadsButtonViewModel.isDownloading,
                     hasUnseenCompletedDownload: downloadsButtonViewModel.hasUnseenCompleted,
+                    downloadProgress: downloadsButtonViewModel.progress,
                     // The release calendar is a panel inside the Compose screen, not a route.
                     onCalendar: {
                         NativeTabBridgeKt.nativeLibraryCalendarOpen()
@@ -1662,13 +1663,15 @@ private final class LibraryHeaderTopViewModel: ObservableObject {
 
 private final class NativeDownloadsButtonViewModel: ObservableObject {
     @Published private(set) var isDownloading = false
+    @Published private(set) var progress: Double = 0
     @Published private(set) var hasUnseenCompleted = false
 
     private let controller = NativeDownloadsButtonController()
 
     func startObserving() {
-        controller.observeState { [weak self] isDownloading, hasUnseenCompleted in
+        controller.observeState { [weak self] isDownloading, hasUnseenCompleted, progress in
             self?.isDownloading = isDownloading.boolValue
+            self?.progress = Double(progress.floatValue)
             self?.hasUnseenCompleted = hasUnseenCompleted.boolValue
         }
     }
@@ -1819,6 +1822,7 @@ private struct LibraryHeaderGlassButtons: View {
     let ratedTitle: String
     let isDownloading: Bool
     let hasUnseenCompletedDownload: Bool
+    let downloadProgress: Double
     let onCalendar: () -> Void
     let onDownloads: () -> Void
     let onRated: () -> Void
@@ -1853,7 +1857,11 @@ private struct LibraryHeaderGlassButtons: View {
             HStack(spacing: 2) {
                 glassButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 glassButton(label: downloadsTitle, action: onDownloads) {
-                    DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
+                    DownloadsGlassIcon(
+                        isDownloading: isDownloading,
+                        hasUnseenCompleted: hasUnseenCompletedDownload,
+                        progress: downloadProgress
+                    )
                 }
                 glassButton(label: ratedTitle, action: onRated) { ratedIcon }
             }
@@ -1865,7 +1873,11 @@ private struct LibraryHeaderGlassButtons: View {
             HStack(spacing: 2) {
                 plainButton(label: calendarTitle, action: onCalendar) { calendarIcon }
                 plainButton(label: downloadsTitle, action: onDownloads) {
-                    DownloadsGlassIcon(isDownloading: isDownloading, hasUnseenCompleted: hasUnseenCompletedDownload)
+                    DownloadsGlassIcon(
+                        isDownloading: isDownloading,
+                        hasUnseenCompleted: hasUnseenCompletedDownload,
+                        progress: downloadProgress
+                    )
                 }
                 plainButton(label: ratedTitle, action: onRated) { ratedIcon }
             }
@@ -2005,28 +2017,42 @@ private struct ProfileEditSaveButton: View {
     }
 }
 
-/// Downloads' icon reflects the same two states Compose's own FlowingDownloadIcon/gradient-mask
-/// combo signals on Android — an active download pulses, an unseen completed one picks up the
-/// app's accent color — so the native button doesn't silently drop information the Compose one
-/// shows.
+/// Downloads' icon reflects the same states Compose's own LibraryDownloadsButton signals on
+/// Android — an active download pulses inside a ring that fills in the theme accent as it
+/// progresses, an unseen completed one picks up the app's accent color — so the native button
+/// doesn't silently drop information the Compose one shows.
 @available(iOS 16.0, *)
 private struct DownloadsGlassIcon: View {
     let isDownloading: Bool
     let hasUnseenCompleted: Bool
+    let progress: Double
 
     @StateObject private var tabIconStore = NativeTabIconStore()
     @State private var pulse = false
 
     var body: some View {
-        // Same weight and outline style as its calendar/star neighbours in the capsule.
-        Image(systemName: "arrow.down.to.line")
-            .font(.system(size: 17, weight: .medium))
-            .foregroundStyle(
-                hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
-            )
-            .opacity(isDownloading && pulse ? 0.35 : 1)
-            .onAppear { updatePulse() }
-            .onChange(of: isDownloading) { _ in updatePulse() }
+        ZStack {
+            if isDownloading {
+                Circle()
+                    .stroke(Color.white.opacity(0.18), lineWidth: 2)
+                Circle()
+                    .trim(from: 0, to: min(max(progress, 0), 1))
+                    .stroke(tabIconStore.accentStyle(), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.3), value: progress)
+            }
+            // Same weight and outline style as its calendar/star neighbours in the capsule,
+            // shrunk to sit inside the ring while a download runs.
+            Image(systemName: "arrow.down.to.line")
+                .font(.system(size: isDownloading ? 12 : 17, weight: isDownloading ? .semibold : .medium))
+                .foregroundStyle(
+                    hasUnseenCompleted && !isDownloading ? tabIconStore.accentStyle() : AnyShapeStyle(.white)
+                )
+                .opacity(isDownloading && pulse ? 0.35 : 1)
+        }
+        .frame(width: 26, height: 26)
+        .onAppear { updatePulse() }
+        .onChange(of: isDownloading) { _ in updatePulse() }
     }
 
     private func updatePulse() {
