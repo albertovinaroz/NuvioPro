@@ -1,5 +1,12 @@
 package com.nuvio.app.features.social
 
+import com.nuvio.app.core.ui.SkeletonBlock
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,7 +40,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,7 +61,12 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.MetaPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -112,7 +131,9 @@ internal fun RecommendationsSheet(
                 )
             }
             val items = if (showSent) state.recommendations.sent else state.recommendations.received
-            if (items.isEmpty()) {
+            if (items.isEmpty() && state.isLoading) {
+                RecommendationsSkeleton()
+            } else if (items.isEmpty()) {
                 Text(
                     text = stringResource(
                         if (showSent) Res.string.social_recommendations_empty_sent else Res.string.social_recommendations_empty_received,
@@ -168,6 +189,10 @@ private fun RecommendationItem(
     var reply by remember(rec.id) { mutableStateOf("") }
     var pendingReaction by remember(rec.id) { mutableStateOf<SocialReaction?>(null) }
     var sending by remember(rec.id) { mutableStateOf(false) }
+    // The reaction that just went out, flying up from its chip; the key replays it per send.
+    var burstReaction by remember(rec.id) { mutableStateOf<SocialReaction?>(null) }
+    var burstKey by remember(rec.id) { mutableStateOf(0) }
+    val haptics = LocalHapticFeedback.current
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(modifier = if (onOpen != null) Modifier.clickable { onOpen(rec) } else Modifier) {
             SocialPoster(title = rec.title, poster = rec.poster, contentType = rec.contentType, contentId = rec.contentId, width = 64.dp)
@@ -221,11 +246,18 @@ private fun RecommendationItem(
                 val shownReaction = if (isFinal) reaction else pendingReaction
                 val options = if (isFinal) listOfNotNull(reaction) else SocialReaction.entries
                 if (options.isNotEmpty()) {
+                    Box {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         options.forEach { option ->
                             val selected = option == shownReaction
+                            val chipScale by animateFloatAsState(
+                                targetValue = if (selected && !isFinal) 1.15f else 1f,
+                                animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
+                                label = "reactionChipScale",
+                            )
                             Box(
                                 modifier = Modifier
+                                    .scale(chipScale)
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(
@@ -236,7 +268,10 @@ private fun RecommendationItem(
                                         if (isFinal || sending) {
                                             Modifier
                                         } else {
-                                            Modifier.clickable { pendingReaction = if (selected) null else option }
+                                            Modifier.clickable {
+                                                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                                pendingReaction = if (selected) null else option
+                                            }
                                         },
                                     ),
                                 contentAlignment = Alignment.Center,
@@ -244,6 +279,11 @@ private fun RecommendationItem(
                                 Text(text = option.emoji, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
+                    }
+                    burstReaction?.let { sent ->
+                        // Sent reactions end up as the row's only chip, so the burst starts there.
+                        EmojiBurst(emoji = sent.emoji, key = burstKey, modifier = Modifier.size(34.dp))
+                    }
                     }
                 }
                 if (isFinal) {
@@ -277,6 +317,10 @@ private fun RecommendationItem(
                                                     .onSuccess {
                                                         reply = ""
                                                         pendingReaction = null
+                                                        if (chosen != null) {
+                                                            burstReaction = chosen
+                                                            burstKey++
+                                                        }
                                                     }
                                                     .onFailure { NuvioToastController.show(getString(Res.string.social_error_generic)) }
                                                 sending = false
@@ -451,6 +495,60 @@ private fun RecommendSheet(title: MetaPreview, isTablet: Boolean, onDismiss: () 
                     }
                 },
             )
+        }
+    }
+}
+
+// Directions (degrees off straight up) and distances for the burst's emoji — fixed, so every
+// send looks the same rather than random.
+private val EmojiBurstAngles = listOf(-62f, -36f, -12f, 10f, 32f, 58f)
+private val EmojiBurstDistances = listOf(44f, 60f, 52f, 66f, 54f, 42f)
+
+/** A handful of [emoji] fanning up and fading out from the middle of [modifier]'s box, once per [key]. */
+@Composable
+private fun EmojiBurst(emoji: String, key: Int, modifier: Modifier = Modifier) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        EmojiBurstAngles.forEachIndexed { index, angle ->
+            val progress = remember(key) { Animatable(0f) }
+            LaunchedEffect(key) {
+                delay(index * 30L)
+                progress.animateTo(1f, tween(durationMillis = 720, easing = FastOutSlowInEasing))
+            }
+            val radians = angle * PI.toFloat() / 180f
+            val distancePx = with(LocalDensity.current) { EmojiBurstDistances[index].dp.toPx() }
+            val p = progress.value
+            if (p in 0.001f..0.999f) {
+                Text(
+                    text = emoji,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                x = (sin(radians) * distancePx * p).roundToInt(),
+                                y = (-cos(radians) * distancePx * p).roundToInt(),
+                            )
+                        }
+                        .scale(0.7f + 0.6f * p)
+                        .alpha(1f - p),
+                )
+            }
+        }
+    }
+}
+
+/** Stand-in rows for the recommendations list while it loads: a poster and a few lines each. */
+@Composable
+private fun RecommendationsSkeleton() {
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        repeat(3) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SkeletonBlock(width = 64.dp, height = 96.dp, cornerRadius = 8.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SkeletonBlock(width = 150.dp, height = 14.dp)
+                    SkeletonBlock(width = 110.dp, height = 10.dp)
+                    SkeletonBlock(width = 190.dp, height = 10.dp)
+                }
+            }
         }
     }
 }

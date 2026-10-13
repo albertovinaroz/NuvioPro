@@ -1,5 +1,6 @@
 package com.nuvio.app.features.social
 
+import com.nuvio.app.core.ui.SkeletonBlock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -143,11 +144,7 @@ internal fun ProfileFriendsContent(
                 SocialPillButton(text = stringResource(Res.string.social_retry), onClick = SocialRepository::refresh)
             }
         } else {
-            Text(
-                text = "…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = tokens.colors.textMuted,
-            )
+            FriendsSkeleton()
         }
         return
     }
@@ -805,6 +802,33 @@ internal fun SocialFriendsPreview() {
                     .padding(2.dp),
             ) {
                 SocialAvatar(person = friend.person, size = 26.dp, live = friend.watchingNow != null)
+            }
+        }
+    }
+}
+
+/** Stand-in for the Friends section while it first loads: code card, inbox row and a few friends. */
+@Composable
+private fun FriendsSkeleton() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        SkeletonBlock(modifier = Modifier.fillMaxWidth(), height = 76.dp, cornerRadius = 16.dp)
+        SkeletonBlock(modifier = Modifier.fillMaxWidth(), height = 52.dp, cornerRadius = 14.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            SkeletonBlock(width = 90.dp, height = 12.dp)
+            repeat(3) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    SkeletonBlock(width = 40.dp, height = 40.dp, cornerRadius = 20.dp)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SkeletonBlock(width = 120.dp, height = 12.dp)
+                        SkeletonBlock(width = 180.dp, height = 10.dp)
+                    }
+                }
             }
         }
     }
