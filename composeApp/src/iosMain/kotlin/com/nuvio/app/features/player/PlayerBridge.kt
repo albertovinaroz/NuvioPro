@@ -22,7 +22,6 @@ interface NuvioPlayerBridge {
     fun retry()
     fun isPictureInPictureSupported(): Boolean
     fun startPictureInPicture()
-    fun setExperimentalSinglePrimaryPictureInPictureEnabled(enabled: Boolean)
     fun updateNowPlayingMetadata(
         title: String,
         subtitle: String?,

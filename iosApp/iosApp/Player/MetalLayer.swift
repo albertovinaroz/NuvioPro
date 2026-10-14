@@ -1,46 +1,36 @@
 import Foundation
 import UIKit
 import QuartzCore
+import CoreVideo
 
 class MetalLayer: CAMetalLayer {
-    var onDrawablePresented: ((CAMetalDrawable) -> Void)?
+    weak var pictureInPictureSink: PlayerPictureInPictureController?
+    private let pictureInPictureLock = NSLock()
+    private var consumesVideo = false
 
+    @objc var nuvioPiPConsumesVideo: Bool {
+        get {
+            pictureInPictureLock.lock()
+            defer { pictureInPictureLock.unlock() }
+            return consumesVideo
+        }
+        set {
+            pictureInPictureLock.lock()
+            consumesVideo = newValue
+            pictureInPictureLock.unlock()
+        }
+    }
+
+    @objc func nuvioEnqueuePiPFrame(_ pixelBuffer: CVPixelBuffer, presentationTime: Double, isPictureInPictureFrame: Bool) {
+        pictureInPictureSink?.submit(pixelBuffer, pts: presentationTime, isPictureInPictureFrame: isPictureInPictureFrame)
+    }
+
+    // Drawable acquisition can stall while iOS denies GPU work (backgrounded app, lost device):
+    // after a couple of failures nextDrawable() stops hammering Metal and only probes now and then,
+    // until a drawable comes back or setRenderingSuspended(false) is called.
     var onRenderingSuspensionChanged: ((Bool, String) -> Void)?
 
-    var isDrawableCaptureArmed: Bool {
-        get {
-            captureLock.lock()
-            defer { captureLock.unlock() }
-            return storedIsDrawableCaptureArmed
-        }
-        set {
-            captureLock.lock()
-            storedIsDrawableCaptureArmed = newValue
-            captureLock.unlock()
-        }
-    }
-
-    var capturesWithoutPresentation: Bool {
-        get {
-            captureLock.lock()
-            defer { captureLock.unlock() }
-            return storedCapturesWithoutPresentation
-        }
-        set {
-            captureLock.lock()
-            storedCapturesWithoutPresentation = newValue
-            captureLock.unlock()
-        }
-    }
-
-    private(set) var capturedDrawableCount: UInt64 = 0
-
-    private(set) var nextDrawableCallCount: UInt64 = 0
-
-    private var storedIsDrawableCaptureArmed = false
-    private var storedCapturesWithoutPresentation = false
-    private var pendingDrawable: CAMetalDrawable?
-    private let captureLock = NSLock()
+    private let suspensionLock = NSLock()
 
     private static let failureThresholdBeforeSuspension = 2
     private static let suspendedRetryInterval: CFTimeInterval = 1.0
@@ -50,12 +40,6 @@ class MetalLayer: CAMetalLayer {
     private var isSuspensionLatched = false
     private var consecutiveAcquisitionFailures = 0
     private var lastSuspendedProbeTime: CFTimeInterval = 0
-
-    var isSuspended: Bool {
-        captureLock.lock()
-        defer { captureLock.unlock() }
-        return isRenderingSuspended
-    }
 
     override var drawableSize: CGSize {
         get { return super.drawableSize }
@@ -72,6 +56,8 @@ class MetalLayer: CAMetalLayer {
             if Thread.isMainThread {
                 super.wantsExtendedDynamicRangeContent = newValue
             } else {
+                // mpv's vo thread sets this during video-output init while it holds the
+                // core lock; a sync hop here deadlocks against main-thread property reads.
                 DispatchQueue.main.async {
                     super.wantsExtendedDynamicRangeContent = newValue
                 }
@@ -80,58 +66,41 @@ class MetalLayer: CAMetalLayer {
     }
 
     func setRenderingSuspended(_ suspended: Bool, reason: String) {
-        captureLock.lock()
+        suspensionLock.lock()
         let changed = isRenderingSuspended != suspended
         isRenderingSuspended = suspended
         isSuspensionLatched = suspended
         consecutiveAcquisitionFailures = 0
         lastSuspendedProbeTime = suspended ? CACurrentMediaTime() : 0
-        let stale = pendingDrawable
-        pendingDrawable = nil
-        captureLock.unlock()
-
-        withExtendedLifetime(stale) {}
+        suspensionLock.unlock()
 
         if changed { onRenderingSuspensionChanged?(suspended, reason) }
     }
 
-    func releasePendingDrawable() {
-        captureLock.lock()
-        let stale = pendingDrawable
-        pendingDrawable = nil
-        captureLock.unlock()
-        withExtendedLifetime(stale) {}
-    }
-
     override func nextDrawable() -> CAMetalDrawable? {
-        captureLock.lock()
-        nextDrawableCallCount &+= 1
+        suspensionLock.lock()
         if isRenderingSuspended {
             let now = CACurrentMediaTime()
             let shouldProbe = now - lastSuspendedProbeTime >= Self.suspendedRetryInterval
             if shouldProbe {
                 lastSuspendedProbeTime = now
             }
-            let stale = pendingDrawable
-            pendingDrawable = nil
-            captureLock.unlock()
-            withExtendedLifetime(stale) {}
+            suspensionLock.unlock()
 
             guard shouldProbe else {
                 Thread.sleep(forTimeInterval: Self.suspendedIdleSleep)
                 return nil
             }
         } else {
-            captureLock.unlock()
+            suspensionLock.unlock()
         }
 
         let drawable = super.nextDrawable()
-        let acquisitionFailed = drawable == nil
 
-        captureLock.lock()
+        suspensionLock.lock()
         var didSuspend = false
         var didResume = false
-        if acquisitionFailed {
+        if drawable == nil {
             consecutiveAcquisitionFailures += 1
             if !isRenderingSuspended &&
                 consecutiveAcquisitionFailures >= Self.failureThresholdBeforeSuspension {
@@ -147,48 +116,10 @@ class MetalLayer: CAMetalLayer {
                 didResume = true
             }
         }
-
-        let suspendedNow = isRenderingSuspended
-        let armed = storedIsDrawableCaptureArmed
-        let handler = onDrawablePresented
-        let deferred = storedCapturesWithoutPresentation && !suspendedNow
-        let previous = pendingDrawable
-        pendingDrawable = deferred ? drawable : nil
-        captureLock.unlock()
+        suspensionLock.unlock()
 
         if didSuspend { onRenderingSuspensionChanged?(true, "drawable-acquisition-stalled") }
         if didResume { onRenderingSuspensionChanged?(false, "drawable-acquired") }
-
-        guard !suspendedNow else { return drawable }
-
-        guard armed, let drawable, let handler else { return drawable }
-
-        if deferred {
-            if let previous {
-                captureLock.lock()
-                capturedDrawableCount &+= 1
-                captureLock.unlock()
-                handler(previous)
-            }
-            return drawable
-        }
-
-        #if targetEnvironment(simulator)
-        // CAMetalDrawable.addPresentedHandler is unavailable in the Simulator's Metal
-        // implementation, so invoke the handler immediately instead of on actual presentation.
-        captureLock.lock()
-        capturedDrawableCount &+= 1
-        captureLock.unlock()
-        handler(drawable)
-        #else
-        drawable.addPresentedHandler { [weak self] _ in
-            guard let self else { return }
-            self.captureLock.lock()
-            self.capturedDrawableCount &+= 1
-            self.captureLock.unlock()
-            handler(drawable)
-        }
-        #endif
 
         return drawable
     }

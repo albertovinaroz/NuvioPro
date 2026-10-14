@@ -70,8 +70,6 @@ actual fun PlatformPlayerSurface(
     PlayerSettingsRepository.ensureLoaded()
     val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val latestPlayerSettings = rememberUpdatedState(playerSettings)
-    val experimentalSinglePrimaryPictureInPictureEnabled =
-        IosExperimentalPictureInPictureSettingsStorage.loadSinglePrimaryRendererEnabled()
 
     val bridge = remember {
         NuvioPlayerBridgeFactory.create()
@@ -84,8 +82,6 @@ actual fun PlatformPlayerSurface(
         }
         return
     }
-
-    bridge.setExperimentalSinglePrimaryPictureInPictureEnabled(experimentalSinglePrimaryPictureInPictureEnabled)
 
     val controller = remember(bridge) {
         object : PlayerEngineController {
