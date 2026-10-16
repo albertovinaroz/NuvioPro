@@ -117,6 +117,7 @@ import com.nuvio.app.features.details.OmdbSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesUiState
+import com.nuvio.app.features.party.PartyRepository
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_root
 import kotlinx.coroutines.delay
@@ -125,6 +126,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+
+@Composable
+private fun watchPartyRow(onClick: () -> Unit): (() -> Unit)? {
+    val available by PartyRepository.available.collectAsStateWithLifecycle()
+    return onClick.takeIf { available }
+}
 
 private fun SettingsPage.isEnabledByPolicy(): Boolean =
     when (this) {
@@ -175,6 +182,7 @@ fun SettingsScreen(
     // page when unset (previews, callers that don't wire it) rather than doing nothing.
     onDownloadsContentClick: (() -> Unit)? = null,
     onNotificationsContentClick: (() -> Unit)? = null,
+    onWatchPartyClick: () -> Unit = {},
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
@@ -503,6 +511,7 @@ fun SettingsScreen(
                         onCollectionsClick = onCollectionsClick,
                         onDownloadsContentClick = onDownloadsContentClick,
                         onNotificationsContentClick = onNotificationsContentClick,
+                        onWatchPartyClick = onWatchPartyClick,
                     )
                 } else {
                     MobileSettingsScreen(
@@ -590,6 +599,7 @@ fun SettingsScreen(
                         onCollectionsClick = onCollectionsClick,
                         onDownloadsContentClick = onDownloadsContentClick,
                         onNotificationsContentClick = onNotificationsContentClick,
+                        onWatchPartyClick = onWatchPartyClick,
                     )
                 }
             }
@@ -683,6 +693,7 @@ private fun MobileSettingsScreen(
     onCollectionsClick: () -> Unit = {},
     onDownloadsContentClick: (() -> Unit)? = null,
     onNotificationsContentClick: (() -> Unit)? = null,
+    onWatchPartyClick: () -> Unit = {},
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(page.name) {
@@ -727,6 +738,7 @@ private fun MobileSettingsScreen(
         }
         DismissKeyboardOnDrag(listState)
 
+        val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
         // Profile's cinematic hero photo bleeds unclipped past its own top edge to reach behind
         // the native nav bar (see ProfileInsightsHeroCinematic) — iOS's native rubber-band
         // overscroll translates the whole list further down than that bleed amount on a fast
@@ -844,6 +856,7 @@ private fun MobileSettingsScreen(
                             } else {
                                 null
                             },
+                            onWatchPartyClick = watchPartyRowClick,
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                         )
                     }
@@ -1117,6 +1130,7 @@ private fun TabletSettingsScreen(
     onCollectionsClick: () -> Unit = {},
     onDownloadsContentClick: (() -> Unit)? = null,
     onNotificationsContentClick: (() -> Unit)? = null,
+    onWatchPartyClick: () -> Unit = {},
 ) {
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
@@ -1219,6 +1233,7 @@ private fun TabletSettingsScreen(
                 }
             }
             DismissKeyboardOnDrag(listState)
+            val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -1292,6 +1307,7 @@ private fun TabletSettingsScreen(
                                 } else {
                                     null
                                 },
+                                onWatchPartyClick = watchPartyRowClick,
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showGeneralSection = activeCategory == SettingsCategory.General,
                                 showAboutSection = activeCategory == SettingsCategory.About,

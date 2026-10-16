@@ -121,6 +121,12 @@ data class MetaScreenSettingsRoute(override val title: String = "") : SettingsDe
 data class ContinueWatchingSettingsRoute(override val title: String = "") : SettingsDestinationRoute
 
 @Serializable
+data class PartyRoute(
+    val code: String = "",
+    override val title: String = "",
+) : SettingsDestinationRoute
+
+@Serializable
 // No preferredTabName override (matches NotificationFeedRoute): every existing pusher already
 // either originates from Library or calls activateTab(Library) itself first, so this was already
 // a no-op for them — but it forced a jarring tab-switch when the Settings root menu started

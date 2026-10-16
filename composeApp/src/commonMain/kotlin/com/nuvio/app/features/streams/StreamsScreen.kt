@@ -834,6 +834,7 @@ internal fun StreamList(
     val findingStreamsText = stringResource(Res.string.streams_finding_streams)
     val checkingMoreAddonsText = stringResource(Res.string.streams_checking_more_addons)
     val formatStreamSize = rememberStreamSizeLabelFormat()
+    val sharedStream = LocalSharedStream.current
     val streamBadgeSettings by remember {
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.uiState
@@ -852,6 +853,24 @@ internal fun StreamList(
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
+        sharedStream?.let { shared ->
+            item(key = "shared_stream") {
+                Column {
+                    SharedStreamSectionHeader(label = shared.label)
+                    StreamCard(
+                        stream = shared.stream,
+                        enabled = true,
+                        appendInstantServiceToDefaultName = false,
+                        showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
+                        showAddonLogo = streamBadgeSettings.showAddonLogo,
+                        badgePlacement = streamBadgeSettings.badgePlacement,
+                        onClick = { onStreamSelected(shared.stream, resumePositionMs, resumeProgressFraction) },
+                        isCurrent = true,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            }
+        }
         when {
             hasGroups && anyLoading && !hasAnyStreams -> {
                 item {
@@ -1101,6 +1120,22 @@ internal fun streamCardRenderKey(
 // ---------------------------------------------------------------------------
 // Stream Section Header
 // ---------------------------------------------------------------------------
+
+/** The watch party's shared stream: just its label, styled like an addon's header. */
+@Composable
+private fun SharedStreamSectionHeader(label: String) {
+    Text(
+        text = label,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        ),
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
+    )
+}
 
 @Composable
 private fun StreamSectionHeader(

@@ -2,11 +2,53 @@ import Foundation
 import UIKit
 import QuartzCore
 import CoreVideo
+import Metal
 
 class MetalLayer: CAMetalLayer {
     weak var pictureInPictureSink: PlayerPictureInPictureController?
     private let pictureInPictureLock = NSLock()
     private var consumesVideo = false
+    private var presentationGeneration: UInt = 0
+    private var presentationObserver: (generation: UInt, callback: (TimeInterval) -> Void)?
+
+    func observeNextPresentedDrawable(_ callback: @escaping (TimeInterval) -> Void) {
+        pictureInPictureLock.lock()
+        presentationGeneration &+= 1
+        presentationObserver = (presentationGeneration, callback)
+        pictureInPictureLock.unlock()
+    }
+
+    func cancelPresentationObserver() {
+        pictureInPictureLock.lock()
+        presentationGeneration &+= 1
+        presentationObserver = nil
+        pictureInPictureLock.unlock()
+    }
+
+    /// Hands [drawable] to a pending presentation observer registered before it was acquired.
+    private func notifyPresentationObserver(of drawable: CAMetalDrawable, generation: UInt?) {
+        guard let generation else { return }
+        pictureInPictureLock.lock()
+        let observer = presentationObserver?.generation == generation ? presentationObserver : nil
+        if observer != nil { presentationObserver = nil }
+        pictureInPictureLock.unlock()
+        guard let observer else { return }
+        let deliver: (TimeInterval) -> Void = { [weak self] time in
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.pictureInPictureLock.lock()
+                let current = self.presentationGeneration == generation
+                self.pictureInPictureLock.unlock()
+                if current { observer.callback(time) }
+            }
+        }
+        #if targetEnvironment(simulator)
+        // The Simulator's Metal has no presented handlers; report the drawable as shown now.
+        deliver(CACurrentMediaTime())
+        #else
+        drawable.addPresentedHandler { presented in deliver(presented.presentedTime) }
+        #endif
+    }
 
     @objc var nuvioPiPConsumesVideo: Bool {
         get {
@@ -78,6 +120,10 @@ class MetalLayer: CAMetalLayer {
     }
 
     override func nextDrawable() -> CAMetalDrawable? {
+        pictureInPictureLock.lock()
+        let observerGeneration = presentationObserver?.generation
+        pictureInPictureLock.unlock()
+
         suspensionLock.lock()
         if isRenderingSuspended {
             let now = CACurrentMediaTime()
@@ -121,6 +167,7 @@ class MetalLayer: CAMetalLayer {
         if didSuspend { onRenderingSuspensionChanged?(true, "drawable-acquisition-stalled") }
         if didResume { onRenderingSuspensionChanged?(false, "drawable-acquired") }
 
+        if let drawable { notifyPresentationObserver(of: drawable, generation: observerGeneration) }
         return drawable
     }
 }

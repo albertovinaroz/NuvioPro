@@ -294,6 +294,15 @@ final class MPVPlayerViewController: UIViewController {
     var mpv: OpaquePointer?
     private var cachedNowPlayingMetadata: CachedNowPlayingMetadata?
     private lazy var nowPlayingController = PlayerNowPlayingController(owner: self)
+    private lazy var audioSessionController: PlayerAudioSessionController = {
+        let controller = PlayerAudioSessionController()
+        controller.onConfigurationChanged = { [weak self] in
+            guard let self, self.mpv != nil else { return }
+            self.publishCachedNowPlayingInfoIfNeeded()
+            self.syncNowPlayingPlaybackState(isPlaying: self.isPlayerPlaying)
+        }
+        return controller
+    }()
     private let eventQueue = DispatchQueue(label: "mpv-events", qos: .userInitiated)
     private let mpvQueue: DispatchQueue = {
         let queue = DispatchQueue(label: "mpv-properties", qos: .userInitiated)
@@ -502,6 +511,10 @@ final class MPVPlayerViewController: UIViewController {
         }
         setupNotifications()
         refreshImmersiveSystemUI()
+    }
+
+    func setPictureInPicturePlaceholderVisible(_ visible: Bool) {
+        NuvioImmersiveSystemUI.shared.setPictureInPicturePlaceholder(self, visible: visible)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -740,8 +753,16 @@ final class MPVPlayerViewController: UIViewController {
     @objc private func enterBackground() {
         guard mpv != nil else { return }
         if pictureInPictureController?.enteredBackground() == true { return }
+        pauseBackgroundPlayback()
+    }
+
+    func pauseBackgroundPlayback() {
         pausePlayback()
         setStringProperty("vid", "no")
+    }
+
+    func restoreBackgroundVideo() {
+        setStringProperty("vid", "auto")
     }
 
     @objc private func enterForeground() {
@@ -749,7 +770,7 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         let wasInPictureInPicture = pictureInPictureController?.enteredForeground() == true
         if wasInPictureInPicture { return }
-        setStringProperty("vid", "auto")
+        restoreBackgroundVideo()
         playPlayback()
     }
 
@@ -1520,21 +1541,11 @@ final class MPVPlayerViewController: UIViewController {
     }
 
     private func activateAudioSessionForPlayback() {
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .moviePlayback)
-            try session.setActive(true)
-        } catch {
-            print("[NowPlaying] Failed to activate audio session: \(error)")
-        }
+        audioSessionController.activate()
     }
 
     private func deactivateAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("[NowPlaying] Failed to deactivate audio session: \(error)")
-        }
+        audioSessionController.deactivate()
     }
 
     // MARK: - Media Info

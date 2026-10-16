@@ -11,12 +11,14 @@ class AppGateController {
     private val settingsPageChannel = Channel<String>(Channel.BUFFERED)
     private val editProfileChannel = Channel<Unit>(Channel.BUFFERED)
     private val _mainContentReady = MutableStateFlow(false)
+    private val _appReady = MutableStateFlow(false)
     private val _contentGeneration = MutableStateFlow(0)
 
     internal val profileSelectionRequests = profileSelectionChannel.receiveAsFlow()
     internal val settingsPageRequests = settingsPageChannel.receiveAsFlow()
     internal val editProfileRequests = editProfileChannel.receiveAsFlow()
     internal val mainContentReady = _mainContentReady.asStateFlow()
+    internal val appReady = _appReady.asStateFlow()
     internal val contentGeneration = _contentGeneration.asStateFlow()
 
     fun requestProfileSelection() {
@@ -39,5 +41,9 @@ class AppGateController {
 
     internal fun reportMainContentReady(ready: Boolean) {
         _mainContentReady.value = ready
+    }
+
+    internal fun reportAppReady(ready: Boolean) {
+        _appReady.value = ready
     }
 }

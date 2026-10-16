@@ -22,7 +22,9 @@ import com.nuvio.app.navigation.CollectionsRoute
 import com.nuvio.app.navigation.DetailRoute
 import com.nuvio.app.navigation.FolderDetailRoute
 import com.nuvio.app.navigation.NuvioNavigator
+import com.nuvio.app.navigation.PartyRoute
 import com.nuvio.app.navigation.SettingsPageRoute
+import nuvio.composeapp.generated.resources.party_title
 import com.nuvio.app.navigation.TrailingMenuAction
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.profile_insights_edit_profile
@@ -69,6 +71,7 @@ internal fun SettingsRootDestination(
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     val profileMenuActions = profileEditSwitchMenuActions()
+    val watchPartyTitle = stringResource(Res.string.party_title)
     SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         initialPageName = route.pageName,
@@ -95,6 +98,9 @@ internal fun SettingsRootDestination(
         },
         onCollectionsClick = {
             navController.navigate(CollectionsRoute(collectionsTitle))
+        },
+        onWatchPartyClick = {
+            navController.navigate(PartyRoute(title = watchPartyTitle))
         },
         onCheckForUpdatesClick = onCheckForUpdates,
         onTestUpdateBannerClick = onTestUpdateBanner,
