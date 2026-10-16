@@ -18,6 +18,15 @@
       "category": "entertainment",
       "versions": [
         {
+          "version": "0.6.0-b1",
+          "buildVersion": "182",
+          "date": "2026-10-16T12:59:21Z",
+          "localizedDescription": "# Nuvio Pro 0.6.0-b1\r\n\r\n**AltStore/SideStore source:**\r\n```\r\nhttps://raw.githubusercontent.com/albertovinaroz/NuvioPro/pro/store-pro.json\r\n```\r\n\r\n## Changelog\r\n\r\n### Upstream (NuvioMedia)\r\n\r\n- feat(party): add experimental watch parties (#2253) @tapframe\r\n- b9d2c39 fix(player): pause other apps audio on android @tapframe\r\n- feat(mdblist): show dynamic and liked lists in the library (#2268) @kernexshadow\r\n- i18n(el): translate new 0.5.10 strings (#2263)@nosvasedis\r\n- Complete missing Italian translations (#2260)@WhiteGiso\r\n- fix(ios): improve PiP transitions and recover playback after closing PiP (#2259)@WhiteGiso\r\n- fix(ios): restore Now Playing by limiting audio mixing to calls (#2246) @WhiteGiso\r\n- fix(i18n): update, complete and review Brazilian Portuguese (pt-BR) localization (#2234) @jhojhocraazy\r\n- feat(mdblist): show external lists in the library (#2172) @kernexshadow\r\n\r\n> **Note for iOS users:** since Nuvio embeds heavy media frameworks, sideloading tools like AltStore, SideStore, or Sideloadly have to manually re-sign thousands of internal components with your Apple ID certificate. If the installation progress bar looks stuck, don't close it — give it a few minutes to finish signing in the background.",
+          "downloadURL": "https://github.com/albertovinaroz/NuvioPro/releases/download/0.6.0-b1/nuvio-0.6.0-b1-pro-release.ipa",
+          "size": 72597801,
+          "minOSVersion": "16.1"
+        },
+        {
           "version": "0.5.10-b1",
           "buildVersion": "181",
           "date": "2026-10-14T10:48:21Z",
