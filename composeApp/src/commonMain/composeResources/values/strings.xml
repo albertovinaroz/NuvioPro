@@ -812,6 +812,8 @@
     <string name="settings_homescreen_hero_style_card_description">A clean rounded shaped card.</string>
     <string name="settings_homescreen_hero_style_poster">Poster</string>
     <string name="settings_homescreen_hero_style_poster_description">Full-bleed poster art with a notifications button up top.</string>
+    <string name="settings_homescreen_hero_style_complete">Complete</string>
+    <string name="settings_homescreen_hero_style_complete_description">Full-bleed artwork with genre, rating and synopsis.</string>
     <string name="settings_homescreen_catalogs_source">Catalogs Source</string>
     <string name="settings_homescreen_selected_count">%1$d of %2$d selected</string>
     <string name="settings_homescreen_show_hero">Show Hero Section</string>

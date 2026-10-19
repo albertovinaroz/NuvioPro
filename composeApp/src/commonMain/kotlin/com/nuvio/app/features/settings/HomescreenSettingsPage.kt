@@ -1,5 +1,7 @@
 package com.nuvio.app.features.settings
 
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_complete_description
+import nuvio.composeapp.generated.resources.settings_homescreen_hero_style_complete
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
@@ -311,6 +313,20 @@ private fun HeroStyleOptions(
                         Res.string.settings_homescreen_hero_style_full_bleed_description,
                     ),
                 )
+                HeroStyleOption(
+                    modifier = Modifier.weight(1f),
+                    style = HomeHeroStyle.COMPLETE,
+                    selectedStyle = selectedStyle,
+                    title = stringResource(Res.string.settings_homescreen_hero_style_complete),
+                    description = stringResource(
+                        Res.string.settings_homescreen_hero_style_complete_description,
+                    ),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 HeroStyleOption(
                     modifier = Modifier.weight(1f),
                     style = HomeHeroStyle.CARD,

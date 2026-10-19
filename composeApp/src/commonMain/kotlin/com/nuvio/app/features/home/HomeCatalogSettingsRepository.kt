@@ -106,6 +106,8 @@ internal enum class HomeHeroStyle(
     FULL_BLEED("full_bleed"),
     CARD("card"),
     POSTER("poster"),
+    /** Full-bleed artwork with genre, rating and synopsis over it (luqmanfadlli's hero). */
+    COMPLETE("complete"),
     ;
 
     companion object {

@@ -1,5 +1,6 @@
 package com.nuvio.app.core.ui
 
+import androidx.compose.runtime.State
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -44,6 +45,9 @@ import kotlin.math.max
  * invisible. Use [dynamicScrimAlpha] for that.
  */
 val LocalDynamicArtworkBackgroundActive = staticCompositionLocalOf { false }
+
+/** The animated wash colour behind the content, for heroes that blend their own edges into it. */
+val LocalDynamicArtworkBackgroundColor = staticCompositionLocalOf<State<Color>?> { null }
 
 /**
  * Artwork is fetched at a tiny resolution purely to sample its palette — it is never displayed, so
@@ -147,11 +151,12 @@ fun DynamicArtworkBackground(
         baseColor
     }
 
-    val washColor by animateColorAsState(
+    val washColorState = animateColorAsState(
         targetValue = targetColor,
         animationSpec = tween(durationMillis = COLOR_TRANSITION_MS, easing = LinearOutSlowInEasing),
         label = "dynamic_artwork_wash_color",
     )
+    val washColor by washColorState
     val accentColor = washColor.blendTowards(Color.White, fraction = 0.22f)
 
     Box(modifier = modifier.fillMaxSize().background(baseColor)) {
@@ -220,7 +225,10 @@ fun DynamicArtworkBackground(
             )
         }
 
-        CompositionLocalProvider(LocalDynamicArtworkBackgroundActive provides true) {
+        CompositionLocalProvider(
+            LocalDynamicArtworkBackgroundActive provides true,
+            LocalDynamicArtworkBackgroundColor provides washColorState,
+        ) {
             content()
         }
     }

@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home
 
+import com.nuvio.app.features.home.components.HomeHeroCompleteSection
 import com.nuvio.app.core.ui.NuvioPullRefreshIndicator
 import com.nuvio.app.core.ui.rememberNuvioPullRefreshController
 import kotlinx.coroutines.flow.first
@@ -1052,6 +1053,22 @@ fun HomeScreen(
                                     viewportHeight = maxHeight,
                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
                                     heroStyle = homeSettingsUiState.heroStyle,
+                                )
+
+                                homeUiState.heroItems.isNotEmpty() &&
+                                    homeSettingsUiState.heroStyle == HomeHeroStyle.COMPLETE -> HomeHeroCompleteSection(
+                                    items = homeUiState.heroItems,
+                                    modifier = Modifier,
+                                    viewportHeight = maxHeight,
+                                    mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+                                    listState = homeListState,
+                                    stretchPx = { heroStretchState.stretchPx },
+                                    trailerPlaybackEnabled = homeSettingsUiState.heroTrailerPlaybackEnabled &&
+                                        animateCollectionGifs,
+                                    trailerStartDelaySeconds = homeSettingsUiState.heroTrailerStartDelaySeconds,
+                                    trailerStartUnmuted = homeSettingsUiState.heroTrailerStartUnmuted,
+                                    onItemClick = onPosterClick,
+                                    onActiveArtworkChange = onActiveHeroArtworkChange,
                                 )
 
                                 homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
