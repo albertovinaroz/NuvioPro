@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -851,6 +852,7 @@ internal fun settingsTileColor(icon: ImageVector): Color = when (icon) {
     Icons.Rounded.NewReleases -> Color(0xFFFF9F0A)
     Icons.Rounded.BugReport -> Color(0xFFAC8E68)
     Icons.Rounded.Tune -> Color(0xFF636366)
+    Icons.Rounded.Groups -> Color(0xFF30B0C7)
     else -> MaterialTheme.nuvio.colors.accent
 }
 

@@ -189,6 +189,7 @@ internal fun LazyListScope.settingsRootContent(
                             title = stringResource(Res.string.party_title),
                             description = stringResource(Res.string.party_settings_description),
                             icon = Icons.Rounded.Groups,
+                            iconTile = true,
                             isTablet = isTablet,
                             onClick = onWatchPartyClick,
                         )
