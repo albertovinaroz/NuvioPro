@@ -535,6 +535,9 @@ private fun ProfileAvatarCard(
     onPressChange: (Boolean) -> Unit,
     onClick: (Offset) -> Unit,
 ) {
+    val clickLabel = stringResource(
+        if (isEditMode) Res.string.profile_edit_accessibility else Res.string.profile_select_accessibility,
+    )
     val avatarColor = remember(profile.avatarColorHex) {
         parseHexColor(profile.avatarColorHex)
     }
@@ -586,7 +589,7 @@ private fun ProfileAvatarCard(
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 if (enabled) {
-                    onClick(label = null) { onClick(avatarCenterInWindow); true }
+                    onClick(label = clickLabel) { onClick(avatarCenterInWindow); true }
                 } else {
                     disabled()
                 }
