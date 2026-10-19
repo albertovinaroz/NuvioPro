@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,10 +45,10 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.isIos
-import dev.chrisbanes.haze.HazeInputScale
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.liquidGlassSurface
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -75,7 +76,7 @@ internal fun TabletStreamsLayout(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val hazeState = rememberHazeState()
+    val streamsPanelBackdrop = rememberNuvioBackdrop()
     val tabletBackdrop = remember(background, poster) {
         background ?: poster
     }
@@ -103,7 +104,7 @@ internal fun TabletStreamsLayout(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(state = hazeState),
+                .nuvioBackdropSource(streamsPanelBackdrop),
         ) {
             if (tabletBackdrop != null) {
                 AsyncImage(
@@ -141,55 +142,61 @@ internal fun TabletStreamsLayout(
             )
         }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(0.4f)
-                    .fillMaxHeight()
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isEpisode && seasonNumber != null && episodeNumber != null) {
-                    TabletEpisodeInfoPanel(
-                        logo = logo,
-                        seasonNumber = seasonNumber,
-                        episodeNumber = episodeNumber,
-                        episodeTitle = episodeTitle,
-                        showTitle = title,
-                    )
-                } else {
-                    TabletMovieInfoPanel(
-                        title = title,
-                        logo = logo,
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(0.6f)
-                    .fillMaxHeight()
-                    .padding(
-                        top = if (isIos) 20.dp else 60.dp,
-                        end = 12.dp,
-                        bottom = 12.dp,
-                    ),
-            ) {
+        CompositionLocalProvider(LocalLiquidGlassBackdrop provides streamsPanelBackdrop) {
+            Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(24.dp))
-                        .hazeEffect(state = hazeState) {
-                            inputScale = HazeInputScale.Fixed(0.66f)
-                            blurRadius = 56.dp
-                        }
-                        .background(Color.Black.copy(alpha = 0.36f)),
+                        .weight(0.4f)
+                        .fillMaxHeight()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Column(
+                    if (isEpisode && seasonNumber != null && episodeNumber != null) {
+                        TabletEpisodeInfoPanel(
+                            logo = logo,
+                            seasonNumber = seasonNumber,
+                            episodeNumber = episodeNumber,
+                            episodeTitle = episodeTitle,
+                            showTitle = title,
+                        )
+                    } else {
+                        TabletMovieInfoPanel(
+                            title = title,
+                            logo = logo,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .fillMaxHeight()
+                        .padding(
+                            top = if (isIos) 20.dp else 60.dp,
+                            end = 12.dp,
+                            bottom = 12.dp,
+                        ),
+                ) {
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .clip(RoundedCornerShape(24.dp))
+                            .liquidGlassSurface(
+                                backdrop = streamsPanelBackdrop,
+                                shape = RoundedCornerShape(24.dp),
+                                tint = Color.Transparent,
+                                fallback = Color.Transparent,
+                                blurRadius = 56.dp,
+                                refractionHeight = 20.dp,
+                                refractionAmount = 40.dp,
+                            )
+                            .background(Color.Black.copy(alpha = 0.36f)),
                     ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                        ) {
                         // AnimatedVisibility, not a raw `if`: a plain conditional insertion of a
                         // sibling into a Column is a real (if minor) hit-test/animation footgun in
                         // Compose. Investigated as a lead for luqmanfadlli/NuvioMobile-Enhanced#99
@@ -243,6 +250,7 @@ internal fun TabletStreamsLayout(
                             resumeProgressFraction = resumeProgressFraction,
                             modifier = Modifier.weight(1f),
                         )
+                        }
                     }
                 }
             }

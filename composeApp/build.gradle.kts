@@ -427,12 +427,18 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
             freeCompilerArgs += listOf("-Xbinary=bundleId=$iosFrameworkBundleId")
+
+            // Biometric authentication and the profile PIN cache use Apple Security,
+            // LocalAuthentication, and CoreFoundation APIs on every iOS distribution.
+            linkerOpts(
+                "-framework", "Security",
+                "-framework", "LocalAuthentication",
+                "-framework", "CoreFoundation",
+            )
             if (iosDistribution == "full") {
                 linkerOpts(
                     "-lc++",
-                    "-framework", "Security",
                     "-framework", "SystemConfiguration",
-                    "-framework", "CoreFoundation",
                 )
             }
         }
@@ -463,13 +469,17 @@ kotlin {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.core.splashscreen)
                 implementation(libs.androidx.work.runtime)
+                implementation(libs.androidx.biometric)
                 implementation(libs.coil.gif)
                 implementation("androidx.recyclerview:recyclerview:1.4.0")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("com.google.code.gson:gson:2.11.0")
                 implementation("io.github.peerless2012:ass-media:0.5.1")
+                implementation("io.github.peerless2012:ass-kt:0.5.1")
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.sentry.android)
+                implementation(libs.play.services.cast.framework)
+                implementation(libs.androidx.mediarouter)
                 implementation(libs.androidx.media3.exoplayer.hls)
                 implementation(libs.androidx.media3.exoplayer.dash)
                 implementation(libs.androidx.media3.exoplayer.smoothstreaming)
@@ -519,7 +529,9 @@ kotlin {
             implementation("io.coil-kt.coil3:coil-svg:${libs.versions.coil.get()}") {
                 exclude(group = "org.jetbrains.skiko", module = "skiko")
             }
+            // Haze still blurs Pro's pinned headers and the iOS floating bar; backdrop drives Android's liquid glass.
             implementation("dev.chrisbanes.haze:haze:1.7.2")
+            implementation("io.github.kyant0:backdrop:2.0.1")
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

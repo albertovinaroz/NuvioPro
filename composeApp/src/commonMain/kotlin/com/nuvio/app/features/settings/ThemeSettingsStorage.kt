@@ -13,6 +13,7 @@ internal expect object ThemeSettingsStorage {
     fun saveLiquidGlassNativeTabBarEnabled(enabled: Boolean)
     fun loadTabBarBehavior(): String?
     fun saveTabBarBehavior(behaviorKey: String)
+    fun isTabBarBehaviorDeviceLocal(): Boolean
     fun loadDynamicArtworkBackgroundEnabled(): Boolean?
     fun saveDynamicArtworkBackgroundEnabled(enabled: Boolean)
     fun loadShowCatalogAccentEnabled(): Boolean?
@@ -26,6 +27,10 @@ internal expect object ThemeSettingsStorage {
     fun saveNavBarPosition(positionKey: String)
     fun loadNavBarGlowEnabled(): Boolean?
     fun saveNavBarGlowEnabled(enabled: Boolean)
+    fun loadNavBarGlass(): String?
+    fun saveNavBarGlass(value: String)
+    fun loadLiquidGlassEffectsEnabled(): Boolean?
+    fun saveLiquidGlassEffectsEnabled(enabled: Boolean)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }

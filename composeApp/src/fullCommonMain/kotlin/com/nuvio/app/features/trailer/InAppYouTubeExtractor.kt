@@ -65,6 +65,15 @@ private data class ManifestBestVariant(
     val bandwidth: Long,
 )
 
+internal data class ManifestCandidate(
+    val client: String,
+    val priority: Int,
+    val manifestUrl: String,
+    val selectedVariantUrl: String,
+    val height: Int,
+    val bandwidth: Long,
+)
+
 internal data class TrailerRequestResponse(
     val ok: Boolean,
     val status: Int,
@@ -328,11 +337,12 @@ class InAppYouTubeExtractor {
 
         val rejectedClients = mutableSetOf<String>()
         if (singleUrl) {
-            // One URL carrying both video and audio (ytId-only streams): the HLS master playlist,
-            // else a muxed progressive file. Adaptive formats keep their audio in a separate file.
+            // Single-source players (upstream's YouTube stream resolver) need one URL that
+            // carries both video and audio: the HLS master playlist first, then a muxed
+            // progressive file. Adaptive formats are skipped because their audio is separate.
             resolveHls(manifestUrls, rejectedClients)?.let { return it }
             resolveProgressive(progressive, rejectedClients)?.let { return it }
-            log.w { "No single-URL source for this video" }
+            log.w { "single-url: no playable HLS or progressive candidate" }
             return null
         }
         resolveAdaptive(adaptiveVideo, adaptiveAudio, rejectedClients)?.let { return it }
@@ -458,6 +468,14 @@ class InAppYouTubeExtractor {
     private fun clientOrder(present: Collection<String>): List<String> {
         return present.distinct().sortedBy { clientRank(it) }
     }
+
+    /**
+     * The master playlist rather than the best variant: YouTube's variant
+     * playlists carry video only, with audio as a separate rendition that only
+     * the master playlist links.
+     */
+    internal fun selectSingleUrlManifest(bestManifest: ManifestCandidate?): String? =
+        bestManifest?.manifestUrl?.takeIf { it.isNotBlank() }
 
     private suspend fun fetchPlayerResponse(
         apiKey: String,

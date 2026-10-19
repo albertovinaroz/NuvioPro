@@ -230,3 +230,13 @@ private val DELIMITED_M3U8_PATTERN = Regex("(^|[=/_.?&%-])m3u8($|[=/_.?&%-])")
 private val DELIMITED_HLS_PATTERN = Regex("(^|[=/_.?&%-])hls($|[=/_.?&%-])")
 private val DELIMITED_MPD_PATTERN = Regex("(^|[=/_.?&%-])mpd($|[=/_.?&%-])")
 private val DELIMITED_SS_PATTERN = Regex("(^|[=/_.?&%-])(ism|isml)($|[=/_.?&%-])")
+
+/** Plain progressive files (not HLS/DASH): the only sources whose chapters are worth probing. */
+internal fun isProgressivePlaybackSource(
+    url: String,
+    responseHeaders: Map<String, String>,
+    streamType: String?,
+): Boolean = androidx.media3.common.util.Util.inferContentTypeForUriAndMimeType(
+    android.net.Uri.parse(url),
+    playbackMediaItemFromUrl(url, responseHeaders, streamType).localConfiguration?.mimeType,
+) == androidx.media3.common.C.CONTENT_TYPE_OTHER

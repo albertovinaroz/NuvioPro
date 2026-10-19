@@ -61,6 +61,7 @@ import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import com.nuvio.app.features.player.MiniPlayerController
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -186,7 +187,7 @@ fun DetailHero(
                     HeroTrailerPlayerSurface(
                         sourceUrl = heroTrailerSourceUrl,
                         sourceAudioUrl = heroTrailerSourceAudioUrl,
-                        playWhenReady = heroTrailerPlayWhenReady(),
+                        playWhenReady = heroTrailerPlayWhenReady() && !MiniPlayerController.isActive,
                         muted = heroTrailerMuted,
                         modifier = Modifier
                             .align(Alignment.TopCenter)

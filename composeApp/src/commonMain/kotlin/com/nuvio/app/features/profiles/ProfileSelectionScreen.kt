@@ -74,6 +74,7 @@ import com.nuvio.app.features.membership.CosmeticEntitlement
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.HapticsSettingsRepository
 import com.nuvio.app.features.settings.SupporterBadgeIfPresent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -113,6 +114,7 @@ fun ProfileSelectionScreen(
     // resting ring is hidden so the exit snapshot taken on that tap never freezes it on screen.
     var pressedProfileIndex by remember { mutableStateOf<Int?>(null) }
     var activeRippleKey by remember { mutableStateOf(0) }
+    var biometricAuthenticating by remember { mutableStateOf(false) }
 
     val titleAlpha = remember { Animatable(0f) }
     val titleOffset = remember { Animatable(20f) }
@@ -122,16 +124,66 @@ fun ProfileSelectionScreen(
     // built-in enter/exit so the supporter badge next to the wordmark — rendered as a sibling, not
     // a descendant, of whatever this is applied to — can sit outside it and stay fully visible.
     val contentFadeAlpha = remember { Animatable(1f) }
-    val onProfileClick: (NuvioProfile, Offset) -> Unit = { profile, tapCenter ->
-        if (interactionEnabled) {
-            if (interfaceHapticsEnabled) {
-                // Compose's standard haptic call is a no-op on iOS in this Compose Multiplatform
-                // version, so it's paired with the app's own native iOS haptic generator — a
-                // no-op on Android, where the standard call above already fires the real
-                // vibration.
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                ProfileHoverHapticFeedback.perform()
+    val onProfileClick: (NuvioProfile, Offset) -> Unit = onProfileClick@{ profile, tapCenter ->
+        if (!interactionEnabled || biometricAuthenticating) return@onProfileClick
+        if (interfaceHapticsEnabled) {
+            // Compose's standard haptic call is a no-op on iOS in this Compose Multiplatform
+            // version, so it's paired with the app's own native iOS haptic generator — a
+            // no-op on Android, where the standard call above already fires the real
+            // vibration.
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            ProfileHoverHapticFeedback.perform()
+        }
+
+        if (
+            !isEditMode &&
+            profile.profileIndex != activeProfileIndex &&
+            profile.profileIndex == 1 &&
+            profile.pinEnabled
+        ) {
+            biometricAuthenticating = true
+            scope.launch {
+                val result = try {
+                    ProfileBiometricAuth.authenticate(profile.profileIndex, profile.userId)
+                } catch (e: CancellationException) {
+                    biometricAuthenticating = false
+                    throw e
+                } catch (_: Exception) {
+                    // A platform failure is not authentication. Follow the existing PIN fallback.
+                    ProfileBiometricResult.Failed
+                }
+                when (result) {
+                    ProfileBiometricResult.Success -> {
+                        biometricAuthenticating = false
+                        onProfileSelected(profile, tapCenter)
+                    }
+                    ProfileBiometricResult.FallbackRequested -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Invalidated,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Unavailable,
+                    ProfileBiometricResult.NotConfigured,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+
+                    ProfileBiometricResult.Failed,
+                    -> {
+                        biometricAuthenticating = false
+                        pendingPinSelection = profile to tapCenter
+                    }
+                    ProfileBiometricResult.Cancelled -> {
+                        biometricAuthenticating = false
+                    }
+                }
             }
+        } else {
             routeProfileSelection(
                 profile = profile,
                 isEditMode = isEditMode,
@@ -657,7 +709,7 @@ private fun ProfileAvatarCard(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
-                        contentDescription = null,
+                        contentDescription = stringResource(Res.string.profile_locked_accessibility),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp),
                     )

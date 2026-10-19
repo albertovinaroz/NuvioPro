@@ -4,6 +4,8 @@ import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
 import com.nuvio.app.core.ui.ThemeColors
+import com.nuvio.app.core.ui.glass.LiquidGlassSettings
+import com.nuvio.app.core.ui.glass.LiquidGlassStyle
 import com.nuvio.app.core.ui.nativeAccentGradientHex
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.availableAppThemes
@@ -35,7 +37,6 @@ object ThemeSettingsRepository {
     private val _tabBarBehavior = MutableStateFlow(NuvioTabBarBehavior.Default)
     val tabBarBehavior: StateFlow<NuvioTabBarBehavior> = _tabBarBehavior.asStateFlow()
 
-    /** Derived from [tabBarBehavior]; kept so existing call sites keep reading a single boolean. */
     private val _liquidGlassNativeTabBarEnabled = MutableStateFlow(NuvioTabBarBehavior.Default.isEnabled)
     val liquidGlassNativeTabBarEnabled: StateFlow<Boolean> = _liquidGlassNativeTabBarEnabled.asStateFlow()
 
@@ -56,6 +57,12 @@ object ThemeSettingsRepository {
 
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
+
+    private val _navBarGlass = MutableStateFlow(LiquidGlassStyle.Default)
+    val navBarGlass: StateFlow<LiquidGlassStyle> = _navBarGlass.asStateFlow()
+
+    private val _liquidGlassEffectsEnabled = MutableStateFlow(true)
+    val liquidGlassEffectsEnabled: StateFlow<Boolean> = _liquidGlassEffectsEnabled.asStateFlow()
 
     private var hasLoaded = false
     private var observesMembership = false
@@ -90,6 +97,8 @@ object ThemeSettingsRepository {
         _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
         _navBarPosition.value = NavBarPosition.BOTTOM
+        _navBarGlass.value = LiquidGlassStyle.Default
+        applyLiquidGlassEffectsEnabled(true)
     }
 
     private fun loadFromDisk() {
@@ -108,7 +117,6 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         applyEffectiveTheme()
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
-        // The four-way behavior replaced the old on/off toggle; fall back to it for existing profiles.
         val behavior = NuvioTabBarBehavior.fromKey(ThemeSettingsStorage.loadTabBarBehavior())
             ?: NuvioTabBarBehavior.fromLegacyEnabled(
                 ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled(),
@@ -124,6 +132,8 @@ object ThemeSettingsRepository {
         _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
         _navBarPosition.value = NavBarPosition.fromKey(ThemeSettingsStorage.loadNavBarPosition())
+        _navBarGlass.value = LiquidGlassStyle.decode(ThemeSettingsStorage.loadNavBarGlass())
+        applyLiquidGlassEffectsEnabled(ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: true)
     }
 
     fun setTheme(theme: AppTheme) {
@@ -159,9 +169,9 @@ object ThemeSettingsRepository {
         if (_tabBarBehavior.value == behavior) return
         applyTabBarBehavior(behavior)
         ThemeSettingsStorage.saveTabBarBehavior(behavior.key)
-        // Keep the legacy key in step so a downgrade, or an older device syncing this profile,
-        // still sees the right on/off state.
-        ThemeSettingsStorage.saveLiquidGlassNativeTabBarEnabled(behavior.isEnabled)
+        if (!ThemeSettingsStorage.isTabBarBehaviorDeviceLocal()) {
+            ThemeSettingsStorage.saveLiquidGlassNativeTabBarEnabled(behavior.isEnabled)
+        }
     }
 
     private fun applyTabBarBehavior(behavior: NuvioTabBarBehavior) {
@@ -211,6 +221,25 @@ object ThemeSettingsRepository {
         if (_navBarGlowEnabled.value == enabled) return
         _navBarGlowEnabled.value = enabled
         ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
+    }
+
+    fun setNavBarGlass(style: LiquidGlassStyle) {
+        ensureLoaded()
+        if (_navBarGlass.value == style) return
+        _navBarGlass.value = style
+        ThemeSettingsStorage.saveNavBarGlass(style.encode())
+    }
+
+    fun setLiquidGlassEffectsEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_liquidGlassEffectsEnabled.value == enabled) return
+        applyLiquidGlassEffectsEnabled(enabled)
+        ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(enabled)
+    }
+
+    private fun applyLiquidGlassEffectsEnabled(enabled: Boolean) {
+        _liquidGlassEffectsEnabled.value = enabled
+        LiquidGlassSettings.enabled = enabled
     }
 
     private fun observeMembership() {

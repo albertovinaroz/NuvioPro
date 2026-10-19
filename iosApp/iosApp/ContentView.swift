@@ -168,6 +168,18 @@ final class RootComposeViewController: UIViewController {
         super.viewWillDisappear(animated)
     }
 
+    func prepareForPictureInPictureParking() {
+        setNavigationBarPassthroughEnabled(false)
+        setInteractiveContentPopGestureEnabled(true)
+    }
+
+    func restoreAfterPictureInPictureParking() {
+        refreshContainingTabBarVisibility()
+        refreshImmersiveSystemUI()
+        setInteractiveContentPopGestureEnabled(false)
+        setNavigationBarPassthroughEnabled(true)
+    }
+
     func refreshContainingTabBarVisibility() {
         enforceContainingTabBarVisibility()
         DispatchQueue.main.async { [weak self] in
@@ -301,8 +313,6 @@ final class TabNavigationCoordinator: ObservableObject {
         setPath([])
     }
 
-    /// Used by NavigationStack's path binding so interactive swipe-back and
-    /// programmatic mutations share the same Kotlin route-disposal behavior.
     func setPath(_ newPath: [RouteWrapper]) {
         let retainedIDs = Set(newPath.map(\.id))
         let removedRoutes = path
@@ -311,7 +321,9 @@ final class TabNavigationCoordinator: ObservableObject {
 
         let returnedToRoot = !path.isEmpty && newPath.isEmpty
         path = newPath
-        removedRoutes.forEach { AppKt.disposeRoute(route: $0) }
+        removedRoutes
+            .filter { !PlayerPictureInPictureParking.shared.isParked($0) }
+            .forEach { AppKt.disposeRoute(route: $0) }
         if returnedToRoot {
             onReturnedToRoot?()
         }
@@ -900,6 +912,7 @@ final class AppNavigationCoordinator: ObservableObject {
     let profileTabInteraction = NativeProfileTabInteractionCoordinator()
 
     init() {
+        PlayerPictureInPictureParking.shared.appCoordinator = self
         setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
@@ -1092,6 +1105,9 @@ final class AppNavigationCoordinator: ObservableObject {
             AppKt.disposeRoute(route: route)
             return
         }
+        if route is PlayerRoute, !PlayerPictureInPictureParking.shared.isParked(route) {
+            PlayerPictureInPictureParking.shared.closeParked()
+        }
         let requestedTab = NuvioAppTab.from(kotlinName: route.preferredTabName)
             ?? tab(for: origin)
             ?? selectedTab
@@ -1099,6 +1115,13 @@ final class AppNavigationCoordinator: ObservableObject {
         let target = coordinator(for: targetTab)
         selectedTab = targetTab
         target.push(route, launchSingleTop: launchSingleTop)
+    }
+
+    func showParkedPlayerRoute(_ route: AppRoute, in target: TabNavigationCoordinator) {
+        if let targetTab = tab(for: target) {
+            selectedTab = targetTab
+        }
+        target.path.append(RouteWrapper(route: route))
     }
 
     func replace(_ route: AppRoute, in target: TabNavigationCoordinator) {
@@ -1216,6 +1239,21 @@ struct DetailComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        if route is PlayerRoute {
+            return PlayerRouteContainerViewController(
+                route: route,
+                coordinator: coordinator,
+                makeContent: { makeScreenController() }
+            )
+        }
+        return makeScreenController()
+    }
+
+    private func makeScreenController() -> UIViewController {
+        let route = route
+        let coordinator = coordinator
+        let appCoordinator = appCoordinator
+        let parking = PlayerPictureInPictureParking.shared
         let controller = MainViewControllerKt.ScreenViewController(
             route: route,
             onNavigate: { newRoute, launchSingleTop in
@@ -1226,9 +1264,17 @@ struct DetailComposeView: UIViewControllerRepresentable {
                 )
             },
             onGoBack: {
-                coordinator.pop()
+                if parking.isParked(route) {
+                    parking.closeParked()
+                } else {
+                    coordinator.pop()
+                }
             },
             onReplace: { newRoute in
+                if parking.isParked(route) {
+                    AppKt.disposeRoute(route: newRoute)
+                    return
+                }
                 appCoordinator.replace(newRoute, in: coordinator)
             },
             onActivate: { tabName in

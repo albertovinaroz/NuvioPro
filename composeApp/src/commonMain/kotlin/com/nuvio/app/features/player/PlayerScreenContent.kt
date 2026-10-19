@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +42,8 @@ import nuvio.composeapp.generated.resources.parental_severity_severe
 import nuvio.composeapp.generated.resources.parental_violence
 import nuvio.composeapp.generated.resources.compose_player_tba
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
 
 @Composable
 internal fun PlayerScreenContent(args: PlayerScreenArgs) {
@@ -77,6 +81,8 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
 
     val runtime = remember { PlayerScreenRuntime(args) }
     runtime.args = args
+    val miniPresentation = LocalPlayerMiniPresentation.current
+    runtime.isMiniPresentation = miniPresentation == true
 
     BoxWithConstraints(
         modifier = args.modifier
@@ -89,9 +95,13 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
 
         runtime.scope = rememberCoroutineScope()
         runtime.hapticFeedback = LocalHapticFeedback.current
-        runtime.gestureController = rememberPlayerGestureController(
-            restoreBrightness = playerSettingsUiState.touchGesturesEnabled,
-        )
+        runtime.gestureController = if (runtime.isMiniPresentation) {
+            null
+        } else {
+            rememberPlayerGestureController(
+                restoreBrightness = playerSettingsUiState.touchGesturesEnabled,
+            )
+        }
         runtime.playerSettingsUiState = playerSettingsUiState
         runtime.p2pSettingsUiState = p2pSettingsUiState
         runtime.p2pStreamingState = p2pStreamingState
@@ -146,18 +156,37 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         }
         runtime.resetIdentityStateIfNeeded()
 
-        val keepScreenAwake = runtime.errorMessage == null &&
-            (runtime.playbackSnapshot.isPlaying ||
-                (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
-        EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
-        ManagePlayerPictureInPicture(
-            isPlaying = runtime.playbackSnapshot.isPlaying,
-            videoSize = IntSize(
-                runtime.playbackSnapshot.videoWidth,
-                runtime.playbackSnapshot.videoHeight,
-            ),
-        )
+        val keepScreenAwake by remember(runtime) {
+            derivedStateOf {
+                runtime.errorMessage == null &&
+                    (runtime.playbackSnapshot.isPlaying ||
+                        (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
+            }
+        }
+        val pipIsPlaying by remember(runtime) {
+            derivedStateOf { runtime.playbackSnapshot.isPlaying }
+        }
+        val pipVideoSize by remember(runtime) {
+            derivedStateOf {
+                IntSize(
+                    runtime.playbackSnapshot.videoWidth,
+                    runtime.playbackSnapshot.videoHeight,
+                )
+            }
+        }
+        if (!runtime.isMiniPresentation) {
+            EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
+            ManagePlayerPictureInPicture(
+                isPlaying = pipIsPlaying,
+                videoSize = pipVideoSize,
+            )
+        }
+        runtime.BindMiniPlayerEffects(miniPresentation)
         runtime.BindPlayerRuntimeEffects()
-        runtime.RenderPlayerRuntimeUi()
+        CompositionLocalProvider(
+            LocalLiquidGlassBackdrop provides rememberVideoFrameBackdrop(enabled = !runtime.isMiniPresentation && isLiquidGlassSupported()),
+        ) {
+            runtime.RenderPlayerRuntimeUi()
+        }
     }
 }

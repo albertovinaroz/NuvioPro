@@ -52,6 +52,7 @@ private const val MpvKitUrl = "https://github.com/mpvkit/MPVKit"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
 private const val NuvioProRepositoryUrl = "https://github.com/albertovinaroz/NuvioPro"
+private const val BackdropLicenseUrl = "https://github.com/Kyant0/AndroidLiquidGlass/blob/kmp/LICENSE"
 
 private data class AttributionItem(
     val titleRes: StringResource,
@@ -153,10 +154,10 @@ private fun LicensesAttributionsBody(
         ) {
             LicenseRow(
                 item = LicenseItem(
-                    titleRes = Res.string.settings_licenses_attributions_haze_title,
-                    bodyRes = Res.string.settings_licenses_attributions_haze_body,
-                    licenseRes = Res.string.settings_licenses_attributions_haze_license,
-                    link = HazeLicenseUrl,
+                    titleRes = Res.string.settings_licenses_attributions_backdrop_title,
+                    bodyRes = Res.string.settings_licenses_attributions_backdrop_body,
+                    licenseRes = Res.string.settings_licenses_attributions_backdrop_license,
+                    link = BackdropLicenseUrl,
                 ),
                 isTablet = isTablet,
             )

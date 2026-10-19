@@ -86,7 +86,7 @@ internal fun FloatingTabBarOverlay(
                         onTabSelected = onSelectTab,
                         onProfileSelected = { NativeTabBridge.requestProfileSelection(it.profileIndex) },
                         onAddProfileRequested = appGateController::requestProfileSelection,
-                        hazeState = null,
+                        backdrop = null,
                     ),
                     modifier = Modifier.align(Alignment.BottomCenter),
                     scrollState = SharedNuvioNavBarScrollState,

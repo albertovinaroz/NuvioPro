@@ -16,6 +16,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.features.livetv.LiveTvEpgSource
 import com.nuvio.app.features.livetv.LiveTvPlaylist
 import com.nuvio.app.features.livetv.LiveTvPlaylistType
 import com.nuvio.app.features.livetv.LiveTvRepository
@@ -42,6 +44,18 @@ import nuvio.composeapp.generated.resources.live_tv_settings_cancel_edit
 import nuvio.composeapp.generated.resources.live_tv_settings_configured_playlists
 import nuvio.composeapp.generated.resources.live_tv_settings_description
 import nuvio.composeapp.generated.resources.live_tv_settings_edit_playlist
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_add
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_auto_description
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_auto_title
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_configured
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_description
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_label
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_loading
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_name_placeholder
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_none
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_refresh
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_status
+import nuvio.composeapp.generated.resources.live_tv_settings_epg_url_placeholder
 import nuvio.composeapp.generated.resources.live_tv_settings_navigation_description
 import nuvio.composeapp.generated.resources.live_tv_settings_navigation_title
 import nuvio.composeapp.generated.resources.live_tv_settings_no_playlists
@@ -57,9 +71,16 @@ import nuvio.composeapp.generated.resources.live_tv_settings_playlist_type_local
 import nuvio.composeapp.generated.resources.live_tv_settings_playlist_type_url
 import nuvio.composeapp.generated.resources.live_tv_settings_playlist_url_label
 import nuvio.composeapp.generated.resources.live_tv_settings_save_playlist
+import nuvio.composeapp.generated.resources.live_tv_settings_section_epg
 import nuvio.composeapp.generated.resources.live_tv_settings_section_navigation
 import nuvio.composeapp.generated.resources.live_tv_settings_section_playlist
 import nuvio.composeapp.generated.resources.live_tv_settings_section_providers
+import nuvio.composeapp.generated.resources.live_tv_settings_section_reload
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_description
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels_loading
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_channels_status
+import nuvio.composeapp.generated.resources.live_tv_settings_reload_epg
 import nuvio.composeapp.generated.resources.live_tv_connect
 import nuvio.composeapp.generated.resources.live_tv_disconnect
 import nuvio.composeapp.generated.resources.live_tv_password
@@ -92,6 +113,22 @@ internal fun LazyListScope.liveTvSettingsContent(
         }
     }
 
+    if (uiState.hasPlaylist) {
+        item {
+            SettingsSection(
+                title = stringResource(Res.string.live_tv_settings_section_reload),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    LiveTvManualReloadRow(
+                        isTablet = isTablet,
+                        uiState = uiState,
+                    )
+                }
+            }
+        }
+    }
+
     item {
         SettingsSection(
             title = stringResource(Res.string.live_tv_settings_section_providers),
@@ -119,6 +156,324 @@ internal fun LazyListScope.liveTvSettingsContent(
                     onPlaylistRemoved = LiveTvRepository::removePlaylist,
                 )
             }
+        }
+    }
+
+    item {
+        SettingsSection(
+            title = stringResource(Res.string.live_tv_settings_section_epg),
+            isTablet = isTablet,
+        ) {
+            SettingsGroup(isTablet = isTablet) {
+                LiveTvEpgSettingsRow(
+                    isTablet = isTablet,
+                    uiState = uiState,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveTvManualReloadRow(
+    isTablet: Boolean,
+    uiState: LiveTvUiState,
+) {
+    LaunchedEffect(Unit) {
+        LiveTvRepository.ensureChannelsLoaded()
+    }
+    val horizontalPadding = if (isTablet) 20.dp else 16.dp
+    val verticalPadding = if (isTablet) 16.dp else 14.dp
+    val matchedChannelCount = uiState.channels.count { channel -> !uiState.epgPrograms[channel.id].isNullOrEmpty() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.live_tv_settings_reload_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = LiveTvRepository::reloadChannels,
+                enabled = !uiState.isLoading,
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_reload_channels))
+            }
+            OutlinedButton(
+                onClick = LiveTvRepository::reloadEpg,
+                enabled = uiState.channels.isNotEmpty() && !uiState.isLoading && !uiState.isEpgLoading,
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_reload_epg))
+            }
+        }
+
+        when {
+            uiState.isLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_reload_channels_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.channels.isNotEmpty() -> Text(
+                text = stringResource(Res.string.live_tv_settings_reload_channels_status, uiState.channels.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        uiState.errorMessage?.takeIf(String::isNotBlank)?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        when {
+            uiState.isEpgLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.channels.isNotEmpty() && !uiState.isLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_status, matchedChannelCount, uiState.channels.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LiveTvEpgSettingsRow(
+    isTablet: Boolean,
+    uiState: LiveTvUiState,
+) {
+    LaunchedEffect(Unit) {
+        LiveTvRepository.ensureChannelsLoaded()
+    }
+    val horizontalPadding = if (isTablet) 20.dp else 16.dp
+    val verticalPadding = if (isTablet) 16.dp else 14.dp
+    var draftName by rememberSaveable { mutableStateOf("") }
+    var draftUrl by rememberSaveable { mutableStateOf("") }
+    val normalizedName = draftName.trim()
+    val normalizedUrl = draftUrl.trim()
+    val matchedChannelCount = uiState.channels.count { channel -> !uiState.epgPrograms[channel.id].isNullOrEmpty() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(Res.string.live_tv_settings_epg_auto_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = stringResource(Res.string.live_tv_settings_epg_auto_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = uiState.isEpgAutoDetectEnabled,
+                onCheckedChange = LiveTvRepository::setEpgAutoDetectEnabled,
+            )
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = stringResource(Res.string.live_tv_settings_epg_label),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = stringResource(Res.string.live_tv_settings_epg_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        OutlinedTextField(
+            value = draftName,
+            onValueChange = { draftName = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(stringResource(Res.string.live_tv_settings_epg_name_placeholder)) },
+            colors = liveTvOutlinedTextFieldColors(),
+        )
+
+        OutlinedTextField(
+            value = draftUrl,
+            onValueChange = { draftUrl = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(stringResource(Res.string.live_tv_settings_epg_url_placeholder)) },
+            colors = liveTvOutlinedTextFieldColors(),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = {
+                    LiveTvRepository.addEpgSource(normalizedName.takeIf(String::isNotBlank), normalizedUrl)
+                    draftName = ""
+                    draftUrl = ""
+                },
+                enabled = normalizedUrl.isNotBlank(),
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_epg_add))
+            }
+            OutlinedButton(
+                onClick = { LiveTvRepository.refreshEpg() },
+                enabled = uiState.channels.isNotEmpty() && !uiState.isEpgLoading,
+            ) {
+                Text(stringResource(Res.string.live_tv_settings_epg_refresh))
+            }
+        }
+
+        when {
+            uiState.isEpgLoading -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_loading),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            uiState.channels.isNotEmpty() -> Text(
+                text = stringResource(Res.string.live_tv_settings_epg_status, matchedChannelCount, uiState.channels.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        uiState.epgErrorMessage?.takeIf(String::isNotBlank)?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        Text(
+            text = stringResource(Res.string.live_tv_settings_epg_configured),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
+        )
+
+        if (uiState.epgSources.isEmpty()) {
+            Text(
+                text = stringResource(Res.string.live_tv_settings_epg_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                uiState.epgSources.forEach { source ->
+                    LiveTvEpgSourceRow(
+                        source = source,
+                        onEnabledChanged = { isEnabled -> LiveTvRepository.setEpgSourceEnabled(source.id, isEnabled) },
+                        onRemove = { LiveTvRepository.removeEpgSource(source.id) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveTvEpgSourceRow(
+    source: LiveTvEpgSource,
+    onEnabledChanged: (Boolean) -> Unit,
+    onRemove: () -> Unit,
+) {
+    val enabledLabel = stringResource(
+        if (source.isEnabled) {
+            Res.string.live_tv_settings_playlist_enabled
+        } else {
+            Res.string.live_tv_settings_playlist_disabled
+        },
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = source.name,
+                        modifier = Modifier.weight(1f, fill = false),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "($enabledLabel)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (source.isEnabled) {
+                            LiveTvPlaylistEnabledColor
+                        } else {
+                            LiveTvPlaylistDisabledColor
+                        },
+                        maxLines = 1,
+                    )
+                }
+                Text(
+                    text = source.url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Switch(
+                checked = source.isEnabled,
+                onCheckedChange = onEnabledChanged,
+            )
+        }
+        TextButton(onClick = onRemove) {
+            Text(stringResource(Res.string.action_remove))
         }
     }
 }

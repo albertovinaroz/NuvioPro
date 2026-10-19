@@ -16,8 +16,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.HighQuality
@@ -25,6 +28,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.StayCurrentLandscape
+import androidx.compose.material.icons.rounded.StayCurrentPortrait
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Star
@@ -57,25 +62,50 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvioTypeScale
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+
+internal fun playerOrientationToggleIcon(isPortraitPlayback: Boolean): ImageVector =
+    if (isPortraitPlayback) Icons.Rounded.StayCurrentLandscape else Icons.Rounded.StayCurrentPortrait
+
+internal fun playerOrientationToggleLabel(isPortraitPlayback: Boolean): StringResource =
+    if (isPortraitPlayback) Res.string.player_action_rotate_landscape else Res.string.player_action_rotate_portrait
 
 @Composable
 internal fun PlayerToolbar(
     isLocked: Boolean,
     onLockToggle: () -> Unit,
     onBack: () -> Unit,
+    onCastClick: (() -> Unit)? = null,
+    isCasting: Boolean = false,
     modifier: Modifier = Modifier,
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
+    onOrientationToggleClick: (() -> Unit)? = null,
+    isPortraitPlayback: Boolean = false,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        onOrientationToggleClick?.let {
+            PlayerAction(
+                description = stringResource(playerOrientationToggleLabel(isPortraitPlayback)),
+                icon = playerOrientationToggleIcon(isPortraitPlayback),
+                onClick = it,
+            )
+        }
         if (onPartyClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.party_title),
                 icon = Icons.Rounded.Groups,
                 onClick = onPartyClick,
                 tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        }
+        onCastClick?.let {
+            PlayerAction(
+                description = stringResource(Res.string.player_cast),
+                icon = if (isCasting) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                onClick = it,
             )
         }
         PlayerAction(
@@ -96,6 +126,8 @@ internal fun PlayerToolbar(
     }
 }
 
+private const val ShowUpstreamStreamInfoAction = false
+
 @Composable
 internal fun PlayerControlActions(
     playbackSnapshot: PlayerPlaybackSnapshot,
@@ -108,9 +140,13 @@ internal fun PlayerControlActions(
     onAudioClick: () -> Unit,
     onSourcesClick: (() -> Unit)?,
     onEpisodesClick: (() -> Unit)?,
+    onChaptersClick: (() -> Unit)? = null,
     onNextEpisodeClick: (() -> Unit)?,
     onSwitchEngineClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
+    speedPickerVisible: Boolean = false,
+    onSpeedSelected: (Float) -> Unit = {},
+    onSpeedPickerDismiss: () -> Unit = {},
     onResizeModeClick: () -> Unit,
     onVideoSettingsClick: (() -> Unit)?,
     onOpenInExternalPlayer: (() -> Unit)?,
@@ -151,6 +187,12 @@ internal fun PlayerControlActions(
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
             )
         },
+        onChaptersClick?.let {
+            PlayerControlAction(
+                stringResource(Res.string.player_chapters), it,
+                icon = Icons.AutoMirrored.Rounded.ListAlt,
+            )
+        },
         onRateClick?.let {
             PlayerControlAction(
                 userRating?.let { rating -> stringResource(Res.string.user_rating_action_rated, rating) }
@@ -174,6 +216,14 @@ internal fun PlayerControlActions(
         PlayerControlAction(
             "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
             onSpeedClick, icon = Icons.Rounded.Speed,
+            popup = {
+                PlayerSpeedPopup(
+                    visible = speedPickerVisible,
+                    currentSpeed = playbackSnapshot.playbackSpeed,
+                    onSpeedSelected = onSpeedSelected,
+                    onDismiss = onSpeedPickerDismiss,
+                )
+            },
         ),
         PlayerControlAction(
             stringResource(resizeMode.labelRes), onResizeModeClick,
@@ -234,16 +284,19 @@ internal fun PlayerControlActions(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.take(if (expanded) actions.size else 5).forEach { action ->
-                    PlayerAction(
-                        description = action.description,
-                        onClick = {
-                            onInteraction()
-                            action.onClick()
-                        },
-                        icon = action.icon,
-                        painter = action.painter,
-                        iconSize = action.iconSize,
-                    )
+                    Box {
+                        PlayerAction(
+                            description = action.description,
+                            onClick = {
+                                onInteraction()
+                                action.onClick()
+                            },
+                            icon = action.icon,
+                            painter = action.painter,
+                            iconSize = action.iconSize,
+                        )
+                        action.popup?.invoke()
+                    }
                 }
                 if (hasOverflow) {
                     PlayerAction(
@@ -306,4 +359,5 @@ private data class PlayerControlAction(
     val icon: ImageVector? = null,
     val painter: Painter? = null,
     val iconSize: Dp = 24.dp,
+    val popup: (@Composable () -> Unit)? = null,
 )

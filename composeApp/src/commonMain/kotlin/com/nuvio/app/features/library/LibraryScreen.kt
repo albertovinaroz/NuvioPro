@@ -189,6 +189,10 @@ import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.cloud.CloudLibraryItemType
 import com.nuvio.app.features.cloud.CloudLibraryRepository
 import com.nuvio.app.features.cloud.CloudLibraryUiState
+import com.nuvio.app.features.cloud.TorboxCloudConnectDialog
+import com.nuvio.app.core.ui.DialogButton
+import com.nuvio.app.core.ui.DialogButtonStyle
+import com.nuvio.app.features.debrid.DebridProviders
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
@@ -339,6 +343,8 @@ fun LibraryScreen(
         selectedTypeName?.let { runCatching { CloudLibraryItemType.valueOf(it) }.getOrNull() }
     }
     var selectedCloudItemKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var showTorboxConnectDialog by rememberSaveable { mutableStateOf(false) }
+    val torboxConnected = cloudSettings.apiKeyFor(DebridProviders.TORBOX_ID).isNotBlank()
     var selectedLibrarySectionKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedLibraryType by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMinRating by rememberSaveable { mutableStateOf(0) }
@@ -700,6 +706,8 @@ fun LibraryScreen(
                             LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
                             LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
                             LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
+                            LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_title)
+                            LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_title)
                         }
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -747,6 +755,9 @@ fun LibraryScreen(
                     onBackToItems = { selectedCloudItemKey = null },
                     onRefresh = { CloudLibraryRepository.refresh() },
                     onConnectCloudClick = onConnectCloudClick,
+                    onConnectTorboxApiKeyClick = if (torboxConnected) null else {
+                        { showTorboxConnectDialog = true }
+                    },
                 )
             } else if (sourceMode == LibraryViewMode.Servers) {
                 serverLibraryContent(
@@ -789,6 +800,8 @@ fun LibraryScreen(
                                         LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_load_failed)
                                         LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_load_failed)
                                         LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_load_failed)
+                                        LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_load_failed)
+                                        LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_load_failed)
                                     },
                                     message = uiState.errorMessage.orEmpty(),
                                     actionLabel = stringResource(Res.string.action_retry),
@@ -808,12 +821,16 @@ fun LibraryScreen(
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_title)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_title)
+                                    LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_title)
+                                    LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_title)
                                 },
                                 message = when (uiState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_message)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_message)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_message)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_message)
+                                    LibrarySourceMode.ANILIST -> stringResource(Res.string.library_anilist_empty_message)
+                                    LibrarySourceMode.WETRAKR -> stringResource(Res.string.library_wetrakr_empty_message)
                                 },
                             )
                         }
@@ -1081,6 +1098,13 @@ fun LibraryScreen(
             },
         )
     }
+
+    if (showTorboxConnectDialog) {
+        TorboxCloudConnectDialog(
+            onDismiss = { showTorboxConnectDialog = false },
+            onConnected = { selectedCloudItemKey = null },
+        )
+    }
 }
 
 private const val LibraryTitleKey = "library_title"
@@ -1101,6 +1125,7 @@ private fun LazyListScope.cloudLibraryContent(
     onBackToItems: () -> Unit,
     onRefresh: () -> Unit,
     onConnectCloudClick: (() -> Unit)?,
+    onConnectTorboxApiKeyClick: (() -> Unit)? = null,
 ) {
     when {
         !uiState.isLoaded -> {
@@ -1118,6 +1143,11 @@ private fun LazyListScope.cloudLibraryContent(
                     onAction = onConnectCloudClick,
                 )
             }
+            cloudLibraryTorboxApiKeyConnectItem(onConnectTorboxApiKeyClick)
+        }
+
+        !uiState.hasConnectedProvider && uiState.isRefreshing -> {
+            cloudLibrarySkeletonItems()
         }
 
         !uiState.hasConnectedProvider -> {
@@ -1131,6 +1161,7 @@ private fun LazyListScope.cloudLibraryContent(
                     onAction = onConnectCloudClick,
                 )
             }
+            cloudLibraryTorboxApiKeyConnectItem(onConnectTorboxApiKeyClick)
         }
 
         else -> {
@@ -1241,6 +1272,22 @@ private fun CloudLibrarySearchField(
         onFocusChanged = {},
         modifier = modifier,
     )
+}
+
+private fun LazyListScope.cloudLibraryTorboxApiKeyConnectItem(
+    onClick: (() -> Unit)?,
+) {
+    if (onClick == null) return
+    item(key = "cloud-library-connect-torbox-api-key") {
+        DialogButton(
+            text = stringResource(Res.string.cloud_library_connect_torbox_api_key),
+            onClick = onClick,
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp)
+                .fillMaxWidth(),
+            style = DialogButtonStyle.Secondary,
+        )
+    }
 }
 
 private fun LazyListScope.cloudLibrarySkeletonItems() {
@@ -2358,7 +2405,7 @@ private fun LazyListScope.librarySections(
         Box(modifier = libraryContentTransitionModifier()) {
             StaggeredEntranceIfAny(batch = entranceBatch, index = sectionIndex) {
                 NuvioShelfSection(
-                    title = section.displayTitle,
+                    title = localizedLibrarySectionTitle(section.type, section.displayTitle),
                     entries = section.previewEntries,
                     headerHorizontalPadding = 16.dp,
                     rowContentPadding = PaddingValues(horizontal = 16.dp),

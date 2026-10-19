@@ -99,6 +99,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
+import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
+import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects
+import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects_description
 
 internal fun LazyListScope.appearanceSettingsContent(
     isTablet: Boolean,
@@ -168,6 +171,8 @@ internal fun LazyListScope.appearanceSettingsContent(
         val navBarStyleAvailable = !isIos
         val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val navBarPosition by ThemeSettingsRepository.navBarPosition.collectAsStateWithLifecycle()
+        val navBarGlass by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
+        val liquidGlassEffectsEnabled by ThemeSettingsRepository.liquidGlassEffectsEnabled.collectAsStateWithLifecycle()
         // Upstream pins tablets to COMPACT because there the bar is a top rail. This fork puts
         // the floating pill at the bottom on every size, so the chosen style still applies.
         val effectiveNavBarStyle = selectedNavBarStyle
@@ -201,6 +206,16 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onCheckedChange = onShowCatalogAccentToggle,
                 )
+                if (isLiquidGlassAvailable()) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_appearance_liquid_glass_effects),
+                        description = stringResource(Res.string.settings_appearance_liquid_glass_effects_description),
+                        checked = liquidGlassEffectsEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = ThemeSettingsRepository::setLiquidGlassEffectsEnabled,
+                    )
+                }
                 if (liquidGlassNativeTabBarSupported) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
@@ -314,6 +329,8 @@ internal fun LazyListScope.appearanceSettingsContent(
                 onGlowChanged = ThemeSettingsRepository::setNavBarGlowEnabled,
                 selectedPosition = navBarPosition,
                 onPositionSelected = ThemeSettingsRepository::setNavBarPosition,
+                glassStyle = navBarGlass,
+                onGlassStyleChanged = ThemeSettingsRepository::setNavBarGlass,
                 onDismiss = { showNavBarStyleSheet = false },
             )
         }

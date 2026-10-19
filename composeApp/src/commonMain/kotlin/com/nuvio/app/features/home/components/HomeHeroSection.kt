@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home.components
 
+import com.nuvio.app.features.player.MiniPlayerController
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -263,7 +264,9 @@ internal fun HomeHeroSection(
     val autoScrollPage = pagerState.settledPage
     val effectiveTrailerPlaybackEnabled = trailerPlaybackEnabled &&
         AppFeaturePolicy.heroTrailerPlaybackSupported &&
-        AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
+        AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP &&
+        // No hero trailer under the mini player's audio.
+        !MiniPlayerController.isActive
 
     LaunchedEffect(pagerState) {
         pagerState.scrollToPage(pagerState.currentPage)

@@ -96,6 +96,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 
 // ---------------------------------------------------------------------------
 // Streams Screen
@@ -455,6 +459,8 @@ private fun MobileStreamsLayout(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val streamsGlassBackdrop = rememberNuvioBackdrop()
+    val streamsGlassEnabled = backgroundMode == StreamBackgroundMode.Cinematic && heroArtwork != null
     Box(modifier = modifier.fillMaxSize()) {
         if (backgroundMode == StreamBackgroundMode.Cinematic && heroArtwork != null) {
             AsyncImage(
@@ -462,55 +468,36 @@ private fun MobileStreamsLayout(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(22.dp),
+                    .blur(12.dp)
+                    .nuvioBackdropSource(streamsGlassBackdrop),
                 contentScale = ContentScale.Crop,
             )
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isEpisode) 0.9f else 0.82f)),
+                    .background(Color.Black.copy(alpha = if (isEpisode) 0.72f else 0.62f)),
             )
         }
 
         val streamBlendColor = MaterialTheme.colorScheme.background
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            if (isEpisode && seasonNumber != null && episodeNumber != null) {
-                EpisodeHeroBlock(
-                    seasonNumber = seasonNumber,
-                    episodeNumber = episodeNumber,
-                    episodeTitle = episodeTitle ?: title,
-                    thumbnail = heroArtwork,
-                    blurred = blurEpisodeThumbnail,
-                    showTitle = title,
-                )
-            } else {
-                MovieHeroBlock(
-                    title = title,
-                    logo = logo,
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) {
-                if (isEpisode && backgroundMode == StreamBackgroundMode.Cinematic) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(132.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        streamBlendColor.copy(alpha = 0.98f),
-                                        streamBlendColor.copy(alpha = 0.84f),
-                                        streamBlendColor.copy(alpha = 0.52f),
-                                        Color.Transparent,
-                                    ),
-                                ),
-                            ),
+        CompositionLocalProvider(
+            LocalLiquidGlassBackdrop provides if (streamsGlassEnabled) streamsGlassBackdrop else null,
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (isEpisode && seasonNumber != null && episodeNumber != null) {
+                    EpisodeHeroBlock(
+                        seasonNumber = seasonNumber,
+                        episodeNumber = episodeNumber,
+                        episodeTitle = episodeTitle ?: title,
+                        thumbnail = heroArtwork,
+                        blurred = blurEpisodeThumbnail,
+                        showTitle = title,
+                    )
+                } else {
+                    MovieHeroBlock(
+                        title = title,
+                        logo = logo,
                     )
                 }
 
@@ -542,22 +529,46 @@ private fun MobileStreamsLayout(
                         )
                     }
 
-                    val listUiState = rememberStreamSearchResult(uiState, searchQuery, showSearchField)
-                    if (listUiState.isEmptyBecauseOfSearch) {
-                        StreamSearchEmptyBlock(modifier = Modifier.weight(1f))
-                        return@Column
-                    }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if ((resumePositionMs != null && resumePositionMs > 0L) || (resumeProgressFraction != null && resumeProgressFraction > 0f)) {
+                            ResumeBanner(
+                                positionMs = resumePositionMs,
+                                progressFraction = resumeProgressFraction,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            )
+                        }
+                        ProviderFilterRow(
+                            groups = uiState.groups,
+                            selectedFilter = uiState.selectedFilter,
+                            onFilterSelected = { addonId -> StreamsRepository.selectFilter(addonId) },
+                            onRefresh = onRefresh,
+                        )
 
-                    StreamList(
-                        uiState = listUiState.uiState,
-                        debridEnabled = debridEnabled,
-                        appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
-                        onStreamSelected = onStreamSelected,
-                        onStreamLongPress = onStreamLongPress,
-                        resumePositionMs = resumePositionMs,
-                        resumeProgressFraction = resumeProgressFraction,
-                        modifier = Modifier.weight(1f),
-                    )
+                        if (showSearchField) {
+                            StreamSearchField(
+                                query = searchQuery,
+                                onQueryChange = onSearchQueryChange,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            )
+                        }
+
+                        val listUiState = rememberStreamSearchResult(uiState, searchQuery, showSearchField)
+                        if (listUiState.isEmptyBecauseOfSearch) {
+                            StreamSearchEmptyBlock(modifier = Modifier.weight(1f))
+                            return@Column
+                        }
+
+                        StreamList(
+                            uiState = listUiState.uiState,
+                            debridEnabled = debridEnabled,
+                            appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
+                            onStreamSelected = onStreamSelected,
+                            onStreamLongPress = onStreamLongPress,
+                            resumePositionMs = resumePositionMs,
+                            resumeProgressFraction = resumeProgressFraction,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
@@ -604,7 +615,11 @@ internal fun ResumeBanner(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
+            .ambientLiquidGlass(
+                shape = RoundedCornerShape(18.dp),
+                tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+                fallback = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+            )
             .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Text(
@@ -879,8 +894,10 @@ internal fun StreamList(
             }
 
             !hasAnyStreams && !uiState.isAnyLoading -> {
-                item {
-                    EmptyStateBlock(reason = uiState.emptyStateReason)
+                if (sharedStream == null) {
+                    item {
+                        EmptyStateBlock(reason = uiState.emptyStateReason)
+                    }
                 }
             }
 

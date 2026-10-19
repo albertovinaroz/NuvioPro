@@ -2,12 +2,14 @@ package com.nuvio.app.features.player
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
+import com.nuvio.app.core.logging.InAppLogger
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
@@ -114,9 +116,15 @@ internal fun Modifier.playerSurfaceDragGestures(
             var verticalGestureActivationDy = 0f
             val horizontalSeekBaselineMs = currentPositionMsState.value
             var horizontalSeekPreviewMs = horizontalSeekBaselineMs
+            var lastVolumeTarget: Float? = null
+            var interruptedByPinch = false
 
             while (true) {
                 val event = awaitPointerEvent()
+                if (event.changes.count { it.pressed } > 1) {
+                    interruptedByPinch = true
+                    break
+                }
                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
                 if (!change.pressed) break
 
@@ -202,6 +210,7 @@ internal fun Modifier.playerSurfaceDragGestures(
                             (-activeTotalDy / height) * PlayerVerticalGestureSensitivity
                         val target = ((initialVolume?.fraction ?: 0f) + gestureDeltaFraction)
                             .coerceIn(0f, PlayerMaxVolumeBoost)
+                        lastVolumeTarget = target
                         setCombinedVolumeLevel(
                             target = target,
                             systemController = controller,
@@ -212,9 +221,51 @@ internal fun Modifier.playerSurfaceDragGestures(
                 change.consume()
             }
 
+            lastVolumeTarget?.let { target ->
+                val system = target.coerceAtMost(PlayerNormalVolumeCeiling)
+                val software = target.coerceAtLeast(PlayerNormalVolumeCeiling)
+                InAppLogger.debug(
+                    "Player/Gesture",
+                    "volume gesture end target=${formatVolumeFraction(target)} " +
+                        "system=${formatVolumeFraction(system)} software=${formatVolumeFraction(software)}",
+                )
+            }
+
+            if (interruptedByPinch) {
+                if (gestureMode == PlayerGestureMode.HorizontalSeek) clearLiveGestureFeedbackState.value()
+                return@awaitEachGesture
+            }
+
             if (gestureMode == PlayerGestureMode.HorizontalSeek && !isHoldToSpeedGestureActiveState.value) {
                 commitHorizontalSeekState.value(horizontalSeekPreviewMs)
                 clearLiveGestureFeedbackState.value()
             }
         }
     }
+
+internal fun Modifier.playerSurfacePinchGestures(
+    playbackGesturesEnabled: Boolean,
+    playerControlsLockedState: State<Boolean>,
+    touchGesturesEnabledState: State<Boolean>,
+    onPinchZoomState: State<(zoomFactor: Float) -> Unit>,
+): Modifier =
+    pointerInput(playbackGesturesEnabled) {
+        if (!playbackGesturesEnabled) return@pointerInput
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            do {
+                val event = awaitPointerEvent()
+                val multiTouch = event.changes.count { it.pressed } > 1
+                if (multiTouch && !playerControlsLockedState.value && touchGesturesEnabledState.value) {
+                    val zoom = event.calculateZoom()
+                    if (zoom != 1f) onPinchZoomState.value(zoom)
+                    event.changes.forEach { it.consume() }
+                }
+            } while (event.changes.any { it.pressed })
+        }
+    }
+
+private fun formatVolumeFraction(value: Float): String {
+    val hundredths = (value * 100f).roundToLong()
+    return "${hundredths / 100}.${(hundredths % 100).toString().padStart(2, '0')}"
+}

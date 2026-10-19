@@ -71,10 +71,10 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         }
     }
 
-    LaunchedEffect(currentStreamBingeGroup, parentMetaId) {
+    LaunchedEffect(currentStreamBingeGroup, currentStreamFilename, currentStreamInfoHash, parentMetaId) {
         val bg = currentStreamBingeGroup
         if (bg != null && parentMetaId.isNotBlank()) {
-            BingeGroupCacheRepository.save(parentMetaId, bg)
+            BingeGroupCacheRepository.save(parentMetaId, bg, currentStreamFilename, currentStreamInfoHash)
         }
     }
 
@@ -116,6 +116,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         useCustomSubtitles = false
         showSourcesPanel = false
         showEpisodesPanel = false
+        showChaptersPanel = false
         episodeStreamsPanelState = EpisodeStreamsPanelState()
         PlayerStreamsRepository.clearEpisodeStreams()
         SubtitleRepository.clear()
@@ -422,17 +423,21 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         controlsVisible,
         controlsActivityTick,
         isScrubbingTimeline,
+        isTouchingTimeline,
         playbackSnapshot.isPlaying,
         playbackSnapshot.isLoading,
         showParentalGuide,
+        showSpeedPanel,
         errorMessage,
     ) {
         if (
             !controlsVisible ||
             isScrubbingTimeline ||
+            isTouchingTimeline ||
             !playbackSnapshot.isPlaying ||
             playbackSnapshot.isLoading ||
             showParentalGuide ||
+            showSpeedPanel ||
             errorMessage != null
         ) {
             return@LaunchedEffect
@@ -906,6 +911,8 @@ internal fun PlayerScreenRuntime.tryRefreshCredentialedSourceAfterError(message:
             activeProviderAddonId = stream.addonId
             activeStream = stream
             currentStreamBingeGroup = stream.behaviorHints.bingeGroup
+            currentStreamFilename = stream.behaviorHints.filename
+            currentStreamInfoHash = stream.infoHash
             activeInitialPositionMs = savedPositionMs
             activeInitialProgressFraction = null
             showSourcesPanel = false

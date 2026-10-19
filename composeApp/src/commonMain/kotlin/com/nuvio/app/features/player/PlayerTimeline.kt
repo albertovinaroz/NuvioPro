@@ -18,9 +18,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -46,6 +49,10 @@ import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
 
 internal val PlayerTimelineContentInset = 2.dp
+
+internal val PlayerChapterMarkWidth = 2.dp
+
+internal val PlayerChapterMarkColor = Color.Black.copy(alpha = 0.6f)
 
 @Composable
 internal fun PlayerTimelineDetails(
@@ -105,6 +112,15 @@ internal fun PlayerTimelineDetails(
     }
 }
 
+@Composable
+internal fun ReportTimelineTouch(touching: Boolean, onTouchChange: (Boolean) -> Unit) {
+    val latestOnTouchChange by rememberUpdatedState(onTouchChange)
+    LaunchedEffect(touching) { latestOnTouchChange(touching) }
+    DisposableEffect(Unit) {
+        onDispose { latestOnTouchChange(false) }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PlayerTimeline(
@@ -115,10 +131,14 @@ internal fun PlayerTimeline(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     seekPreview: SeekPreviewController? = null,
+    onTouchChange: (Boolean) -> Unit = {},
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
     val bufferedFraction = playerBufferedFraction(snapshot.bufferedPositionMs, durationMs)
+    val chapterMarks = remember(snapshot.chapters, durationMs) {
+        snapshot.chapters.chapterMarkFractions(durationMs)
+    }
     val accentBrush = MaterialTheme.themePalette.accentBrush()
     val description = stringResource(Res.string.player_seek_position)
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
@@ -126,6 +146,7 @@ internal fun PlayerTimeline(
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDragged by interactionSource.collectIsDraggedAsState()
     val isInteracting = enabled && durationMs > 0L && (isPressed || isDragged)
+    ReportTimelineTouch(isInteracting, onTouchChange)
     val trackThickness by animateDpAsState(
         targetValue = if (isInteracting) 10.dp else 6.dp,
         animationSpec = tween(durationMillis = if (isInteracting) 140 else 180),
@@ -176,6 +197,14 @@ internal fun PlayerTimeline(
                                     size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
                                     cornerRadius = radius,
                                 )
+                                val markWidth = PlayerChapterMarkWidth.toPx()
+                                chapterMarks.forEach { fraction ->
+                                    drawRect(
+                                        color = PlayerChapterMarkColor,
+                                        topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
+                                        size = Size(markWidth, trackHeight),
+                                    )
+                                }
                             },
                     )
                 },

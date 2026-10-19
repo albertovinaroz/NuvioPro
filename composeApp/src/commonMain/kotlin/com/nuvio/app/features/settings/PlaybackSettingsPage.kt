@@ -235,12 +235,13 @@ fun ValueBox(
 internal fun SettingsSliderRow(
     title: String,
     value: Int,
-    valueText: @Composable (Int) -> String,
+    valueText: @Composable (Int) -> String = { it.toString() },
     valueRange: IntRange,
     step: Int,
     isTablet: Boolean,
     enabled: Boolean = true,
     description: String? = null,
+    formatValue: (@Composable (Int) -> String)? = null,
     onValueChange: (Int) -> Unit,
 ) {
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
@@ -273,7 +274,7 @@ internal fun SettingsSliderRow(
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f),
             )
-            ValueBox(text = valueText(shownValue), modifier = Modifier.wrapContentWidth())
+            ValueBox(text = formatValue?.invoke(shownValue) ?: valueText(shownValue), modifier = Modifier.wrapContentWidth())
         }
         if (description != null) {
             Text(
@@ -451,6 +452,23 @@ private fun PlaybackSettingsSection(
                     checked = autoPlayPlayerSettings.movieRecommendationsEnabled,
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setMovieRecommendationsEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_mini_player),
+                    description = stringResource(Res.string.settings_playback_mini_player_description),
+                    checked = autoPlayPlayerSettings.miniPlayerEnabled,
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setMiniPlayerEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_private_viewing),
+                    description = stringResource(Res.string.settings_playback_private_viewing_description),
+                    checked = autoPlayPlayerSettings.privateViewingEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setPrivateViewingEnabled,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 // Player preference picker: Internal / External
@@ -771,6 +789,15 @@ private fun PlaybackSettingsSection(
                             onClick = { showLibassRenderTypeDialog = true },
                         )
                     }
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_enable_libmpv_ass),
+                        description = stringResource(Res.string.settings_playback_enable_libmpv_ass_description),
+                        checked = autoPlayPlayerSettings.useLibmpvAss,
+                        enabled = subtitleRenderingEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setUseLibmpvAss,
+                    )
                 }
             }
         }

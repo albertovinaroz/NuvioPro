@@ -2,6 +2,8 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -77,6 +79,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
     showStreamInfo = false
     showSourcesPanel = false
     showEpisodesPanel = false
+    showChaptersPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()
     PlayerStreamsRepository.clearEpisodeStreams()
 }
@@ -209,6 +212,25 @@ internal suspend fun PlayerScreenRuntime.runSleepTimerUntilElapsed() {
     }
 }
 
+/** Sets the requested state; system controls may send pause, skip and play in a row. */
+internal fun PlayerScreenRuntime.setPlaybackPlaying(playing: Boolean) {
+    if (playing == shouldPlay) return
+    if (isPartyControlLocked) {
+        toggleOwnPlayback()
+        return
+    }
+    val restart = playing && playbackSnapshot.isEnded
+    if (restart) playerController?.seekTo(0L)
+    shouldPlay = playing
+    if (playing) playerController?.play() else playerController?.pause()
+    // A seek issued just before may not be reflected in the playback snapshot yet.
+    val positionMs = pendingSeekTarget
+        ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
+        ?.first
+        ?: currentPlaybackPositionMs()
+    publishPartyPlayback(positionMs = if (restart) 0L else positionMs)
+}
+
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
     val fromMs = pendingSeekTarget
         ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
@@ -296,6 +318,11 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
     resizeMode = nextMode
     lastSyncedSettingsResizeMode = nextMode
     PlayerSettingsRepository.setResizeMode(nextMode)
+    rawVideoZoom = 1f
+    if (videoZoom != 1f) {
+        videoZoom = 1f
+        playerController?.setVideoZoom(1f)
+    }
     showGestureMessage(
         when (nextMode) {
             PlayerResizeMode.Fit -> resizeModeFitLabel
@@ -304,6 +331,28 @@ internal fun PlayerScreenRuntime.cycleResizeMode() {
         },
     )
     controlsVisible = true
+}
+
+internal const val PlayerMinVideoZoom = 0.8f
+internal const val PlayerMaxVideoZoom = 2.0f
+private const val PlayerVideoZoomSnapRange = 0.04f
+
+internal fun PlayerScreenRuntime.pinchVideoZoom(zoomFactor: Float) {
+    if (zoomFactor <= 0f || zoomFactor == 1f) return
+    rawVideoZoom = (rawVideoZoom * zoomFactor).coerceIn(PlayerMinVideoZoom, PlayerMaxVideoZoom)
+    val next = if (abs(rawVideoZoom - 1f) < PlayerVideoZoomSnapRange) 1f else rawVideoZoom
+    if (next == videoZoom) return
+    videoZoom = next
+    playerController?.setVideoZoom(next)
+    showGestureMessage("${(next * 100f).roundToInt()}%")
+}
+
+internal fun PlayerScreenRuntime.setPlaybackSpeedFromPicker(speed: Float) {
+    if (partyBlocksControl()) return
+    partyRateNudge = null
+    playerController?.setPlaybackSpeed(speed)
+    publishPartyPlayback(rate = speed)
+    showGestureMessage(formatPlaybackSpeedLabel(speed))
 }
 
 internal fun PlayerScreenRuntime.cyclePlaybackSpeed() {
@@ -394,8 +443,8 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         touchGesturesEnabled = rememberUpdatedState(playerSettingsUiState.touchGesturesEnabled),
         swipeToSeekEnabled = rememberUpdatedState(playerSettingsUiState.swipeToSeekEnabled),
         playerControlsLocked = rememberUpdatedState(playerControlsLocked),
-        currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
-        currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
+        currentPositionMs = remember(this) { derivedStateOf { playbackSnapshot.positionMs.coerceAtLeast(0L) } },
+        currentDurationMs = remember(this) { derivedStateOf { playbackSnapshot.durationMs } },
         commitHorizontalSeek = rememberUpdatedState { requestedPositionMs: Long ->
             val fromPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
             val targetPositionMs = if (isPartyControlLocked) {

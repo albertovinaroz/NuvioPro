@@ -63,13 +63,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioInputField
 import com.nuvio.app.features.livetv.LiveTvChannel
+import com.nuvio.app.features.livetv.LiveTvEpgProgram
+import com.nuvio.app.features.livetv.LiveTvEpgProgressBar
 import com.nuvio.app.features.livetv.LiveTvRepository
+import com.nuvio.app.features.livetv.currentProgram
+import com.nuvio.app.features.livetv.formatLiveTvEpgTime
+import com.nuvio.app.features.livetv.nextProgram
+import com.nuvio.app.features.livetv.rememberLiveTvEpgNowMillis
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.compose_player_channels
 import nuvio.composeapp.generated.resources.compose_player_playing
 import nuvio.composeapp.generated.resources.live_tv_action_back_to_top
+import nuvio.composeapp.generated.resources.live_tv_epg_next
 import nuvio.composeapp.generated.resources.live_tv_filter_choose_category
 import nuvio.composeapp.generated.resources.live_tv_filter_favorites
 import nuvio.composeapp.generated.resources.live_tv_group_all_channels
@@ -78,6 +85,7 @@ import nuvio.composeapp.generated.resources.live_tv_no_matching_channels_message
 import nuvio.composeapp.generated.resources.live_tv_no_matching_channels_title
 import nuvio.composeapp.generated.resources.live_tv_search_placeholder
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 @Composable
 fun PlayerLiveChannelsPanel(
@@ -89,8 +97,12 @@ fun PlayerLiveChannelsPanel(
     modifier: Modifier = Modifier,
 ) {
     LiveTvRepository.ensureLoaded()
+    LaunchedEffect(visible) {
+        if (visible) LiveTvRepository.ensureChannelsLoaded()
+    }
     val liveTvUiState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
     val favoriteChannelIds = liveTvUiState.favoriteChannelIds
+    val epgNowMillis = rememberLiveTvEpgNowMillis()
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -182,7 +194,14 @@ fun PlayerLiveChannelsPanel(
                         .fillMaxWidth(0.92f)
                         .heightIn(max = 640.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(colorScheme.surface)
+                        .ambientLiquidGlass(
+                            shape = RoundedCornerShape(24.dp),
+                            tint = colorScheme.surface.copy(alpha = colorScheme.surface.alpha * 0.74f),
+                            fallback = colorScheme.surface,
+                            blurRadius = 28.dp,
+                            refractionHeight = 10.dp,
+                            refractionAmount = 18.dp,
+                        )
                         .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.8f), RoundedCornerShape(24.dp))
                         .clickable(
                             indication = null,
@@ -269,6 +288,8 @@ fun PlayerLiveChannelsPanel(
                                             channel = channel,
                                             isCurrent = channel.streamUrl == currentStreamUrl,
                                             onClick = { onChannelSelected(channel) },
+                                            programs = liveTvUiState.epgPrograms[channel.id].orEmpty(),
+                                            nowMillis = epgNowMillis,
                                         )
                                     }
                                 }
@@ -518,9 +539,13 @@ private fun LiveChannelRow(
     channel: LiveTvChannel,
     isCurrent: Boolean,
     onClick: () -> Unit,
+    programs: List<LiveTvEpgProgram> = emptyList(),
+    nowMillis: Long = 0L,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val cardShape = RoundedCornerShape(12.dp)
+    val currentProgram = programs.currentProgram(nowMillis)
+    val nextProgram = programs.nextProgram(nowMillis)
 
     Row(
         modifier = Modifier
@@ -603,6 +628,33 @@ private fun LiveChannelRow(
                     text = channel.group,
                     color = colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (currentProgram != null) {
+                Text(
+                    text = "${formatLiveTvEpgTime(currentProgram.startMillis)} · ${currentProgram.title}",
+                    color = colorScheme.onSurface.copy(alpha = 0.85f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                LiveTvEpgProgressBar(
+                    progress = currentProgram.progressAt(nowMillis),
+                    trackColor = colorScheme.onSurface.copy(alpha = 0.12f),
+                    progressColor = colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp),
+                )
+            }
+            if (nextProgram != null) {
+                Text(
+                    text = "${stringResource(Res.string.live_tv_epg_next)} ${formatLiveTvEpgTime(nextProgram.startMillis)} · ${nextProgram.title}",
+                    color = colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

@@ -62,6 +62,7 @@ import nuvio.composeapp.generated.resources.stream_info_source
 import nuvio.composeapp.generated.resources.stream_info_subtitle_source_addon
 import nuvio.composeapp.generated.resources.stream_info_subtitle_source_embedded
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 /** Where the playing stream came from: the addon that served it and the stream's own name/notes. */
 internal data class PlaybackInfoSource(
@@ -119,8 +120,14 @@ internal fun PlaybackInfoModal(
                         .fillMaxWidth(0.9f)
                         .heightIn(max = 560.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.verticalGradient(
+                        .ambientLiquidGlass(
+                            shape = RoundedCornerShape(24.dp),
+                            tint = Color(0xFF16161B).copy(alpha = 0.74f),
+                            fallback = Color(0xFF1E1E24),
+                            blurRadius = 28.dp,
+                            refractionHeight = 10.dp,
+                            refractionAmount = 18.dp,
+                            fallbackBrush = Brush.verticalGradient(
                                 colors = listOf(
                                     Color(0xFF1E1E24),
                                     Color(0xFF0F0F12),

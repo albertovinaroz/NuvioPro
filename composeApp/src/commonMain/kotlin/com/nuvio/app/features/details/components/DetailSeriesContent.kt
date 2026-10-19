@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -62,8 +63,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -109,6 +112,7 @@ import com.nuvio.app.features.details.seasonSortKey
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watching.application.WatchingState
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
@@ -116,6 +120,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 private val log = Logger.withTag("SeriesContent")
 
@@ -243,8 +248,66 @@ fun DetailSeriesContent(
                     }
                     val seasonEpisodes = groupedEpisodes.getValue(seasonForContent)
                     if (episodeCardStyle == MetaEpisodeCardStyle.Horizontal) {
-                        EpisodeHorizontalRow(
-                            episodes = seasonEpisodes,
+                        val navigator = rememberEpisodeNavigatorState(meta.id + ":" + seasonForContent)
+                        val rowState = rememberLazyListState()
+                        val navigatorScope = rememberCoroutineScope()
+                        val isWatched: (MetaVideo) -> Boolean = { episode ->
+                            meta.isEpisodeWatchedForNavigator(episode, progressByVideoId, watchedKeys)
+                        }
+                        val shownEpisodes = remember(seasonEpisodes, navigator.query, navigator.sort, progressByVideoId, watchedKeys) {
+                            seasonEpisodes.filteredAndSortedForNavigator(navigator.query, navigator.sort, isWatched)
+                        }
+                        val jumpTo: (MetaVideo) -> Unit = { target ->
+                            navigatorScope.launch {
+                                if (shownEpisodes.none { it.navigatorKey() == target.navigatorKey() }) {
+                                    navigator.query = ""
+                                    withFrameNanos { }
+                                    withFrameNanos { }
+                                }
+                                val index = seasonEpisodes
+                                    .filteredAndSortedForNavigator(navigator.query, navigator.sort, isWatched)
+                                    .indexOfFirst { it.navigatorKey() == target.navigatorKey() }
+                                if (index >= 0) {
+                                    rowState.animateScrollToItem(index)
+                                    navigator.flashHighlight(target.navigatorKey())
+                                }
+                            }
+                        }
+                        var navigatorOrderInitialized by remember { mutableStateOf(false) }
+                        LaunchedEffect(navigator.sort, navigator.query) {
+                            if (navigatorOrderInitialized) rowState.scrollToItem(0)
+                            navigatorOrderInitialized = true
+                        }
+                        EpisodeNavigatorBar(
+                            state = navigator,
+                            shownCount = shownEpisodes.size,
+                            totalCount = seasonEpisodes.size,
+                            onSubmitNumber = { number ->
+                                seasonEpisodes.firstOrNull { it.episode == number }?.let(jumpTo)
+                            },
+                        )
+                        if (navigator.goToSheetVisible) {
+                            EpisodeGoToSheet(
+                                seasonLabel = seasonDisplayLabel(meta, seasonForContent),
+                                episodes = seasonEpisodes,
+                                isWatched = isWatched,
+                                onPick = jumpTo,
+                                onDismiss = { navigator.goToSheetVisible = false },
+                            )
+                        }
+                        if (navigator.sortSheetVisible) {
+                            EpisodeSortSheet(
+                                current = navigator.sort,
+                                onSelect = { navigator.sort = it },
+                                onDismiss = { navigator.sortSheetVisible = false },
+                            )
+                        }
+                        if (shownEpisodes.isEmpty()) {
+                            EpisodeNavigatorEmptyState(query = navigator.query, onClear = { navigator.query = "" })
+                        } else EpisodeHorizontalRow(
+                            episodes = shownEpisodes,
+                            listState = rowState,
+                            highlightedKey = navigator.highlightedEpisodeKey,
                             maxWidthDp = containerWidthDp,
                             horizontalScrollPadding = horizontalScrollPadding,
                             parentMetaId = meta.id,
@@ -382,6 +445,8 @@ internal fun DetailSeriesListEpisode(
     onEpisodeClick: ((MetaVideo) -> Unit)?,
     onEpisodeLongPress: ((MetaVideo) -> Unit)?,
     modifier: Modifier = Modifier,
+    highlightQuery: String? = null,
+    jumpHighlighted: Boolean = false,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val sizing = seriesContentSizing(maxWidth.value)
@@ -411,11 +476,37 @@ internal fun DetailSeriesListEpisode(
             episodeRatingsVisibility = episodeRatingsVisibility,
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
             sizing = sizing,
+            modifier = Modifier.episodeJumpHighlight(jumpHighlighted),
+            highlightQuery = highlightQuery,
             onClick = { onEpisodeClick?.invoke(episode) },
             onLongPress = { onEpisodeLongPress?.invoke(episode) },
         )
     }
 }
+
+internal fun MetaDetails.isEpisodeWatchedForNavigator(
+    episode: MetaVideo,
+    progressByVideoId: Map<String, WatchProgressEntry>,
+    watchedKeys: Set<String>,
+): Boolean {
+    val episodeVideoId = buildPlaybackVideoId(
+        parentMetaId = id,
+        seasonNumber = episode.season,
+        episodeNumber = episode.episode,
+        fallbackVideoId = episode.id,
+    )
+    return progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
+        WatchingState.isEpisodeWatched(
+            watchedKeys = watchedKeys,
+            metaType = type,
+            metaId = id,
+            episode = episode,
+        )
+}
+
+@Composable
+internal fun seasonDisplayLabel(meta: MetaDetails, season: Int): String =
+    if (meta.type != "series" && season <= 0) stringResource(Res.string.details_videos) else season.label()
 
 @Composable
 private fun SeriesSeasonSelector(
@@ -520,7 +611,12 @@ private fun SeasonViewModeToggle(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .ambientLiquidGlass(
+                shape = RoundedCornerShape(8.dp),
+                tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                fallback = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                refractionHeight = 6.dp,
+            )
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.2f),
@@ -798,12 +894,14 @@ private fun EpisodeHorizontalRow(
     blurUnwatchedEpisodes: Boolean,
     userRatingTargetFor: (MetaVideo) -> TrackingRatingTarget? = { null },
     preferredEpisodeNumber: Int? = null,
+    listState: LazyListState = rememberLazyListState(),
+    highlightedKey: String? = null,
     onEpisodeClick: ((MetaVideo) -> Unit)?,
     onEpisodeLongPress: ((MetaVideo) -> Unit)?,
 ) {
     val rowMetrics = rememberEpisodeHorizontalCardMetrics(maxWidthDp)
-    val listState = rememberLazyListState()
-    var hasPositioned by remember(episodes) { mutableStateOf(false) }
+    var positionedFor by remember { mutableStateOf<Int?>(null) }
+    var hasPositioned by remember { mutableStateOf(false) }
     val episodesEntrance = remember(episodes) { TimeSource.Monotonic.markNow() }
     // The row opens scrolled to the preferred episode; stagger from there rather than from the first.
     val entranceStartIndex = remember(episodes, preferredEpisodeNumber) {
@@ -811,6 +909,7 @@ private fun EpisodeHorizontalRow(
     }
 
     LaunchedEffect(episodes, preferredEpisodeNumber) {
+        if (hasPositioned && positionedFor == preferredEpisodeNumber) return@LaunchedEffect
         val targetIndex = if (preferredEpisodeNumber != null) {
             episodes.indexOfFirst { it.episode == preferredEpisodeNumber }
         } else {
@@ -823,6 +922,7 @@ private fun EpisodeHorizontalRow(
                 listState.scrollToItem(targetIndex)
                 hasPositioned = true
             }
+            positionedFor = preferredEpisodeNumber
         }
     }
 
@@ -852,6 +952,7 @@ private fun EpisodeHorizontalRow(
                 batch = episodesEntrance,
                 index = (episodeIndex - entranceStartIndex).coerceAtLeast(0),
             ) {
+            Box(modifier = Modifier.episodeJumpHighlight(episode.navigatorKey() == highlightedKey)) {
             EpisodeHorizontalCard(
                 video = episode,
                 userRating = rememberUserRating(userRatingTarget),
@@ -875,6 +976,7 @@ private fun EpisodeHorizontalRow(
                 onLongPress = { onEpisodeLongPress?.invoke(episode) },
             )
             }
+            }
         }
     }
 }
@@ -897,8 +999,6 @@ private fun EpisodeHorizontalCard(
     onLongPress: (() -> Unit)? = null,
 ) {
     val cardShape = RoundedCornerShape(metrics.cornerRadius)
-    // The fork shows IMDb and TMDB side by side; upstream's visibility rule decides whether an
-    // unwatched episode gets to show either of them.
     val showsRating = episodeRatingsVisibility.showRating(isWatched)
     val tmdbRatingLabel = remember(tmdbRating, showsRating) {
         tmdbRating?.takeIf { it > 0.0 && showsRating }?.let(::formatEpisodeRating)
@@ -910,8 +1010,8 @@ private fun EpisodeHorizontalCard(
     val formattedDate = remember(video.released) { video.released?.let { formatReleaseDateForDisplay(it) } }
     val runtimeLabel = remember(video.runtime) { video.runtime?.takeIf { it > 0 }?.let(::formatEpisodeRuntime) }
     val imageUrl = video.thumbnail ?: fallbackImage
-    val visibleProgressEntry = progressEntry?.takeIf { it.durationMs > 0L && !it.isCompleted }
-    val progressBarHeight = 4.dp
+    val visibleProgressEntry = progressEntry?.takeIf { it.progressFraction > 0f && !it.isEffectivelyCompleted }
+    val progressBarHeight = 3.dp
     val progressBarContentSpacing = 6.dp
     val progressBarBottomSpacing = 8.dp
     val contentBottomPadding = if (visibleProgressEntry != null) {
@@ -924,7 +1024,12 @@ private fun EpisodeHorizontalCard(
             .width(metrics.cardWidth)
             .height(metrics.cardHeight)
             .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .ambientLiquidGlass(
+                shape = cardShape,
+                tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                fallback = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                blurRadius = 18.dp,
+            )
             .nuvioCardDepth(
                 shape = cardShape,
                 surface = NuvioCardDepthSurface.EpisodeCards,
@@ -1068,7 +1173,7 @@ private fun EpisodeHorizontalCard(
                         bottom = progressBarBottomSpacing,
                     ),
                 height = progressBarHeight,
-                trackColor = Color.White.copy(alpha = 0.22f),
+                trackColor = Color.Black.copy(alpha = 0.30f),
                 fillColor = MaterialTheme.colorScheme.primary,
             )
         }
@@ -1352,13 +1457,19 @@ private fun EpisodeListCard(
     blurUnwatchedEpisodes: Boolean,
     sizing: SeriesContentSizing,
     modifier: Modifier = Modifier,
+    highlightQuery: String? = null,
     onClick: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
 ) {
+    val matchStyle = episodeMatchStyle()
+    val titleText = remember(video.title, highlightQuery, matchStyle) {
+        highlightEpisodeMatches(video.title, highlightQuery, matchStyle)
+    }
+    val overviewText = remember(video.overview, highlightQuery, matchStyle) {
+        video.overview?.let { highlightEpisodeMatches(it, highlightQuery, matchStyle) }
+    }
     val cornerRadius = rememberPosterCardStyleUiState().cornerRadiusDp.dp
     val cardShape = RoundedCornerShape(cornerRadius)
-    // The fork shows IMDb and TMDB side by side; upstream's visibility rule decides whether an
-    // unwatched episode gets to show either of them.
     val showsRating = episodeRatingsVisibility.showRating(isWatched)
     val tmdbRatingLabel = remember(tmdbRating, showsRating) {
         tmdbRating?.takeIf { it > 0.0 && showsRating }?.let(::formatEpisodeRating)
@@ -1381,7 +1492,12 @@ private fun EpisodeListCard(
             .fillMaxWidth()
             .height(sizing.cardHeight)
             .clip(cardShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .ambientLiquidGlass(
+                shape = cardShape,
+                tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                fallback = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                blurRadius = 18.dp,
+            )
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.1f),
@@ -1465,7 +1581,7 @@ private fun EpisodeListCard(
                 verticalArrangement = Arrangement.spacedBy(sizing.contentSpacing),
             ) {
                 Text(
-                    text = video.title,
+                    text = titleText,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontSize = sizing.titleTextSize,
                         fontWeight = FontWeight.Bold,
@@ -1504,9 +1620,9 @@ private fun EpisodeListCard(
                     }
                 }
 
-                if (!video.overview.isNullOrBlank()) {
+                if (!video.overview.isNullOrBlank() && overviewText != null) {
                     Text(
-                        text = video.overview,
+                        text = overviewText,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = sizing.bodyTextSize,
                             lineHeight = sizing.bodyLineHeight,
@@ -1520,7 +1636,7 @@ private fun EpisodeListCard(
         }
 
         progressEntry
-            ?.takeIf { it.durationMs > 0L && !it.isCompleted }
+            ?.takeIf { it.progressFraction > 0f && !it.isEffectivelyCompleted }
             ?.let { entry ->
                 NuvioProgressBar(
                     progress = entry.progressFraction,

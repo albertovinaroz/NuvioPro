@@ -138,6 +138,8 @@ internal class PlayerScreenRuntime(
     var activeLogo by mutableStateOf(logo)
     var activeStream by mutableStateOf(args.stream)
     var currentStreamBingeGroup by mutableStateOf(initialBingeGroup)
+    var currentStreamFilename by mutableStateOf<String?>(null)
+    var currentStreamInfoHash by mutableStateOf<String?>(null)
     var activeSeasonNumber by mutableStateOf(seasonNumber)
     var activeEpisodeNumber by mutableStateOf(episodeNumber)
     var activeEpisodeTitle by mutableStateOf(episodeTitle)
@@ -148,6 +150,8 @@ internal class PlayerScreenRuntime(
     var activeInitialProgressFraction by mutableStateOf(initialProgressFraction)
     var shouldPlay by mutableStateOf(true)
     var resizeMode by mutableStateOf(playerSettingsUiState.resizeMode)
+    var videoZoom by mutableStateOf(1f)
+    var rawVideoZoom: Float = 1f
     var layoutSize by mutableStateOf(IntSize.Zero)
     var playbackSnapshot by mutableStateOf(PlayerPlaybackSnapshot())
     var playbackSnapshotKey by mutableStateOf<PlaybackKey?>(null)
@@ -155,6 +159,7 @@ internal class PlayerScreenRuntime(
     var playerControllerSourceUrl by mutableStateOf<String?>(null)
     var errorMessage by mutableStateOf<String?>(null)
     var isScrubbingTimeline by mutableStateOf(false)
+    var isTouchingTimeline by mutableStateOf(false)
     var scrubbingPositionMs by mutableStateOf<Long?>(null)
     var pausedOverlayVisible by mutableStateOf(false)
     var gestureFeedback by mutableStateOf<GestureFeedbackState?>(null)
@@ -166,6 +171,7 @@ internal class PlayerScreenRuntime(
     var seekProgressSyncJob by mutableStateOf<Job?>(null)
     var accumulatedSeekState by mutableStateOf<PlayerAccumulatedSeekState?>(null)
     var initialLoadCompleted by mutableStateOf(false)
+    var isMiniPresentation by mutableStateOf(false)
     var speedBoostRestoreSpeed by mutableStateOf<Float?>(null)
     var isHoldToSpeedGestureActive by mutableStateOf(false)
     var initialSeekApplied by mutableStateOf(
@@ -181,7 +187,9 @@ internal class PlayerScreenRuntime(
 
     var showSourcesPanel by mutableStateOf(false)
     var showQualityPanel by mutableStateOf(false)
+    var showSpeedPanel by mutableStateOf(false)
     var showEpisodesPanel by mutableStateOf(false)
+    var showChaptersPanel by mutableStateOf(false)
     var showLiveChannelsPanel by mutableStateOf(false)
     var showSubmitIntroModal by mutableStateOf(false)
     var submitIntroSegmentType by mutableStateOf("intro")
@@ -228,6 +236,7 @@ internal class PlayerScreenRuntime(
     var showUserRatingSheet by mutableStateOf(false)
     var showStreamInfo by mutableStateOf(false)
     var showPartyPanel by mutableStateOf(false)
+    var showPartyChat by mutableStateOf(false)
     var partyBehind by mutableStateOf(false)
     var partyBehindMs by mutableStateOf<Long?>(null)
     var partyRateNudge: Float? = null
@@ -297,7 +306,9 @@ internal class PlayerScreenRuntime(
             showUserRatingSheet ||
             showSourcesPanel ||
             showQualityPanel ||
+            showSpeedPanel ||
             showEpisodesPanel ||
+            showChaptersPanel ||
             showLiveChannelsPanel ||
             showSubmitIntroModal ||
             showParentalGuide ||
