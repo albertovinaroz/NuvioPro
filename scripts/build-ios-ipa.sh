@@ -51,6 +51,22 @@ fi
 if [[ -n "${NUVIO_KOTLIN_NATIVE_JVMARGS:-}" ]]; then
     build_environment+=("ORG_GRADLE_PROJECT_kotlin.native.jvmArgs=${NUVIO_KOTLIN_NATIVE_JVMARGS}")
 fi
+# The Gradle daemon's own heap only comes from gradle.properties or -Dorg.gradle.jvmargs, never
+# from an ORG_GRADLE_PROJECT_ variable, so on CI the project's 12 GB desktop setting won and the
+# ~7 GB runner spent hours swapping through the Kotlin/Native link. The user-home file outranks
+# the project's, so write the CI limits there. CI only: never touch a developer's ~/.gradle.
+if [[ "${CI:-}" == "true" ]]; then
+    gradle_user_properties="${GRADLE_USER_HOME:-${HOME}/.gradle}/gradle.properties"
+    mkdir -p "$(dirname "${gradle_user_properties}")"
+    {
+        [[ -n "${NUVIO_GRADLE_JVMARGS:-}" ]] && echo "org.gradle.jvmargs=${NUVIO_GRADLE_JVMARGS}"
+        [[ -n "${NUVIO_KOTLIN_NATIVE_JVMARGS:-}" ]] && echo "kotlin.native.jvmArgs=${NUVIO_KOTLIN_NATIVE_JVMARGS}"
+        [[ -n "${KOTLIN_DAEMON_JVMARGS:-}" ]] && echo "kotlin.daemon.jvmargs=${KOTLIN_DAEMON_JVMARGS}"
+        true
+    } >> "${gradle_user_properties}"
+    echo "==> CI Gradle memory limits (${gradle_user_properties}):"
+    cat "${gradle_user_properties}"
+fi
 "${build_environment[@]}" \
     xcodebuild \
     -project iosApp/iosApp.xcodeproj \
