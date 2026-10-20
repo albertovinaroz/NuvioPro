@@ -108,7 +108,7 @@
     <string name="collections_editor_shape_square">Kwadrat</string>
     <string name="collections_editor_shape_wide">Szeroki</string>
     <string name="collections_editor_show_all_tab_desc">Połącz wszystkie katalogi w jednej karcie</string>
-    <string name="collections_editor_show_all_tab">Pokaż kartę \"Wszystko\"</string>
+    <string name="collections_editor_show_all_tab">Pokaż kartę "Wszystko"</string>
     <string name="collections_editor_show_gif_when_configured_desc">Odtwarzaj skonfigurowany GIF zamiast statycznej okładki, gdy jest dostępny.</string>
     <string name="collections_editor_show_gif_when_configured">Pokaż GIF gdy skonfigurowany</string>
     <string name="collections_editor_source_count">%1$d źródeł · %2$s</string>
@@ -1491,7 +1491,7 @@
     <string name="settings_playback_option_original">Język oryginalny</string>
     <string name="settings_playback_option_original_hint">Wymaga włączonego wzbogacania TMDB</string>
     <string name="settings_appearance_app_language_device">Język urządzenia</string>
-    <string name="addons_manifest_missing_field">W manifeście brakuje \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">W manifeście brakuje "%1$s"</string>
     <string name="cloud_library_playback_disabled">Biblioteka w chmurze jest wyłączona.</string>
     <string name="cloud_library_provider_unavailable">Biblioteka w chmurze nie jest dostępna dla %1$s.</string>
     <string name="collections_editor_media_movies_suffix">Filmy</string>

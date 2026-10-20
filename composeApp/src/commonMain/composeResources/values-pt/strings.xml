@@ -63,7 +63,7 @@
     <string name="cd_selected">Selecionado</string>
     <string name="collections_copy_json">Copiar JSON</string>
     <string name="collections_count_summary">Coleções: %1$d · Pastas: %2$d</string>
-    <string name="collections_delete_message">Eliminar \"%1$s\"? Esta ação não pode ser desfeita.</string>
+    <string name="collections_delete_message">Eliminar "%1$s"? Esta ação não pode ser desfeita.</string>
     <string name="collections_delete_title">Eliminar coleção</string>
     <string name="collections_editor_add_catalog">Adicionar catálogo</string>
     <string name="collections_editor_add_folder">Adicionar pasta</string>
@@ -108,7 +108,7 @@
     <string name="collections_editor_shape_square">Quadrado</string>
     <string name="collections_editor_shape_wide">Panorâmico</string>
     <string name="collections_editor_show_all_tab_desc">Combinar todos os catálogos num único separador</string>
-    <string name="collections_editor_show_all_tab">Mostrar separador \"Tudo\"</string>
+    <string name="collections_editor_show_all_tab">Mostrar separador "Tudo"</string>
     <string name="collections_editor_show_gif_when_configured_desc">Reproduzir o GIF configurado em vez da capa estática, quando disponível.</string>
     <string name="collections_editor_show_gif_when_configured">Mostrar GIF quando configurado</string>
     <string name="collections_editor_source_count">Fontes: %1$d · %2$s</string>
@@ -172,7 +172,7 @@
     <string name="collections_editor_tmdb_quick_studios">Estúdios rápidos</string>
     <string name="collections_editor_tmdb_quick_networks">Canais/Plataformas rápidos</string>
     <string name="collections_editor_tmdb_genres">IDs de género</string>
-    <string name="collections_editor_tmdb_genres_helper">Utiliza os números de género do TMDB. Separa vários com vírgulas para \"E\", ou com barras verticais para \"OU\".</string>
+    <string name="collections_editor_tmdb_genres_helper">Utiliza os números de género do TMDB. Separa vários com vírgulas para "E", ou com barras verticais para "OU".</string>
     <string name="collections_editor_tmdb_genres_movie_placeholder">28,12</string>
     <string name="collections_editor_tmdb_genres_series_placeholder">18,35</string>
     <string name="collections_editor_tmdb_date_from">Lançamento ou emissão desde</string>
@@ -278,7 +278,7 @@
     <string name="collections_editor_tmdb_watch_region_helper">Código de país ISO 3166-1 onde o título está disponível. Exemplo: PT, BR, US.</string>
     <string name="collections_editor_tmdb_quick_watch_regions">Regiões rápidas</string>
     <string name="collections_editor_tmdb_watch_providers">IDs dos serviços</string>
-    <string name="collections_editor_tmdb_watch_providers_helper">Utiliza os IDs dos serviços do TMDB. Separa vários com vírgulas para \"E\", ou com barras verticais para \"OU\".</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">Utiliza os IDs dos serviços do TMDB. Separa vários com vírgulas para "E", ou com barras verticais para "OU".</string>
     <string name="collections_editor_tmdb_watch_providers_placeholder">8|337|350</string>
     <string name="collections_editor_tmdb_quick_watch_providers">Serviços rápidos</string>
     <string name="collections_editor_tmdb_watch_provider_netflix">Netflix</string>
@@ -1242,7 +1242,7 @@
     <string name="profile_custom_avatar_url">URL de avatar personalizado</string>
     <string name="profile_custom_avatar_url_description">Cola um link de imagem ou deixa em branco para utilizar o catálogo de avatares integrado.</string>
     <string name="profile_custom_avatar_url_placeholder">https://exemplo.com/avatar.png</string>
-    <string name="profile_delete_confirm_message">Todos os dados de \"%1$s\" serão eliminados permanentemente.</string>
+    <string name="profile_delete_confirm_message">Todos os dados de "%1$s" serão eliminados permanentemente.</string>
     <string name="profile_delete_title">Eliminar perfil</string>
     <string name="profile_edit_add_title">Adicionar perfil</string>
     <string name="profile_edit_edit_title">Editar perfil</string>
@@ -1696,7 +1696,7 @@
     <string name="collections_editor_media_series_suffix">Séries</string>
     <string name="cloud_library_playback_disabled">A biblioteca na nuvem está desativada.</string>
     <string name="settings_playback_introdb_invalid_api_key">Chave API inválida ou falha na ligação</string>
-    <string name="addons_manifest_missing_field">Campo em falta no manifesto: \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">Campo em falta no manifesto: "%1$s"</string>
     <string name="collections_editor_tmdb_collection_title_format">Coleção TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Realização TMDB %1$s</string>
     <string name="collections_editor_tmdb_discover_title">Explorar TMDB</string>

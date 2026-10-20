@@ -9,7 +9,7 @@
     <string name="profile_background_normal">Normal</string>
     <string name="profile_background_custom">Custom</string>
     <string name="profile_custom_background_url">Custom background URL</string>
-    <string name="profile_custom_background_url_description">Paste an image link to use as this profile\'s background, or leave this empty to use the default background.</string>
+    <string name="profile_custom_background_url_description">Paste an image link to use as this profile's background, or leave this empty to use the default background.</string>
     <string name="profile_custom_background_url_placeholder">https://example.com/background.jpg</string>
     <string name="profile_background_url_invalid">Enter a valid http:// or https:// image URL.</string>
     <string name="about_licenses_attributions_subtitle">Data sources, acknowledgements, and platform licenses</string>
@@ -896,7 +896,7 @@
     <string name="settings_poster_width_standard">Standard</string>
     <!-- Custom Poster URL -->
     <string name="settings_custom_poster_title">CUSTOM POSTER SOURCE</string>
-    <string name="settings_custom_poster_description">Use a URL pattern to load posters from another service. Titles it can\'t fill keep their own.</string>
+    <string name="settings_custom_poster_description">Use a URL pattern to load posters from another service. Titles it can't fill keep their own.</string>
     <string name="settings_custom_poster_placeholder">https://example.com/{type}/{id}.jpg</string>
     <string name="settings_custom_poster_active">Custom poster source active</string>
     <string name="settings_custom_poster_none">No pattern configured</string>
@@ -1349,7 +1349,7 @@
     <string name="settings_playback_mini_player">Mini Player</string>
     <string name="settings_playback_mini_player_description">Shows the mini player button in the player so you can keep watching in a floating window while you browse. Picture in Picture when leaving the app works either way.</string>
     <string name="settings_playback_private_viewing">Private Viewing</string>
-    <string name="settings_playback_private_viewing_description">Don\'t save watch progress, Continue Watching or watched status, and don\'t sync playback to connected trackers.</string>
+    <string name="settings_playback_private_viewing_description">Don't save watch progress, Continue Watching or watched status, and don't sync playback to connected trackers.</string>
     <string name="mini_player_play">Play</string>
     <string name="mini_player_pause">Pause</string>
     <string name="mini_player_close">Close mini player</string>
@@ -2499,7 +2499,7 @@
     <string name="cloud_library_playback_disabled">Cloud library is disabled.</string>
     <!-- IntroDB settings -->
     <string name="settings_playback_introdb_invalid_api_key">Invalid API Key or connection failed</string>
-    <string name="addons_manifest_missing_field">Manifest missing \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">Manifest missing "%1$s"</string>
     <string name="collections_editor_tmdb_collection_title_format">TMDB Collection %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">TMDB Director %1$s</string>
     <string name="collections_editor_tmdb_discover_title">TMDB Discover</string>
@@ -2799,8 +2799,8 @@
     <string name="user_rating_syncs_with">Syncs with %1$s</string>
     <string name="user_rating_saved">Rated %1$d/10 on %2$s</string>
     <string name="user_rating_removed">Rating removed from %1$s</string>
-    <string name="user_rating_sync_failed">Couldn\'t sync rating to %1$s</string>
-    <string name="user_rating_last_failed">Last change didn\'t reach %1$s. Try again.</string>
+    <string name="user_rating_sync_failed">Couldn't sync rating to %1$s</string>
+    <string name="user_rating_last_failed">Last change didn't reach %1$s. Try again.</string>
     <string name="user_rating_no_provider">Turn on at least one tracking service to save ratings</string>
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
@@ -2886,7 +2886,7 @@
     <string name="stream_info_server">Server</string>
     <string name="support_pro_title">Support Nuvio Pro</string>
     <string name="support_pro_heading">Enjoying Nuvio Pro?</string>
-    <string name="support_pro_message">Nuvio Pro is built and maintained in my spare time. If it\'s made your watching better, a coffee helps keep it going. Thank you!</string>
+    <string name="support_pro_message">Nuvio Pro is built and maintained in my spare time. If it's made your watching better, a coffee helps keep it going. Thank you!</string>
     <string name="support_pro_kofi_button">Support on Ko-fi</string>
     <string name="support_pro_upstream_note">Nuvio Pro is an independent fork of Nuvio by NuvioMedia. Support given here goes to the Nuvio Pro developer.</string>
     <string name="player_cast">Cast</string>

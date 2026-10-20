@@ -123,7 +123,7 @@
     <string name="collections_editor_shape_square">Квадрат</string>
     <string name="collections_editor_shape_wide">Широкий</string>
     <string name="collections_editor_show_all_tab_desc">Объедините все каталоги в одну вкладку</string>
-    <string name="collections_editor_show_all_tab">Показать вкладку \"Все\"</string>
+    <string name="collections_editor_show_all_tab">Показать вкладку "Все"</string>
     <string name="collections_editor_show_gif_when_configured_desc">Воспроизводите настроенный GIF-файл вместо статической обложки, если она доступна.</string>
     <string name="collections_editor_show_gif_when_configured">Показывать GIF при настройке</string>
     <string name="collections_editor_source_count">%1$d источников · %2$s</string>
@@ -2043,7 +2043,7 @@
     <string name="cloud_library_playback_disabled">Облачная библиотека отключена.</string>
     <!-- IntroDB settings -->
     <string name="settings_playback_introdb_invalid_api_key">Неверный ключ API или соединение не установлено.</string>
-    <string name="addons_manifest_missing_field">Манифест отсутствует \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">Манифест отсутствует "%1$s"</string>
     <string name="collections_editor_tmdb_collection_title_format">Коллекция TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Режиссер TMDB %1$s</string>
     <string name="collections_editor_tmdb_discover_title">TMDB Discover</string>

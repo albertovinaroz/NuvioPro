@@ -12,7 +12,7 @@
     </plurals>
     <string name="social_summary_empty">Add friends with your code</string>
     <string name="social_unavailable">Friends needs a Nuvio account. Sign in from Settings → Account to add friends and share recommendations.</string>
-    <string name="social_load_failed">Couldn\'t reach the friends server.</string>
+    <string name="social_load_failed">Couldn't reach the friends server.</string>
     <string name="social_retry">Try again</string>
 
     <string name="social_your_code">Your friend code</string>
@@ -20,14 +20,14 @@
     <string name="social_code_copied">Friend code copied</string>
     <string name="social_add_friend">Add friend</string>
     <string name="social_add_friend_title">Add a friend</string>
-    <string name="social_add_friend_message">Ask your friend for their code. They\'ll find it in Profile → Friends.</string>
+    <string name="social_add_friend_message">Ask your friend for their code. They'll find it in Profile → Friends.</string>
     <string name="social_add_friend_placeholder">ABCD-2345</string>
     <string name="social_add_friend_send">Send request</string>
     <string name="social_add_friend_requested">Request sent to %1$s</string>
     <string name="social_add_friend_added">You and %1$s are now friends</string>
     <string name="social_someone">your friend</string>
     <string name="social_error_code_not_found">No one has that code</string>
-    <string name="social_error_own_code">That\'s your own code</string>
+    <string name="social_error_own_code">That's your own code</string>
     <string name="social_error_bad_code">Codes look like ABCD-2345</string>
     <string name="social_error_generic">Something went wrong. Try again.</string>
 
@@ -37,7 +37,7 @@
     <string name="social_pending_header">Waiting for them</string>
     <string name="social_cancel">Cancel</string>
     <string name="social_friends_header">Your friends</string>
-    <string name="social_no_friends">No friends yet. Share your code, or add someone else\'s.</string>
+    <string name="social_no_friends">No friends yet. Share your code, or add someone else's.</string>
     <string name="social_status_watching">Watching %1$s</string>
     <string name="social_status_finished">Finished %1$s · %2$s</string>
     <string name="social_episode_suffix">%1$s · S%2$d E%3$d</string>
@@ -48,7 +48,7 @@
     <string name="social_live">Live</string>
 
     <string name="social_sharing_title">Share what I watch</string>
-    <string name="social_sharing_description">Friends see what you\'re watching and what you finished recently</string>
+    <string name="social_sharing_description">Friends see what you're watching and what you finished recently</string>
 
     <string name="social_recommendations">Recommendations</string>
     <string name="social_recommendations_new">%1$d new</string>

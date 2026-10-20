@@ -55,7 +55,7 @@
     <string name="cd_selected">Kiválasztva</string>
     <string name="collections_copy_json">JSON másolása</string>
     <string name="collections_count_summary">%1$d gyűjtemény, %2$d mappa</string>
-    <string name="collections_delete_message">Biztosan törlöd a(z) \"%1$s\" elemet? Ez a művelet nem vonható vissza.</string>
+    <string name="collections_delete_message">Biztosan törlöd a(z) "%1$s" elemet? Ez a művelet nem vonható vissza.</string>
     <string name="collections_delete_title">Gyűjtemény törlése</string>
     <string name="collections_editor_add_catalog">Katalógus hozzáadása</string>
     <string name="collections_editor_add_folder">Mappa hozzáadása</string>
@@ -100,7 +100,7 @@
     <string name="collections_editor_shape_square">Négyzet</string>
     <string name="collections_editor_shape_wide">Széles</string>
     <string name="collections_editor_show_all_tab_desc">Az összes katalógus kombinálása egyetlen fülre</string>
-    <string name="collections_editor_show_all_tab">\"Összes\" fül megjelenítése</string>
+    <string name="collections_editor_show_all_tab">"Összes" fül megjelenítése</string>
     <string name="collections_editor_show_gif_when_configured_desc">A beállított GIF lejátszása a statikus borító helyett, ha elérhető.</string>
     <string name="collections_editor_show_gif_when_configured">GIF megjelenítése, ha be van állítva</string>
     <string name="collections_editor_source_count">%1$d forrás · %2$s</string>

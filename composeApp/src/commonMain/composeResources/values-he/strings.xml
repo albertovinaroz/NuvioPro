@@ -85,7 +85,7 @@
     <string name="collections_editor_shape_poster">פוסטר</string>
     <string name="collections_editor_shape_square">מרובע</string>
     <string name="collections_editor_shape_wide">רוחב</string>
-    <string name="collections_editor_show_all_tab">הצג לשונית \"הכל\"</string>
+    <string name="collections_editor_show_all_tab">הצג לשונית "הכל"</string>
     <string name="collections_editor_source_count">%1$d מקורות</string>
     <string name="collections_editor_tile_shape">צורת אריח</string>
     <string name="collections_editor_view_mode_rows">שורות</string>
@@ -149,7 +149,7 @@
     <string name="collections_editor_tmdb_watch_region_helper">קוד מדינה בתקן ISO 3166-1 שבו הכותרת זמינה. לדוגמה: US, IL.</string>
     <string name="collections_editor_tmdb_quick_watch_regions">אזורי צפייה מהירים</string>
     <string name="collections_editor_tmdb_watch_providers">מזהי ספקי צפייה</string>
-    <string name="collections_editor_tmdb_watch_providers_helper">השתמש במזהי ספקי צפייה של TMDB. הפרד מספר מזהים בפסיקים עבור \"וגם\" (AND), או בקו אנכי עבור \"או\" (OR).</string>
+    <string name="collections_editor_tmdb_watch_providers_helper">השתמש במזהי ספקי צפייה של TMDB. הפרד מספר מזהים בפסיקים עבור "וגם" (AND), או בקו אנכי עבור "או" (OR).</string>
     <string name="collections_editor_tmdb_quick_watch_providers">ספקי צפייה מהירים</string>
     <string name="collections_header">אוספים</string>
     <string name="collections_new">אוסף חדש</string>
@@ -415,8 +415,8 @@
     <string name="trakt_watch_progress_dialog_subtitle">בחר איפה לשמור את התקדמות הצפייה שלך. ב-Trakt או בשרת של Nuvio.</string>
     <string name="trakt_watch_progress_trakt_selected">מקור התקדמות צפייה הוגדר ל-Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">מקור התקדמות צפייה הוגדר ל-Nuvio Sync</string>
-    <string name="trakt_more_like_this_source_title">מקור \"עוד כמו זה\"</string>
-    <string name="trakt_continue_watching_window">חלון  \"המשך צפייה\"</string>
+    <string name="trakt_more_like_this_source_title">מקור "עוד כמו זה"</string>
+    <string name="trakt_continue_watching_window">חלון  "המשך צפייה"</string>
     <string name="trakt_continue_watching_subtitle">היסטוריית Trakt הנחשבת להמשך צפייה</string>
     <string name="trakt_cw_window_title">חלון המשך צפייה</string>
     <string name="trakt_cw_window_subtitle">בחר כמה מפעילות Trakt תופיע בהמשך צפייה.</string>

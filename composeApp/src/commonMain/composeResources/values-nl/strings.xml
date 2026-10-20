@@ -123,7 +123,7 @@
     <string name="collections_editor_shape_square">Vierkant</string>
     <string name="collections_editor_shape_wide">Breed</string>
     <string name="collections_editor_show_all_tab_desc">Combineer alle catalogi in één tabblad</string>
-    <string name="collections_editor_show_all_tab">Tabblad \"Alles\" tonen</string>
+    <string name="collections_editor_show_all_tab">Tabblad "Alles" tonen</string>
     <string name="collections_editor_show_gif_when_configured_desc">Speel de ingestelde GIF af in plaats van de statische omslag wanneer beschikbaar.</string>
     <string name="collections_editor_show_gif_when_configured">GIF tonen wanneer ingesteld</string>
     <string name="collections_editor_source_count">%1$d bron(nen) · %2$s</string>
@@ -2062,7 +2062,7 @@
     <string name="cloud_library_playback_disabled">Cloudbibliotheek is uitgeschakeld.</string>
     <!-- IntroDB settings -->
     <string name="settings_playback_introdb_invalid_api_key">Ongeldige API-sleutel of verbinding mislukt</string>
-    <string name="addons_manifest_missing_field">Manifest mist \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">Manifest mist "%1$s"</string>
     <string name="collections_editor_tmdb_collection_title_format">TMDB-collectie %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">TMDB-regisseur %1$s</string>
     <string name="collections_editor_tmdb_discover_title">TMDB Ontdekken</string>
