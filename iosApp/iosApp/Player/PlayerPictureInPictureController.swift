@@ -102,7 +102,9 @@ final class PlayerPictureInPictureController: NSObject,
             let renderer = layer.sampleBufferRenderer
             frameQueue = DispatchQueue(label: "com.nuvio.pip.frames", qos: .userInitiated)
             prepareFrameRenderer = {
-                if renderer.status == .failed { renderer.flush() }
+                // The renderer can also stop decoding without failing (e.g. after an interruption);
+                // it keeps showing the last frame until flushed.
+                if renderer.status == .failed || renderer.requiresFlushToResumeDecoding { renderer.flush() }
                 return renderer.isReadyForMoreMediaData
             }
             enqueueFrame = { renderer.enqueue($0) }
@@ -110,7 +112,7 @@ final class PlayerPictureInPictureController: NSObject,
         } else {
             frameQueue = .main
             prepareFrameRenderer = {
-                if layer.status == .failed { layer.flush() }
+                if layer.status == .failed || layer.requiresFlushToResumeDecoding { layer.flush() }
                 return layer.isReadyForMoreMediaData
             }
             enqueueFrame = { layer.enqueue($0) }

@@ -728,6 +728,7 @@ final class MPVPlayerViewController: UIViewController {
         mpv_observe_property(mpv, 0, "current-tracks/sub/id", MPV_FORMAT_INT64)
         mpv_observe_property(mpv, 0, "current-tracks/sub/lang", MPV_FORMAT_STRING)
         mpv_observe_property(mpv, 0, "sub-text", MPV_FORMAT_STRING)
+        mpv_observe_property(mpv, 0, "hwdec-current", MPV_FORMAT_STRING)
 
         mpv_set_wakeup_callback(mpv, { ctx in
             let vc = unsafeBitCast(ctx, to: MPVPlayerViewController.self)
@@ -816,6 +817,46 @@ final class MPVPlayerViewController: UIViewController {
             self.setStringProperty("hwdec", "no")
             self.setStringProperty("hwdec", configured)
         }
+    }
+
+    // PiP only receives VideoToolbox frames (MPVKit's nuvio_pip patch). If iOS invalidates the
+    // decoder session while the app sits in PiP, mpv silently falls back to software decoding and
+    // the floating window freezes on its last frame while audio keeps playing. Re-enable hwdec
+    // right away instead of waiting for the app to become active again.
+    private var lastHardwareDecoder = ""
+    private var lastPictureInPictureHwdecRecovery: CFTimeInterval = 0
+
+    private func handleHardwareDecoderChange(_ event: UnsafeMutablePointer<mpv_event>) {
+        guard let data = event.pointee.data else { return }
+        let property = UnsafePointer<mpv_event_property>(OpaquePointer(data)).pointee
+        guard String(cString: property.name) == "hwdec-current" else { return }
+        var value = ""
+        if property.format == MPV_FORMAT_STRING, let raw = property.data {
+            if let cString = raw.assumingMemoryBound(to: UnsafePointer<CChar>?.self).pointee {
+                value = String(cString: cString)
+            }
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.hardwareDecoderDidChange(to: value)
+        }
+    }
+
+    private func hardwareDecoderDidChange(to current: String) {
+        let previous = lastHardwareDecoder
+        lastHardwareDecoder = current
+        let lostHardware = !previous.isEmpty && previous != "no" && (current.isEmpty || current == "no")
+        guard lostHardware, isPlayerPlaying, pictureInPictureController?.keepsPlaybackAlive == true else { return }
+        let configured = lastVideoOutputSettings?.hardwareDecoder ?? "videotoolbox"
+        guard configured != "no" else { return }
+        let now = CACurrentMediaTime()
+        guard now - lastPictureInPictureHwdecRecovery >= 3 else { return }
+        lastPictureInPictureHwdecRecovery = now
+        InAppLogBridge.shared.warn(
+            tag: "Player/PiP",
+            message: "Hardware decoding lost during PiP (was \(previous)); reinitialising hwdec=\(configured)"
+        )
+        setStringProperty("hwdec", "no")
+        setStringProperty("hwdec", configured)
     }
 
     private func resumeRenderingAfterDeviceLossIfPossible(reason: String) {
@@ -2224,6 +2265,7 @@ final class MPVPlayerViewController: UIViewController {
                 switch eventPtr.pointee.event_id {
                 case MPV_EVENT_PROPERTY_CHANGE:
                     self.subtitleFonts.handlePropertyChange(eventPtr)
+                    self.handleHardwareDecoderChange(eventPtr)
                     DispatchQueue.main.async { self.updateState() }
                 case MPV_EVENT_FILE_LOADED:
                     DispatchQueue.main.async {
