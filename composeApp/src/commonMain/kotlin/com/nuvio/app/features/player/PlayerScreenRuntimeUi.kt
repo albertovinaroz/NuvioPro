@@ -38,6 +38,8 @@ import com.nuvio.app.features.servers.ServerStreams
 import com.nuvio.app.features.streams.streamAddonInstanceId
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
+import com.nuvio.app.core.ui.NuvioToastController
+import org.jetbrains.compose.resources.getString
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.features.ratings.UserRatingPlayerOverlay
 import com.nuvio.app.features.ratings.rememberCanRate
@@ -438,7 +440,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
         val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
         val orientationToggleSupported = rememberPlayerOrientationToggleSupported()
         val portraitPlayback by PlayerOrientationPreference.portrait.collectAsStateWithLifecycle()
-        val pipAvailable = isIos && playerSettingsUiState.miniPlayerEnabled &&
+        val pipAvailable = isIos && playerSettingsUiState.pictureInPictureEnabled &&
             playerController?.isPictureInPictureSupported() == true
         PlayerControlsShell(
             title = title,
@@ -514,9 +516,16 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
             onPictureInPictureClick = when {
                 pipAvailable -> {
                     {
-                        InAppLogger.info("Player/PiP", "start requested")
-                        playerController?.startPictureInPicture()
-                        controlsVisible = false
+                        if (playerController?.isPictureInPictureReady() == false) {
+                            InAppLogger.warn("Player/PiP", "start skipped: no hardware-decoded frames for PiP")
+                            scope.launch {
+                                NuvioToastController.show(getString(Res.string.player_picture_in_picture_unavailable))
+                            }
+                        } else {
+                            InAppLogger.info("Player/PiP", "start requested")
+                            playerController?.startPictureInPicture()
+                            controlsVisible = false
+                        }
                     }
                 }
                 !isIos && canHandOffToMiniPlayer() -> {

@@ -2081,7 +2081,7 @@
     <string name="collections_editor_media_series_suffix">Serie</string>
     <string name="cloud_library_playback_disabled">La biblioteca en la nube está deshabilitada.</string>
     <string name="settings_playback_introdb_invalid_api_key">Clave API no válida o error de conexión</string>
-    <string name="addons_manifest_missing_field">Falta el manifiesto \"%1$s\"</string>
+    <string name="addons_manifest_missing_field">Falta el manifiesto "%1$s"</string>
     <string name="collections_editor_tmdb_collection_title_format">Colección TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Director de TMDB %1$s</string>
     <string name="collections_editor_tmdb_discover_title">TMDB Descubrir</string>
@@ -2352,4 +2352,7 @@ Utilizas esta función bajo tu propia responsabilidad. P2P se puede desactivar e
     <string name="stream_info_subtitle_source_addon">Complemento</string>
     <string name="stream_info_subtitle_source_embedded">Integrado</string>
     <string name="stream_info_player_engine">Motor de reproducción</string>
+    <string name="settings_playback_picture_in_picture">Imagen dentro de imagen</string>
+    <string name="settings_playback_picture_in_picture_description">Muestra el botón de imagen dentro de imagen en el reproductor y abre la ventana flotante automáticamente al ir a la pantalla de inicio.</string>
+    <string name="player_picture_in_picture_unavailable">La imagen dentro de imagen no está disponible para este vídeo. Su formato se decodifica por software y la ventana flotante no puede mostrarlo.</string>
 </resources>

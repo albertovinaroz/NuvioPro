@@ -454,14 +454,25 @@ private fun PlaybackSettingsSection(
                     onCheckedChange = PlayerSettingsRepository::setMovieRecommendationsEnabled,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_playback_mini_player),
-                    description = stringResource(Res.string.settings_playback_mini_player_description),
-                    checked = autoPlayPlayerSettings.miniPlayerEnabled,
-                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
-                    isTablet = isTablet,
-                    onCheckedChange = PlayerSettingsRepository::setMiniPlayerEnabled,
-                )
+                if (isIos) {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_picture_in_picture),
+                        description = stringResource(Res.string.settings_playback_picture_in_picture_description),
+                        checked = autoPlayPlayerSettings.pictureInPictureEnabled,
+                        enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setPictureInPictureEnabled,
+                    )
+                } else {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_mini_player),
+                        description = stringResource(Res.string.settings_playback_mini_player_description),
+                        checked = autoPlayPlayerSettings.miniPlayerEnabled,
+                        enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setMiniPlayerEnabled,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_private_viewing),

@@ -83,9 +83,19 @@ final class PlayerPictureInPictureController: NSObject,
     // Nuvio Pro: the player's PiP button starts it by hand, alongside the automatic start on leaving the app.
     var isSupported: Bool { controller != nil }
     var isPictureInPictureActive: Bool { controller?.isPictureInPictureActive == true }
+    var hasVideoFrames: Bool { receivedFrame }
+
+    // Nuvio Pro: the Picture in Picture setting turns off both the button and the automatic start.
+    private var isEnabled = true
+
+    func setEnabled(_ enabled: Bool) {
+        isEnabled = enabled
+        controller?.canStartPictureInPictureAutomaticallyFromInline = enabled
+    }
+
 
     func start() {
-        guard let controller, !controller.isPictureInPictureActive else { return }
+        guard isEnabled, let controller, !controller.isPictureInPictureActive else { return }
         metalLayer?.nuvioPiPConsumesVideo = true
         stopRequested = false
         shouldReturnToInline = false
@@ -129,7 +139,7 @@ final class PlayerPictureInPictureController: NSObject,
         controller = AVPictureInPictureController(contentSource: .init(
             sampleBufferDisplayLayer: displayLayer, playbackDelegate: self))
         controller?.delegate = self
-        controller?.canStartPictureInPictureAutomaticallyFromInline = true
+        controller?.canStartPictureInPictureAutomaticallyFromInline = isEnabled
         sceneActivationObserver = NotificationCenter.default.addObserver(
             forName: playerSceneDidActivateNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -229,7 +239,7 @@ final class PlayerPictureInPictureController: NSObject,
         shouldReturnToInline = false
         stopRequested = false
         metalLayer?.nuvioPiPConsumesVideo = true
-        if !keepsPlaybackAlive, receivedFrame, owner?.isPlayerPlaying == true,
+        if isEnabled, !keepsPlaybackAlive, receivedFrame, owner?.isPlayerPlaying == true,
            controller?.isPictureInPicturePossible == true {
             isStarting = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in

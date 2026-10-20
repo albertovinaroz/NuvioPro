@@ -162,6 +162,8 @@ internal expect object PlayerSettingsStorage {
     fun savePreloadNextEpisodeSources(enabled: Boolean)
     fun loadMiniPlayerEnabled(): Boolean?
     fun saveMiniPlayerEnabled(enabled: Boolean)
+    fun loadPictureInPictureEnabled(): Boolean?
+    fun savePictureInPictureEnabled(enabled: Boolean)
     fun loadPrivateViewingEnabled(): Boolean?
     fun savePrivateViewingEnabled(enabled: Boolean)
     fun loadUseLibass(): Boolean?

@@ -12,6 +12,8 @@ interface PlayerEngineController {
     fun retry()
     fun isPictureInPictureSupported(): Boolean = false
     fun startPictureInPicture() {}
+    /** False while the floating window has no video frames to show (e.g. software-decoded formats). */
+    fun isPictureInPictureReady(): Boolean = true
     fun setVideoZoom(scale: Float) {}
     fun showCastDialog() {}
     fun setPlaybackSpeed(speed: Float)

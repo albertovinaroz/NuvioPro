@@ -14,6 +14,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     // in ensurePlayerViewController().
     private var keyboardShortcutsEnabled = true
     private var keyboardShortcutHandler: ((String) -> Void)?
+    private var pictureInPictureEnabled = true
 
     func createPlayerViewController() -> UIViewController {
         return ensurePlayerViewController()
@@ -24,6 +25,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
         let vc = MPVPlayerViewController()
         vc.setKeyboardShortcutsEnabled(keyboardShortcutsEnabled)
         vc.setKeyboardShortcutHandler(keyboardShortcutHandler)
+        vc.setPictureInPictureEnabled(pictureInPictureEnabled)
         self.playerVC = vc
         return vc
     }
@@ -74,6 +76,11 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func retry() { playerVC?.retryPlayback() }
     func isPictureInPictureSupported() -> Bool { playerVC?.isPictureInPictureSupported() ?? false }
     func startPictureInPicture() { playerVC?.startPictureInPicture() }
+    func isPictureInPictureReady() -> Bool { playerVC?.isPictureInPictureReady() ?? false }
+    func setPictureInPictureEnabled(enabled: Bool) {
+        pictureInPictureEnabled = enabled
+        playerVC?.setPictureInPictureEnabled(enabled)
+    }
     func setVideoZoom(scale: Double) { playerVC?.setVideoZoom(scale) }
     func updateNowPlayingMetadata(
         title: String,
@@ -513,6 +520,7 @@ final class MPVPlayerViewController: UIViewController {
             }
         }
         let pip = PlayerPictureInPictureController(owner: self, metalLayer: metalLayer)
+        pip.setEnabled(pictureInPictureEnabled)
         pictureInPictureController = pip
         view.layer.addSublayer(pip.displayLayer)
         view.layer.addSublayer(metalLayer)
@@ -874,6 +882,18 @@ final class MPVPlayerViewController: UIViewController {
 
     func startPictureInPicture() {
         pictureInPictureController?.start()
+    }
+
+    private var pictureInPictureEnabled = true
+
+    func setPictureInPictureEnabled(_ enabled: Bool) {
+        pictureInPictureEnabled = enabled
+        pictureInPictureController?.setEnabled(enabled)
+    }
+
+    /// PiP only gets frames from VideoToolbox output; software-decoded formats (XviD and the like) never feed it.
+    func isPictureInPictureReady() -> Bool {
+        pictureInPictureController?.hasVideoFrames == true
     }
 
     func isPictureInPictureActive() -> Bool {

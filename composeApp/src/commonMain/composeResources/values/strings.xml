@@ -1348,6 +1348,9 @@
     <string name="settings_playback_preload_next_episode_description">Start searching for sources in the background before the next episode button appears.</string>
     <string name="settings_playback_mini_player">Mini Player</string>
     <string name="settings_playback_mini_player_description">Shows the mini player button in the player so you can keep watching in a floating window while you browse. Picture in Picture when leaving the app works either way.</string>
+    <string name="settings_playback_picture_in_picture">Picture in Picture</string>
+    <string name="settings_playback_picture_in_picture_description">Shows the Picture in Picture button in the player and opens the floating window automatically when you go to the Home Screen.</string>
+    <string name="player_picture_in_picture_unavailable">Picture in Picture isn't available for this video. Its format is decoded in software, which the floating window can't show.</string>
     <string name="settings_playback_private_viewing">Private Viewing</string>
     <string name="settings_playback_private_viewing_description">Don't save watch progress, Continue Watching or watched status, and don't sync playback to connected trackers.</string>
     <string name="mini_player_play">Play</string>

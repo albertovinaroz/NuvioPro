@@ -98,6 +98,7 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val preloadNextEpisodeSources: Boolean = false,
     val miniPlayerEnabled: Boolean = true,
+    val pictureInPictureEnabled: Boolean = true,
     val privateViewingEnabled: Boolean = false,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
@@ -189,6 +190,7 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
     private var miniPlayerEnabled = true
+    private var pictureInPictureEnabled = true
     private var privateViewingEnabled = false
     private var useLibass = false
     private var libassRenderType = "CUES"
@@ -286,6 +288,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
         miniPlayerEnabled = true
+        pictureInPictureEnabled = true
         privateViewingEnabled = false
         useLibass = false
         libassRenderType = "CUES"
@@ -449,6 +452,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
         miniPlayerEnabled = PlayerSettingsStorage.loadMiniPlayerEnabled() ?: true
+        pictureInPictureEnabled = PlayerSettingsStorage.loadPictureInPictureEnabled() ?: true
         privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
@@ -1064,6 +1068,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveMiniPlayerEnabled(enabled)
     }
 
+    fun setPictureInPictureEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (pictureInPictureEnabled == enabled) return
+        pictureInPictureEnabled = enabled
+        publish()
+        PlayerSettingsStorage.savePictureInPictureEnabled(enabled)
+    }
+
     fun setPrivateViewingEnabled(enabled: Boolean) {
         ensureLoaded()
         if (privateViewingEnabled == enabled) return
@@ -1328,6 +1340,7 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
             preloadNextEpisodeSources = preloadNextEpisodeSources,
             miniPlayerEnabled = miniPlayerEnabled,
+            pictureInPictureEnabled = pictureInPictureEnabled,
             privateViewingEnabled = privateViewingEnabled,
             useLibass = useLibass,
             libassRenderType = libassRenderType,

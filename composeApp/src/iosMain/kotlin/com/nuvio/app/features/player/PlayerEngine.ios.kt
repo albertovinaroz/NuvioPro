@@ -149,6 +149,8 @@ actual fun PlatformPlayerSurface(
                 bridge.startPictureInPicture()
             }
 
+            override fun isPictureInPictureReady(): Boolean = bridge.isPictureInPictureReady()
+
             override fun setVideoZoom(scale: Float) {
                 bridge.setVideoZoom(scale.toDouble())
             }
@@ -430,6 +432,10 @@ actual fun PlatformPlayerSurface(
 
     LaunchedEffect(bridge, playerSettings) {
         bridge.applyIosVideoOutputSettings(playerSettings)
+    }
+
+    LaunchedEffect(bridge, playerSettings.pictureInPictureEnabled) {
+        bridge.setPictureInPictureEnabled(playerSettings.pictureInPictureEnabled)
     }
 
     // Polling for snapshots
