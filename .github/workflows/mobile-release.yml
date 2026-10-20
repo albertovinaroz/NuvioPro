@@ -270,8 +270,8 @@ jobs:
       - prepare
       - test
     runs-on: macos-26
-    # The full IPA build runs close to two hours on hosted macOS runners.
-    timeout-minutes: 180
+    # The full IPA build now takes 2-3+ hours on hosted macOS runners (it passed 3h for 0.6.2-b2).
+    timeout-minutes: 300
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       GRADLE_OPTS: -Dfile.encoding=UTF-8
