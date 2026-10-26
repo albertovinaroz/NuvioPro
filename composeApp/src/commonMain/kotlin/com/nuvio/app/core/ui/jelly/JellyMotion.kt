@@ -75,6 +75,8 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
 
     var dragging = false
         private set
+    var tabIconRefractionActive by mutableStateOf(false)
+        private set
     var running by mutableStateOf(false)
         private set
     var frame by mutableStateOf(JellyFrame(position.value.toFloat()))
@@ -91,6 +93,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
 
     fun select(index: Int) {
         dragging = false
+        tabIconRefractionActive = false
         if (index >= 0) target = index.coerceAtMost(maxIndex).toDouble()
         releasePending = true
         pressTarget = 0.0
@@ -109,6 +112,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
 
     fun snap(index: Int) {
         if (index < 0 || dragging) return
+        tabIconRefractionActive = false
         if (target == index.coerceAtMost(maxIndex).toDouble() && position.isAtRest(target)) return
         target = index.coerceAtMost(maxIndex).toDouble()
         position.snapTo(target)
@@ -126,6 +130,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         if (tabWidth > 0) target = indexAt(downX).toDouble()
         dragStartTarget = target
         dragStartPanel = panel.value
+        tabIconRefractionActive = false
         dragging = true
         releasePending = false
         pressTarget = 1.0
@@ -138,6 +143,9 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         if (!dragging || tabWidth <= 0) return
         val dx = x.toDouble()
         val dy = y.toDouble()
+        // A vertical settings-list scroll must not enable icon refraction. Only a meaningful
+        // horizontal movement of the selected lens can turn this optional overlay on.
+        if (abs(dx) >= 4.0) tabIconRefractionActive = true
         target = (dragStartTarget + dx / tabWidth).coerceIn(0.0, maxIndex.toDouble())
         panel.snapTo(dragStartPanel + dx)
         trackY.snapTo(dragStartY + jellyRubberBand(dy, height) * 0.25)
@@ -153,6 +161,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         else floor(target + 0.5).toInt().coerceIn(0, maxIndex)
         JellySelectionSource.lastDragCommit = if (wasDrag) index else null
         dragging = false
+        tabIconRefractionActive = false
         panel.velocity = 0.0
         target = index.toDouble()
         releasePending = true
@@ -162,6 +171,7 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
 
     fun cancel(selectedIndex: Int) {
         dragging = false
+        tabIconRefractionActive = false
         panel.velocity = 0.0
         select(selectedIndex)
     }
@@ -176,6 +186,21 @@ internal class JellyMotion(initialIndex: Int, count: Int) {
         if (last != NoFrame && frameTimeNanos <= last) return
         lastFrameNanos = frameTimeNanos
         if (last != NoFrame) advance((frameTimeNanos - last) / 1_000_000_000.0)
+    }
+
+    /**
+     * Reuses the track's existing spring physics for a settings-preview scroll-threshold bounce.
+     * This only distorts the shared track; it does not change the selected tab or pointer state.
+     */
+    fun bounce(direction: Float) {
+        if (dragging || direction == 0f || !direction.isFinite()) return
+        originX = width / 2.0
+        // Kick the existing springs instead of snapping the pill to a displaced frame.
+        trackY.velocity += (if (direction < 0f) -1.0 else 1.0) * height * 2.0
+        trackX.velocity -= 2.4
+        trackPress.velocity += 1.0
+        publish()
+        running = true
     }
 
     fun advance(seconds: Double) {

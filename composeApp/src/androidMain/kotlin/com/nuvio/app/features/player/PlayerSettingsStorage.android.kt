@@ -29,6 +29,8 @@ actual object PlayerSettingsStorage {
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
+    private const val skipBackwardSecondsKey = "skip_backward_seconds"
+    private const val skipForwardSecondsKey = "skip_forward_seconds"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val swipeToSeekEnabledKey = "swipe_to_seek_enabled"
     private const val seekPreviewEnabledKey = "seek_preview_enabled"
@@ -48,6 +50,9 @@ actual object PlayerSettingsStorage {
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
+    private const val subtitleShadowEnabledKey = "subtitle_shadow_enabled"
+    private const val subtitleShadowStrengthKey = "subtitle_shadow_strength"
+    private const val subtitleCustomFontKey = "subtitle_custom_font"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
@@ -103,6 +108,7 @@ actual object PlayerSettingsStorage {
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
     private const val useLibmpvAssKey = "use_libmpv_ass"
+    private const val libassRenderScaleKey = "libass_render_scale"
     private const val iosVideoOutputPresetKey = "ios_video_output_preset"
     private const val iosToneMappingModeKey = "ios_tone_mapping_mode"
     private const val iosTargetPrimariesKey = "ios_target_primaries"
@@ -344,6 +350,24 @@ actual object PlayerSettingsStorage {
             ?.putFloat(ProfileScopedKey.of(holdToSpeedValueKey), speed)
             ?.apply()
     }
+
+    private fun loadLocalInt(keyBase: String): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(keyBase)
+            if (sharedPreferences.contains(key)) sharedPreferences.getInt(key, 0) else null
+        }
+
+    private fun saveLocalInt(keyBase: String, value: Int) {
+        preferences?.edit()?.putInt(ProfileScopedKey.of(keyBase), value)?.apply()
+    }
+
+    actual fun loadSkipBackwardSeconds(): Int? = loadLocalInt(skipBackwardSecondsKey)
+
+    actual fun saveSkipBackwardSeconds(seconds: Int) = saveLocalInt(skipBackwardSecondsKey, seconds)
+
+    actual fun loadSkipForwardSeconds(): Int? = loadLocalInt(skipForwardSecondsKey)
+
+    actual fun saveSkipForwardSeconds(seconds: Int) = saveLocalInt(skipForwardSecondsKey, seconds)
 
     actual fun loadTouchGesturesEnabled(): Boolean? =
         preferences?.let { sharedPreferences ->
@@ -631,6 +655,50 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putInt(ProfileScopedKey.of(subtitleOutlineWidthKey), width)
             ?.apply()
+    }
+
+    actual fun loadSubtitleShadowEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleShadowEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, SubtitleStyleState.DEFAULT.shadowEnabled)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleShadowEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(subtitleShadowEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleShadowStrength(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleShadowStrengthKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, SubtitleStyleState.DEFAULT.shadowStrength)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleShadowStrength(strength: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(subtitleShadowStrengthKey), strength)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleCustomFont(): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleCustomFontKey), null)
+
+    actual fun saveSubtitleCustomFont(fileName: String?) {
+        preferences?.edit()?.apply {
+            val key = ProfileScopedKey.of(subtitleCustomFontKey)
+            if (fileName.isNullOrBlank()) remove(key) else putString(key, fileName)
+        }?.apply()
     }
 
     actual fun loadSubtitleBold(): Boolean? =
@@ -1373,6 +1441,16 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(useLibmpvAssKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadLibassRenderScale(): String? =
+        preferences?.getString(ProfileScopedKey.of(libassRenderScaleKey), null)
+
+    actual fun saveLibassRenderScale(scale: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(libassRenderScaleKey), scale)
             ?.apply()
     }
 

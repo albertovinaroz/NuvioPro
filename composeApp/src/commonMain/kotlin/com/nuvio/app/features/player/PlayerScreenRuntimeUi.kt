@@ -3,6 +3,8 @@ package com.nuvio.app.features.player
 import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.features.home.MetaPreview
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -29,6 +31,7 @@ import com.nuvio.app.features.player.seekpreview.rememberSeekPreviewController
 import com.nuvio.app.features.player.skip.PlayerNextEpisodeRules
 import com.nuvio.app.core.logging.InAppLogger
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.p2p.formatP2pMegabytes
@@ -50,6 +53,7 @@ import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.livetv.currentProgram
 import com.nuvio.app.features.livetv.rememberLiveTvEpgNowMillis
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
@@ -432,11 +436,16 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
     }
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
+    val playerBadges = rememberPlayerBadges()
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
         exit = fadeOut(),
     ) {
+        @OptIn(ExperimentalAnimationApi::class)
+        val controlsFadingOut = transition.targetState == EnterExitState.PostExit
+        val shownBeforeExit = remember { booleanArrayOf(controlsVisible) }
+        if (!controlsFadingOut) shownBeforeExit[0] = controlsVisible
         val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
         val orientationToggleSupported = rememberPlayerOrientationToggleSupported()
         val portraitPlayback by PlayerOrientationPreference.portrait.collectAsStateWithLifecycle()
@@ -458,6 +467,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
             showRemainingTime = showRemainingTime,
             onRuntimeClick = { showRemainingTime = !showRemainingTime },
             releaseInfo = metaUiState.meta?.takeIf { it.id == parentMetaId }?.releaseInfo,
+            badges = playerBadges,
             hideDetails = activeSkipInterval != null && !skipIntervalDismissed,
             onNextEpisodeClick = if (nextEpisodeInfo?.hasAired == true && !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null) {
                 {
@@ -465,7 +475,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 }
             } else null,
             onInteraction = { controlsActivityTick += 1 },
-            showPlaybackControls = controlsVisible,
+            showPlaybackControls = if (controlsFadingOut) shownBeforeExit[0] else controlsVisible,
             onLockToggle = {
                 if (playerControlsLocked) unlockPlayerControls() else lockPlayerControls()
             },
@@ -480,8 +490,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
             },
             partyActive = partyActive,
             onTogglePlayback = { togglePlayback() },
-            onSeekBack = { seekBy(-10_000L) },
-            onSeekForward = { seekBy(10_000L) },
+            onSeekBack = { seekBy(-skipStepMs(PlayerSeekDirection.Backward)) },
+            onSeekForward = { seekBy(skipStepMs(PlayerSeekDirection.Forward)) },
+            skipBackwardSeconds = playerSettingsUiState.skipBackwardSeconds,
+            skipForwardSeconds = playerSettingsUiState.skipForwardSeconds,
             onResizeModeClick = { cycleResizeMode() },
             onSpeedClick = if (!isLiveTvPlayback) {
                 {
@@ -643,7 +655,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(isEpisode: Boolean) {
                 null
             },
             onSwitchEngineClick = if (playerController?.playbackEngine != null) {
-                { switchPlaybackEngine() }
+                { showSwitchEngineConfirm = true }
             } else {
                 null
             },
@@ -1145,6 +1157,21 @@ private fun PlayerScreenRuntime.RenderPlayerModals() {
         addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onDismiss = { showStreamInfo = false },
     )
+    val switchEngineTarget = playerController?.playbackEngine?.switchTarget
+    if (switchEngineTarget != null) {
+        NuvioStatusModal(
+            isVisible = showSwitchEngineConfirm,
+            title = stringResource(Res.string.player_engine_switch_title, switchEngineTarget.label),
+            message = stringResource(Res.string.player_engine_switch_message),
+            confirmText = stringResource(Res.string.action_switch),
+            dismissText = stringResource(Res.string.action_cancel),
+            onConfirm = {
+                showSwitchEngineConfirm = false
+                switchPlaybackEngine()
+            },
+            onDismiss = { showSwitchEngineConfirm = false },
+        )
+    }
 }
 
 /** The movie or episode currently playing, for in-player rating. */

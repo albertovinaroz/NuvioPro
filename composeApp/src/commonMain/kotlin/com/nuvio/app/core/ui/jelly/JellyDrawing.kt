@@ -28,7 +28,11 @@ internal fun DrawScope.drawJellyGlow(frame: JellyFrame, color: Color) {
     )
 }
 
-internal fun DrawScope.jellyPillPath(frame: JellyFrame, count: Int): Path {
+internal fun DrawScope.jellyPillPath(
+    frame: JellyFrame,
+    count: Int,
+    cornerRadiusPercent: Float = 50f,
+): Path {
     val inset = 4.dp.toPx()
     val tabWidth = (size.width - 2 * inset) / count
     val itemHeight = size.height - 2 * inset
@@ -36,7 +40,7 @@ internal fun DrawScope.jellyPillPath(frame: JellyFrame, count: Int): Path {
     // A little narrower than its slot, so the pill on an end tab doesn't run into the bar's edge.
     val halfWidth = (tabWidth - 6.dp.toPx()) * frame.pillScaleX / 2
     val halfHeight = itemHeight * frame.pillScaleY / 2
-    val radius = min(tabWidth, itemHeight) / 2
+    val radius = min(tabWidth, itemHeight) * cornerRadiusPercent.coerceIn(0f, 50f) / 100f
     return Path().apply {
         addRoundRect(
             RoundRect(

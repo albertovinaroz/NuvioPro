@@ -363,7 +363,8 @@ struct NuvioGlassTabBar: View {
         .background {
             if selected && isExpanded && dragLocationX == nil {
                 Capsule()
-                    .fill(iconStore.accentStyle(opacity: 0.12))
+                    .fill(Color.black.opacity(0.34))
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.28), lineWidth: 1))
             }
         }
 

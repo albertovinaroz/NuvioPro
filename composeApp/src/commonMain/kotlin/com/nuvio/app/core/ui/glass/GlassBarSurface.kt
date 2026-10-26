@@ -22,24 +22,24 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 
-internal val GlassSurfaceColor = Color(0xFF1C1C1E)
-
 internal val GlassBarShape = RoundedCornerShape(50)
 
 /**
  * The backdrop of the floating navigation pill: Kyant's liquid glass (vibrancy, blur and lens
- * refraction) tuned by [LiquidGlassStyle]. Without a backdrop, on devices without RenderEffect or
- * with the solid material it is [SolidGlassBar].
+ * refraction) with the [LiquidGlassStyle] flags and the tunable [settings] numbers (already
+ * filtered by the material, see forNavigationMaterial). Without a backdrop, on devices without
+ * RenderEffect or with the solid material it is [SolidGlassBar].
  */
 @Composable
 internal fun GlassBarSurface(
     backdrop: Backdrop?,
     modifier: Modifier = Modifier,
     style: LiquidGlassStyle = LiquidGlassStyle.Default,
+    settings: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.floatingBar,
     exportedBackdrop: LayerBackdrop? = null,
 ) {
     if (backdrop != null && style.usesBackdrop && isLiquidGlassSupported()) {
-        LiquidGlassBar(backdrop, style, exportedBackdrop, modifier)
+        LiquidGlassBar(backdrop, style, settings, exportedBackdrop, modifier)
     } else {
         SolidGlassBar(modifier, style.edgeHighlight)
     }
@@ -49,6 +49,7 @@ internal fun GlassBarSurface(
 private fun LiquidGlassBar(
     backdrop: Backdrop,
     style: LiquidGlassStyle,
+    settings: LiquidGlassEffectSettings,
     exportedBackdrop: LayerBackdrop?,
     modifier: Modifier,
 ) {
@@ -58,13 +59,13 @@ private fun LiquidGlassBar(
             shape = { GlassBarShape },
             effects = {
                 if (style.vibrancy) vibrancy()
-                if (style.usesBlur && style.blurRadius > 0) blur(style.blurRadius.dp.toPx())
-                if (style.usesLens && style.refraction > 0) {
-                    val refraction = style.refraction.dp.toPx()
+                if (settings.blurRadiusDp > 0f) blur(settings.blurRadiusDp.dp.toPx())
+                if (settings.refractionHeightDp > 0f && settings.refractionAmountDp > 0f) {
                     lens(
-                        refractionHeight = refraction.coerceAtMost(size.minDimension / 2f),
-                        refractionAmount = refraction,
-                        chromaticAberration = style.chromaticAberration,
+                        refractionHeight = settings.refractionHeightDp.dp.toPx().coerceAtMost(size.minDimension / 2f),
+                        refractionAmount = settings.refractionAmountDp.dp.toPx(),
+                        depthEffect = settings.depthEffect,
+                        chromaticAberration = settings.chromaticAberration,
                     )
                 }
             },
@@ -72,36 +73,9 @@ private fun LiquidGlassBar(
             shadow = if (style.shadow) DefaultGlassShadow else null,
             exportedBackdrop = exportedBackdrop,
             onDrawSurface = {
-                drawRect(GlassSurfaceColor.copy(alpha = style.tintPercent / 100f))
+                drawRect(GlassSurfaceColor.copy(alpha = settings.tintOpacity))
             },
         ),
-    )
-}
-
-/** A dark fill and a thin top-lit edge: the glass bar without any backdrop. */
-@Composable
-internal fun SolidGlassBar(modifier: Modifier, edgeHighlight: Boolean = true) {
-    Box(
-        modifier
-            .drawWithCache {
-                val fill = GlassSurfaceColor.copy(alpha = 0.82f)
-                val edge = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.27f), Color.White.copy(alpha = 0.02f)),
-                )
-                val width = 0.75.dp.toPx()
-                onDrawBehind {
-                    drawRoundRect(fill, cornerRadius = CornerRadius(size.height / 2))
-                    if (edgeHighlight) {
-                        drawRoundRect(
-                            brush = edge,
-                            topLeft = Offset(width / 2, width / 2),
-                            size = Size(size.width - width, size.height - width),
-                            cornerRadius = CornerRadius((size.height - width) / 2),
-                            style = Stroke(width),
-                        )
-                    }
-                }
-            },
     )
 }
 

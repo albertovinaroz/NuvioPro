@@ -525,14 +525,14 @@
     <string name="compose_settings_root_about_section">GIỚI THIỆU</string>
     <string name="compose_settings_root_account_description">Tài khoản và trạng thái đồng bộ</string>
     <string name="compose_settings_root_account_section">TÀI KHOẢN</string>
-    <string name="compose_settings_root_advanced_description">Cài đặt khi khởi động và quản lý hồ sơ</string>
+    <string name="compose_settings_root_advanced_description">Cài đặt khi khởi động và quản lý hồ sơ.</string>
     <string name="compose_settings_root_advanced_section">NÂNG CAO</string>
     <string name="compose_settings_root_appearance_description">Trang chủ, luồng, bộ sưu tập và trang chi tiết</string>
     <string name="compose_settings_root_check_updates_description">Tải xuống phiên bản mới nhất</string>
     <string name="compose_settings_root_check_updates_title">Kiểm tra cập nhật</string>
-    <string name="compose_settings_root_content_discovery_description">Quản lý các tiện ích và nguồn khám phá</string>
+    <string name="compose_settings_root_content_discovery_description">Quản lý các tiện ích và nguồn khám phá.</string>
     <string name="compose_settings_root_content_discovery_description_appstore">Quản lý các tiện ích và chọn những gì xuất hiện trong Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">Quản lý các phim điện ảnh và tập phim đã tải xuống của bạn</string>
+    <string name="compose_settings_root_downloads_description">Quản lý các phim điện ảnh và tập phim đã tải xuống của bạn.</string>
     <string name="compose_settings_root_downloads_description_appstore">Quản lý những gì bạn đã lưu trên thiết bị này.</string>
     <string name="compose_settings_root_downloads_title">Tải xuống</string>
     <string name="compose_settings_root_general_section">CHUNG</string>
@@ -543,7 +543,7 @@
     <string name="compose_settings_root_switch_profile_description">Chuyển sang hồ sơ khác</string>
     <string name="compose_settings_root_switch_profile_title">Chuyển hồ sơ</string>
     <string name="compose_settings_root_trakt_description">Mở màn hình kết nối Trakt</string>
-    <string name="compose_settings_root_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ nào được dùng cho Thư viện và Tiếp tục xem</string>
+    <string name="compose_settings_root_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ nào được dùng cho Thư viện và Tiếp tục xem.</string>
     <string name="settings_search_empty">Không tìm thấy cài đặt nào.</string>
     <string name="settings_search_placeholder">Tìm cài đặt...</string>
     <string name="settings_search_results_section">KẾT QUẢ</string>
@@ -894,6 +894,11 @@
     <string name="settings_stream_badges_section">KIỂU FUSION</string>
     <string name="settings_stream_size_badges_title">Nhãn dung lượng</string>
     <string name="settings_stream_size_badges_description">Hiển thị nhãn dung lượng tệp trong kết quả luồng và bảng chọn nguồn phát.</string>
+    <string name="settings_stream_badges_in_player_title">Hiển thị trong trình phát</string>
+    <string name="settings_stream_badges_in_player_description">Hiển thị nhãn cho video và âm thanh đang phát bên dưới tiêu đề trình phát. Cần một bộ nhãn khớp với văn bản thuần túy như 2160p hoặc Atmos.</string>
+    <string name="settings_stream_player_badges_title">Nhãn trình phát</string>
+    <string name="settings_stream_player_badges_description">Chọn bộ nhãn trình phát sử dụng.</string>
+    <string name="settings_stream_player_badges_same">Giống nhãn luồng phát</string>
     <string name="settings_stream_addon_logo_title">Biểu tượng tiện ích</string>
     <string name="settings_stream_addon_logo_description">Hiển thị biểu tượng và tên tiện ích bên cạnh mỗi nguồn phát</string>
     <string name="settings_stream_display_section">HIỂN THỊ</string>
@@ -906,8 +911,8 @@
     <string name="settings_stream_badge_position_top">Phía trên</string>
     <string name="settings_stream_badge_position_bottom">Phía dưới</string>
     <string name="settings_stream_badge_urls_title">URL nhãn Fusion</string>
-    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng kiểu Fusion. Bạn có thể cập nhật hoặc xóa từng URL riêng lẻ.</string>
-    <string name="settings_stream_badge_urls_search_description">Quản lý các URL JSON nhãn luồng kiểu Fusion đã nhập.</string>
+    <string name="settings_stream_badge_urls_description">Nhập tối đa %1$d URL JSON nhãn luồng phát kiểu Fusion. Bạn có thể cập nhật hoặc xóa từng URL riêng lẻ.</string>
+    <string name="settings_stream_badge_urls_search_description">Quản lý các URL JSON nhãn luồng phát kiểu Fusion đã nhập.</string>
     <string name="settings_stream_badge_import_failed">Nhập thất bại</string>
     <string name="settings_stream_badge_enter_url">Nhập URL chuỗi JSON của nhãn</string>
     <string name="settings_stream_badge_url_scheme_invalid">URL nhãn phải bắt đầu bằng http:// hoặc https://.</string>
@@ -983,7 +988,6 @@
     <string name="settings_meta_tab_group_format">Nhóm thẻ %1$d</string>
     <string name="settings_meta_tab_layout">Bố cục thẻ</string>
     <string name="settings_meta_tab_layout_description">Nhóm các mục thành từng thẻ như trên ứng dụng TV. Gán tối đa 3 mục cho mỗi thẻ</string>
-    <string name="settings_meta_tab_layout_hint">Đã bật nhưng chưa có tab nào. Hãy chọn nhóm tab cho các mục bên dưới; các mục cùng nhóm sẽ hiển thị dạng tab.</string>
     <string name="settings_meta_trailers">Trailer</string>
     <string name="settings_meta_trailers_description">Thanh trailer và phím tắt phát lại</string>
     <string name="settings_notifications_disabled_in_app">Thông báo hiện đang bị tắt trên Nuvio</string>
@@ -1142,11 +1146,6 @@
     <string name="settings_playback_regex_preset_quality_720p_smaller">720p / Dung lượng nhỏ</string>
     <string name="settings_playback_regex_preset_web_sources">Nguồn WEB</string>
     <string name="settings_playback_render_type">Chế độ kết xuất libass</string>
-    <string name="settings_playback_render_type_cues">Phụ đề tiêu chuẩn</string>
-    <string name="settings_playback_render_type_effects_canvas">Hiệu ứng Canvas</string>
-    <string name="settings_playback_render_type_effects_opengl">Hiệu ứng OpenGL</string>
-    <string name="settings_playback_render_type_overlay_canvas">Lớp phủ Canvas</string>
-    <string name="settings_playback_render_type_overlay_opengl">Lớp phủ OpenGL (Khuyến nghị)</string>
     <string name="settings_playback_reuse_last_link">Dùng lại liên kết cuối</string>
     <string name="settings_playback_reuse_last_link_description">Tự động phát luồng hoạt động gần nhất cho cùng một phim điện ảnh/tập phim khi bộ nhớ đệm vẫn còn hiệu lực.</string>
     <string name="settings_playback_secondary_audio_language">Ngôn ngữ âm thanh phụ</string>
@@ -1928,6 +1927,11 @@
     <string name="library_sort_released_asc">Đã phát hành đầu tiên</string>
     <string name="library_sort_released_desc">Đã phát hành gần đây</string>
     <string name="library_sort_title_asc">Tên A–Z</string>
+    <string name="library_status_watching">Đang xem</string>
+    <string name="library_status_plan_to_watch">Xem sau</string>
+    <string name="library_status_on_hold">Tạm dừng</string>
+    <string name="library_status_completed">Đã hoàn tất</string>
+    <string name="library_status_dropped">Đã bỏ</string>
     <string name="library_error_sort_failed">Không thể tải thứ tự sắp xếp. Đang hiển thị theo thứ tự của nhà cung cấp.</string>
     <string name="library_sort_title_desc">Tên Z–A</string>
     <string name="library_sort_provider_order">Thứ tự nguồn theo dõi</string>
@@ -2391,7 +2395,6 @@
     <string name="layout_ratings_hide_unwatched">Ẩn mục Chưa xem</string>
      <string name="settings_playback_legacy_layout">Bố cục kiểu cũ</string>
     <string name="settings_playback_legacy_layout_description">Sử dụng các nút điều khiển gốc của trình phát.</string>
-    <string name="compose_player_via">Qua %1$s</string>
     <string name="compose_player_episode_code">M%1$d T%2$d</string>
     <string name="compose_player_more_actions">Thêm nút điều khiển</string>
     <string name="compose_player_fewer_actions">Ẩn nút điều khiển</string>
@@ -2443,6 +2446,8 @@
     <string name="cd_switch_player_engine">Chuyển lõi trình phát</string>
     <string name="cd_stream_info">Thông tin luồng</string>
     <string name="player_engine_switching_manual_message">Đang chuyển sang %1$s...</string>
+    <string name="player_engine_switch_title">Chuyển sang %1$s?</string>
+    <string name="player_engine_switch_message">Video sẽ tải lại từ vị trí hiện tại của bạn.</string>
     <string name="stream_info_section_source">NGUỒN</string>
     <string name="stream_info_section_video">VIDEO</string>
     <string name="stream_info_section_audio">ÂM THANH</string>
@@ -2460,4 +2465,5 @@
     <string name="stream_info_subtitle_source_embedded">Nhúng</string>
     <string name="stream_info_player_engine">Lõi trình phát</string>
     <string name="stream_info_server">Máy chủ</string>
+    <string name="settings_meta_tab_layout_hint">Đã bật nhưng chưa có tab nào. Hãy chọn nhóm tab cho các mục bên dưới; các mục cùng nhóm sẽ hiển thị dạng tab.</string>
 </resources>

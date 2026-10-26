@@ -474,8 +474,8 @@ kotlin {
                 implementation("androidx.recyclerview:recyclerview:1.4.0")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("com.google.code.gson:gson:2.11.0")
-                implementation("io.github.peerless2012:ass-media:0.5.1")
-                implementation("io.github.peerless2012:ass-kt:0.5.1")
+                // libass - atlas-based subtitle rendering (from NuvioMedia/nuvio-libass)
+                implementation(files("libs/nuvio-libass-release.aar"))
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.sentry.android)
                 implementation(libs.play.services.cast.framework)
@@ -530,8 +530,8 @@ kotlin {
                 exclude(group = "org.jetbrains.skiko", module = "skiko")
             }
             // Haze still blurs Pro's pinned headers and the iOS floating bar; backdrop drives Android's liquid glass.
-            implementation("dev.chrisbanes.haze:haze:1.7.2")
-            implementation("io.github.kyant0:backdrop:2.0.1")
+            implementation("dev.chrisbanes.haze:haze:1.7.3")
+            implementation(libs.kyant.backdrop)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

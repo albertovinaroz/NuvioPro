@@ -115,7 +115,7 @@ fun NuvioScreen(
             top = topPadding ?: tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding,
             end = horizontalPadding,
             bottom = nuvioSafeBottomPadding(tokens.spacing.screenBottom),
-        ),
+        ).withVerticalBar(),
         verticalArrangement = Arrangement.spacedBy(tokens.spacing.listGap),
         content = content,
     )
@@ -449,6 +449,7 @@ fun NuvioInputField(
     // the fully-rounded, iOS-search-bar look.
     shape: Shape = RoundedCornerShape(NuvioTokens.Radius.lg),
     trailingContent: (@Composable (() -> Unit))? = null,
+    containerColor: Color = MaterialTheme.nuvio.colors.surfaceCard,
 ) {
     val tokens = MaterialTheme.nuvio
     OutlinedTextField(
@@ -469,8 +470,8 @@ fun NuvioInputField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = tokens.colors.borderFocus,
             unfocusedBorderColor = tokens.colors.borderDefault,
-            focusedContainerColor = tokens.colors.surfaceCard,
-            unfocusedContainerColor = tokens.colors.surfaceCard,
+            focusedContainerColor = containerColor,
+            unfocusedContainerColor = containerColor,
             cursorColor = tokens.colors.accent,
         ),
     )

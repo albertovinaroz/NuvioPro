@@ -64,6 +64,8 @@ import dev.chrisbanes.haze.hazeSource
 import com.nuvio.app.features.player.MiniPlayerController
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.verticalBarWidth
 
 @Composable
 fun DetailHero(
@@ -93,7 +95,7 @@ fun DetailHero(
     ) {
         val heroHazeState = remember { HazeState() }
         val isHeightCapped = maxHeroHeight.isSpecified
-        val heroHeight = detailHeroHeight(maxWidth, isTablet).let { natural ->
+        val heroHeight = detailHeroHeight(maxWidth - verticalBarWidth(), isTablet).let { natural ->
             if (isHeightCapped) minOf(natural, maxHeroHeight.coerceAtLeast(200.dp)) else natural
         }
         val trailerAlpha by animateFloatAsState(
@@ -222,6 +224,7 @@ fun DetailHero(
                             onClick = onHeroTrailerMuteToggle,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
+                                .padding(LocalVerticalBarPadding.current)
                                 .padding(
                                     top = heroChromeTopPadding,
                                     end = if (isTablet) 32.dp else 22.dp,

@@ -282,6 +282,15 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         selectedSegmentTintColor = indicatorColor.withAlphaComponent(0.24)
     }
 
+    private let selectionBorder: CAShapeLayer = {
+        let border = CAShapeLayer()
+        border.fillColor = UIColor.clear.cgColor
+        border.strokeColor = UIColor.white.withAlphaComponent(0.28).cgColor
+        border.lineWidth = 1
+        border.zPosition = 10
+        return border
+    }()
+
     /// True between touch down and touch up/cancel, so external selection updates don't fight it.
     private(set) var isTrackingTouch = false
 
@@ -306,6 +315,7 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
         super.init(items: items)
         accessibilityTraits = .tabBar
         applySelectionTint()
+        layer.addSublayer(selectionBorder)
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPress.minimumPressDuration = 0.45
         addGestureRecognizer(longPress)
@@ -498,6 +508,12 @@ final class NuvioTabSegmentedControl: UISegmentedControl {
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        if rect.isEmpty {
+            selectionBorder.path = nil
+        } else {
+            let edge = rect.insetBy(dx: 0.5, dy: 0.5)
+            selectionBorder.path = UIBezierPath(roundedRect: edge, cornerRadius: edge.height / 2).cgPath
+        }
         let selfLayer = layer.presentation() ?? layer
         for (base, accent) in zip(baseViews, accentViews) {
             let accentLayer = accent.layer.presentation() ?? accent.layer

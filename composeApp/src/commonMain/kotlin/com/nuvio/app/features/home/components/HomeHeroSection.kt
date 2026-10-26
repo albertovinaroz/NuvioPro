@@ -3,6 +3,7 @@ package com.nuvio.app.features.home.components
 import com.nuvio.app.features.player.MiniPlayerController
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.MutatePriority
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -77,6 +79,7 @@ import com.nuvio.app.core.ui.HeroGlassIconButton
 import com.nuvio.app.core.ui.TrackingListPickerDialog
 import com.nuvio.app.core.ui.dynamicScrimAlpha
 import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.details.HeroTrailerAudioState
@@ -104,6 +107,9 @@ import com.nuvio.app.features.trailer.TrailerPlaybackResolver
 import com.nuvio.app.features.trailer.TrailerPlaybackSource
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import com.nuvio.app.core.ui.centeredVerticalBarPadding
+import com.nuvio.app.core.ui.withVerticalBar
+import com.nuvio.app.features.home.stableKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -243,6 +249,8 @@ internal fun HomeHeroSection(
     trailerPlaybackEnabled: Boolean = false,
     trailerStartDelaySeconds: Int = 0,
     trailerStartUnmuted: Boolean = false,
+    showImdbRating: Boolean = true,
+    showMdbListRatings: Boolean = false,
     onItemClick: ((MetaPreview) -> Unit)? = null,
     onActiveArtworkChange: ((String?) -> Unit)? = null,
 ) {
@@ -709,9 +717,13 @@ internal fun HomeHeroSection(
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = layout.contentHorizontalPadding,
-                                    vertical = layout.contentVerticalPadding,
-                                ),
+                                    if (layout.isTablet || isPosterStyle) {
+                                        PaddingValues(horizontal = layout.contentHorizontalPadding).withVerticalBar()
+                                    } else {
+                                        centeredVerticalBarPadding(layout.contentHorizontalPadding)
+                                    },
+                                )
+                                .padding(vertical = layout.contentVerticalPadding),
                             horizontalAlignment = if (layout.isTablet || isPosterStyle) {
                                 Alignment.Start
                             } else {
@@ -732,6 +744,8 @@ internal fun HomeHeroSection(
                                 },
                             ) {
                                 visiblePages.forEach { layer ->
+                                    val layerItem = items[layer.itemIndex]
+                                    key(layerItem.stableKey()) {
                                     Box(
                                         modifier = Modifier.graphicsLayer {
                                             alpha = heroContentAlpha(layer.visibility)
@@ -739,11 +753,14 @@ internal fun HomeHeroSection(
                                         },
                                     ) {
                                         HeroContentBlock(
-                                            item = items[layer.itemIndex],
+                                            item = layerItem,
                                             layout = layout,
                                             leftAligned = layout.isTablet || isPosterStyle,
+                                            showImdbRating = showImdbRating,
+                                            showMdbListRatings = showMdbListRatings,
                                             onItemClick = onItemClick,
                                         )
+                                    }
                                     }
                                 }
                             }
@@ -1060,6 +1077,8 @@ private fun HeroContentBlock(
     item: MetaPreview,
     layout: HomeHeroLayout,
     leftAligned: Boolean,
+    showImdbRating: Boolean,
+    showMdbListRatings: Boolean,
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     var logoLoadError by remember(item.type, item.id, item.logo) {
@@ -1068,7 +1087,9 @@ private fun HeroContentBlock(
     val logoUrl = item.logo?.takeIf { it.isNotBlank() }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         horizontalAlignment = if (leftAligned) Alignment.Start else Alignment.CenterHorizontally,
     ) {
         if (logoUrl != null && !logoLoadError) {
@@ -1102,39 +1123,54 @@ private fun HeroContentBlock(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (leftAligned) {
-                Arrangement.spacedBy(8.dp, Alignment.Start)
-            } else {
-                Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-            },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeroMetaText(text = item.type.replaceFirstChar(Char::uppercase))
-            item.genres.firstOrNull()?.let { genre ->
-                HeroMetaDot()
-                HeroMetaText(text = genre)
-            }
-            item.releaseInfo?.takeIf { it.isNotBlank() }?.let { info ->
-                HeroMetaDot()
-                HeroMetaText(text = formatReleaseDateForDisplay(info))
+        val detailsState = remember(item.type, item.id) {
+            mutableStateOf(MetaDetailsRepository.peek(item.type, item.id))
+        }
+        LaunchedEffect(item.type, item.id) {
+            if (detailsState.value == null) {
+                detailsState.value = runCatching {
+                    MetaDetailsRepository.fetch(item.type, item.id)
+                }.getOrNull()
             }
         }
-    }
-}
+        val details = detailsState.value
+        // Fill the gaps a catalog preview leaves (rating, age rating, genre) from
+        // the cached details so the upstream meta rows stay populated on Enhanced.
+        val metaItem = remember(item, details) {
+            if (details == null) {
+                item
+            } else {
+                item.copy(
+                    imdbRating = item.imdbRating ?: details.imdbRating,
+                    releaseInfo = item.releaseInfo ?: details.releaseInfo,
+                    genres = item.genres.ifEmpty { details.genres },
+                    ageRating = item.ageRating ?: details.ageRating,
+                )
+            }
+        }
+        val synopsis = (item.description ?: details?.description)?.trim()?.takeIf { it.isNotBlank() }
 
-@Composable
-private fun HeroMetaText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.SemiBold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+        Spacer(modifier = Modifier.height(12.dp))
+        HomeHeroMetaRows(
+            item = metaItem,
+            isTablet = leftAligned,
+            showImdbRating = showImdbRating,
+            showMdbListRatings = showMdbListRatings,
+        )
+
+        if (synopsis != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = synopsis,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.72f),
+                textAlign = if (leftAligned) TextAlign.Start else TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 internal fun homeHeroLayout(
@@ -1243,16 +1279,6 @@ private fun mobileHeroHeight(
     }
 
     return cappedHeight.coerceIn(minHeight, MOBILE_HERO_MAX_HEIGHT_DP.dp)
-}
-
-@Composable
-private fun HeroMetaDot() {
-    Box(
-        modifier = Modifier
-            .size(4.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)),
-    )
 }
 
 private fun heroBackgroundScrollScale(scrollOffsetPx: Float): Float {

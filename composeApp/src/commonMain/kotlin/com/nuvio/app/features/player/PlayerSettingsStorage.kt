@@ -23,6 +23,10 @@ internal expect object PlayerSettingsStorage {
     fun saveHoldToSpeedEnabled(enabled: Boolean)
     fun loadHoldToSpeedValue(): Float?
     fun saveHoldToSpeedValue(speed: Float)
+    fun loadSkipBackwardSeconds(): Int?
+    fun saveSkipBackwardSeconds(seconds: Int)
+    fun loadSkipForwardSeconds(): Int?
+    fun saveSkipForwardSeconds(seconds: Int)
     fun loadTouchGesturesEnabled(): Boolean?
     fun saveTouchGesturesEnabled(enabled: Boolean)
     fun loadSwipeToSeekEnabled(): Boolean?
@@ -55,12 +59,18 @@ internal expect object PlayerSettingsStorage {
     fun saveSubtitleTextColor(colorHex: String)
     fun loadSubtitleBackgroundColor(): String?
     fun saveSubtitleBackgroundColor(colorHex: String)
+    fun loadSubtitleCustomFont(): String?
+    fun saveSubtitleCustomFont(fileName: String?)
     fun loadSubtitleOutlineColor(): String?
     fun saveSubtitleOutlineColor(colorHex: String)
     fun loadSubtitleOutlineEnabled(): Boolean?
     fun saveSubtitleOutlineEnabled(enabled: Boolean)
     fun loadSubtitleOutlineWidth(): Int?
     fun saveSubtitleOutlineWidth(width: Int)
+    fun loadSubtitleShadowEnabled(): Boolean?
+    fun saveSubtitleShadowEnabled(enabled: Boolean)
+    fun loadSubtitleShadowStrength(): Int?
+    fun saveSubtitleShadowStrength(strength: Int)
     fun loadSubtitleBold(): Boolean?
     fun saveSubtitleBold(enabled: Boolean)
     fun loadSubtitleFontSizeSp(): Int?
@@ -172,6 +182,8 @@ internal expect object PlayerSettingsStorage {
     fun saveLibassRenderType(renderType: String)
     fun loadUseLibmpvAss(): Boolean?
     fun saveUseLibmpvAss(enabled: Boolean)
+    fun loadLibassRenderScale(): String?
+    fun saveLibassRenderScale(scale: String)
     fun loadIosVideoOutputPreset(): String?
     fun saveIosVideoOutputPreset(preset: String)
     fun loadIosToneMappingMode(): String?

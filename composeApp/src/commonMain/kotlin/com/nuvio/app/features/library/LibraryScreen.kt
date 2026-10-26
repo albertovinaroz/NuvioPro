@@ -184,6 +184,8 @@ import com.nuvio.app.core.ui.ScopedDisintegrationTracker
 import com.nuvio.app.core.ui.SkeletonBlock
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.nuvioConsumePointerEvents
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.features.cloud.CloudLibraryFile
 import com.nuvio.app.features.cloud.CloudLibraryItem
 import com.nuvio.app.features.cloud.CloudLibraryItemType
@@ -676,7 +678,8 @@ fun LibraryScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontalSafePadding),
+            .padding(horizontalSafePadding)
+            .padding(LocalVerticalBarPadding.current),
     ) {
             // Same rule as Search's grid, from the full screen width, so both screens fit the same
             // number of posters to a row even with the landscape safe area taken off the sides.
@@ -2627,13 +2630,13 @@ private fun LibraryCalendarCard(
 @Composable
 private fun LibraryCalendarWeekdayHeader() {
     val labels = listOf(
-        stringResource(Res.string.library_calendar_weekday_sun),
         stringResource(Res.string.library_calendar_weekday_mon),
         stringResource(Res.string.library_calendar_weekday_tue),
         stringResource(Res.string.library_calendar_weekday_wed),
         stringResource(Res.string.library_calendar_weekday_thu),
         stringResource(Res.string.library_calendar_weekday_fri),
         stringResource(Res.string.library_calendar_weekday_sat),
+        stringResource(Res.string.library_calendar_weekday_sun),
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -3558,7 +3561,7 @@ private fun libraryCalendarCells(month: LibraryCalendarMonth): List<LibraryCalen
 
 private fun firstLibraryCalendarWeekdayOffset(year: Int, month: Int): Int {
     val epochDay = isoEpochDay(LibraryCalendarDate(year, month, 1).iso)
-    val raw = (epochDay + 4L) % 7L
+    val raw = (epochDay + 3L) % 7L
     return if (raw < 0L) (raw + 7L).toInt() else raw.toInt()
 }
 

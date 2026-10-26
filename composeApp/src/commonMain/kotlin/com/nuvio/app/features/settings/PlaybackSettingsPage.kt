@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MAX
+import com.nuvio.app.features.player.SUBTITLE_SHADOW_STRENGTH_MIN
+import com.nuvio.app.features.player.SubtitleFontRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.PlaybackBufferSettings
 import com.nuvio.app.features.player.playbackHeapBufferMaxMb
@@ -67,6 +71,7 @@ import com.nuvio.app.features.player.VodCacheSizing
 import com.nuvio.app.features.player.exoNativeMemoryInfo
 import com.nuvio.app.features.player.isExoNativeMemorySupported
 import com.nuvio.app.features.player.playbackCacheUsableSpaceBytes
+import com.nuvio.app.features.player.PlayerSkipSecondsOptions
 import com.nuvio.app.features.player.AndroidPlaybackEngine
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.AvailableLanguageOptions
@@ -98,7 +103,9 @@ import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
 import com.nuvio.app.isIos
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -126,6 +133,7 @@ internal fun LazyListScope.playbackSettingsContent(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
 ) {
     item {
         PlaybackSettingsSection(
@@ -149,6 +157,7 @@ internal fun LazyListScope.playbackSettingsContent(
             tunnelingEnabled = tunnelingEnabled,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
+            libassRenderScale = libassRenderScale,
         )
     }
 }
@@ -344,6 +353,7 @@ private fun PlaybackSettingsSection(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    libassRenderScale: String,
 ) {
     var showPreferredAudioDialog by remember { mutableStateOf(false) }
     var showAutoSkipSegmentDialog by remember { mutableStateOf(false) }
@@ -353,18 +363,24 @@ private fun PlaybackSettingsSection(
     var showSubtitleTextColorDialog by remember { mutableStateOf(false) }
     var showSubtitleBackgroundColorDialog by remember { mutableStateOf(false) }
     var showSubtitleOutlineColorDialog by remember { mutableStateOf(false) }
+    var showSubtitleFontDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) { SubtitleFontRepository.ensureLoaded() }
+    }
+    val subtitleFonts by SubtitleFontRepository.fonts.collectAsState()
     var showExternalPlayerDialog by remember { mutableStateOf(false) }
     var showExternalPlayerAppDialog by remember { mutableStateOf(false) }
     var showReuseCacheDurationDialog by remember { mutableStateOf(false) }
     var showPlaybackEngineDialog by remember { mutableStateOf(false) }
     var showLibmpvVideoOutputDialog by remember { mutableStateOf(false) }
+    var showLibassRenderScaleDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showHoldToSpeedValueDialog by remember { mutableStateOf(false) }
+    var skipDirectionDialog by remember { mutableStateOf<Boolean?>(null) } // true = forward
     var showIosAudioOutputDialog by remember { mutableStateOf(false) }
     var showIosHardwareDecoderDialog by remember { mutableStateOf(false) }
     var showIosTargetPrimariesDialog by remember { mutableStateOf(false) }
     var showIosTargetTransferDialog by remember { mutableStateOf(false) }
-    var showLibassRenderTypeDialog by remember { mutableStateOf(false) }
     var showAutoPlayModeDialog by remember { mutableStateOf(false) }
     var showAutoPlaySourceDialog by remember { mutableStateOf(false) }
     var showAutoPlayAddonSelectionDialog by remember { mutableStateOf(false) }
@@ -571,6 +587,28 @@ private fun PlaybackSettingsSection(
                         onClick = { showHoldToSpeedValueDialog = true },
                     )
                 }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_skip_backward),
+                    description = stringResource(
+                        Res.string.settings_playback_skip_seconds_value,
+                        autoPlayPlayerSettings.skipBackwardSeconds,
+                    ),
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onClick = { skipDirectionDialog = false },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_skip_forward),
+                    description = stringResource(
+                        Res.string.settings_playback_skip_seconds_value,
+                        autoPlayPlayerSettings.skipForwardSeconds,
+                    ),
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    isTablet = isTablet,
+                    onClick = { skipDirectionDialog = true },
+                )
             }
         }
 
@@ -635,7 +673,7 @@ private fun PlaybackSettingsSection(
                     SettingsGroupDivider(isTablet = isTablet)
                     AutoSyncPlaybackSettingsRows( // AutoSync hook
                         isTablet = isTablet,
-                        enabled = otherSubtitleOptionsEnabled && androidPlaybackEngine != AndroidPlaybackEngine.Libmpv,
+                        enabled = otherSubtitleOptionsEnabled,
                         preferredSubtitleLanguage = preferredSubtitleLanguage,
                     )
                 }
@@ -744,6 +782,15 @@ private fun PlaybackSettingsSection(
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_font),
+                    description = subtitleFonts.firstOrNull { it.fileName == subtitleStyle.customFontFile }?.familyName
+                        ?: stringResource(Res.string.settings_playback_subtitle_font_default),
+                    enabled = subtitleRenderingEnabled,
+                    isTablet = isTablet,
+                    onClick = { showSubtitleFontDialog = true },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_subtitle_text_color),
                     value = subtitleColorLabel(subtitleStyle.textColor),
                     enabled = subtitleRenderingEnabled,
@@ -779,6 +826,32 @@ private fun PlaybackSettingsSection(
                         onClick = { showSubtitleOutlineColorDialog = true },
                     )
                 }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_shadow),
+                    description = stringResource(Res.string.settings_playback_subtitle_shadow_description),
+                    checked = subtitleStyle.shadowEnabled,
+                    enabled = subtitleRenderingEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowEnabled = enabled))
+                    },
+                )
+                if (subtitleStyle.shadowEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSliderRow(
+                        title = stringResource(Res.string.settings_playback_subtitle_shadow_strength),
+                        value = subtitleStyle.shadowStrength,
+                        formatValue = { it.toString() },
+                        valueRange = SUBTITLE_SHADOW_STRENGTH_MIN..SUBTITLE_SHADOW_STRENGTH_MAX,
+                        step = 1,
+                        isTablet = isTablet,
+                        enabled = subtitleRenderingEnabled,
+                        onValueChange = { value ->
+                            PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(shadowStrength = value))
+                        },
+                    )
+                }
                 val showLibassSettings = !isIos && androidPlaybackEngine != AndroidPlaybackEngine.Libmpv
                 if (showLibassSettings) {
                     SettingsGroupDivider(isTablet = isTablet)
@@ -793,11 +866,11 @@ private fun PlaybackSettingsSection(
                     if (useLibass) {
                         SettingsGroupDivider(isTablet = isTablet)
                         SettingsNavigationRow(
-                            title = stringResource(Res.string.settings_playback_render_type),
-                            value = libassRenderTypeLabel(libassRenderType),
+                            title = stringResource(Res.string.settings_playback_render_scale),
+                            value = libassRenderScale,
                             enabled = subtitleRenderingEnabled,
                             isTablet = isTablet,
-                            onClick = { showLibassRenderTypeDialog = true },
+                            onClick = { showLibassRenderScaleDialog = true },
                         )
                     }
                     SettingsGroupDivider(isTablet = isTablet)
@@ -1814,6 +1887,18 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    if (showSubtitleFontDialog) {
+        SubtitleFontDialog(
+            selectedFontFile = autoPlayPlayerSettings.subtitleStyle.customFontFile,
+            onFontSelected = { fileName ->
+                PlayerSettingsRepository.setSubtitleStyle(
+                    PlayerSettingsRepository.uiState.value.subtitleStyle.copy(customFontFile = fileName),
+                )
+            },
+            onDismiss = { showSubtitleFontDialog = false },
+        )
+    }
+
     if (showSubtitleOutlineColorDialog) {
         SubtitleColorDialog(
             title = stringResource(Res.string.settings_playback_subtitle_outline_color),
@@ -1908,6 +1993,28 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    skipDirectionDialog?.let { forward ->
+        SkipSecondsDialog(
+            title = stringResource(
+                if (forward) Res.string.settings_playback_skip_forward else Res.string.settings_playback_skip_backward,
+            ),
+            selectedSeconds = if (forward) {
+                autoPlayPlayerSettings.skipForwardSeconds
+            } else {
+                autoPlayPlayerSettings.skipBackwardSeconds
+            },
+            onSelected = { seconds ->
+                if (forward) {
+                    PlayerSettingsRepository.setSkipForwardSeconds(seconds)
+                } else {
+                    PlayerSettingsRepository.setSkipBackwardSeconds(seconds)
+                }
+                skipDirectionDialog = null
+            },
+            onDismiss = { skipDirectionDialog = null },
+        )
+    }
+
     if (showHoldToSpeedValueDialog) {
         HoldToSpeedValueDialog(
             selectedSpeed = holdToSpeedValue,
@@ -1982,14 +2089,14 @@ private fun PlaybackSettingsSection(
         )
     }
 
-    if (showLibassRenderTypeDialog) {
-        LibassRenderTypeDialog(
-            selectedRenderType = libassRenderType,
-            onRenderTypeSelected = { renderType ->
-                PlayerSettingsRepository.setLibassRenderType(renderType)
-                showLibassRenderTypeDialog = false
+    if (showLibassRenderScaleDialog) {
+        LibassRenderScaleDialog(
+            selectedScale = libassRenderScale,
+            onScaleSelected = { scale ->
+                PlayerSettingsRepository.setLibassRenderScale(scale)
+                showLibassRenderScaleDialog = false
             },
-            onDismiss = { showLibassRenderTypeDialog = false },
+            onDismiss = { showLibassRenderScaleDialog = false },
         )
     }
 
@@ -2402,33 +2509,33 @@ private fun HoldToSpeedValueDialog(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun LibassRenderTypeDialog(
-    selectedRenderType: String,
-    onRenderTypeSelected: (String) -> Unit,
+private fun LibassRenderScaleDialog(
+    selectedScale: String,
+    onScaleSelected: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val options = listOf(
-        "OVERLAY_OPEN_GL" to Res.string.settings_playback_render_type_overlay_opengl,
-        "OVERLAY_CANVAS" to Res.string.settings_playback_render_type_overlay_canvas,
-        "EFFECTS_OPEN_GL" to Res.string.settings_playback_render_type_effects_opengl,
-        "EFFECTS_CANVAS" to Res.string.settings_playback_render_type_effects_canvas,
-        "CUES" to Res.string.settings_playback_render_type_cues,
+        "FULL" to "1:1",
+        "THREE_QUARTER" to "\u00BE",
+        "HALF" to "\u00BD",
+        "THIRD" to "\u2153",
+        "QUARTER" to "\u00BC",
     )
 
     DialogSurface(
         onDismissRequest = onDismiss,
-        title = stringResource(Res.string.settings_playback_render_type),
+        title = stringResource(Res.string.settings_playback_render_scale),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            options.forEach { (value, labelRes) ->
-                val isSelected = value == selectedRenderType
+            options.forEach { (value, label) ->
+                val isSelected = value == selectedScale
                 DialogOption(
-                    text = stringResource(labelRes),
+                    text = label,
                     selected = isSelected,
-                    onClick = { onRenderTypeSelected(value) },
+                    onClick = { onScaleSelected(value) },
                 )
             }
         }
@@ -3177,14 +3284,35 @@ private val com.nuvio.app.features.player.skip.NextEpisodeThresholdMode.labelRes
             Res.string.settings_playback_threshold_mode_minutes_before_end
     }
 
-private fun libassRenderTypeRes(renderType: String): StringResource = when (renderType) {
-    "OVERLAY_OPEN_GL" -> Res.string.settings_playback_render_type_overlay_opengl
-    "OVERLAY_CANVAS" -> Res.string.settings_playback_render_type_overlay_canvas
-    "EFFECTS_OPEN_GL" -> Res.string.settings_playback_render_type_effects_opengl
-    "EFFECTS_CANVAS" -> Res.string.settings_playback_render_type_effects_canvas
-    "CUES" -> Res.string.settings_playback_render_type_cues
-    else -> Res.string.settings_playback_render_type_cues
-}
-
 @Composable
-private fun libassRenderTypeLabel(renderType: String): String = stringResource(libassRenderTypeRes(renderType))
+private fun SkipSecondsDialog(
+    title: String,
+    selectedSeconds: Int,
+    onSelected: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    DialogSurface(
+        onDismissRequest = onDismiss,
+        title = title,
+        message = stringResource(Res.string.settings_playback_skip_description),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PlayerSkipSecondsOptions.forEach { seconds ->
+                DialogOption(
+                    text = stringResource(Res.string.settings_playback_skip_seconds_value, seconds),
+                    selected = seconds == selectedSeconds,
+                    onClick = { onSelected(seconds) },
+                )
+            }
+        }
+        DialogButtons {
+            DialogButton(
+                text = stringResource(Res.string.action_cancel),
+                onClick = onDismiss,
+            )
+        }
+    }
+}

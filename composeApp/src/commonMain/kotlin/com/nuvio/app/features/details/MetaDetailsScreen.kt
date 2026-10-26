@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -82,6 +83,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -103,6 +106,8 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioBackButton
+import com.nuvio.app.core.ui.LocalVerticalBarPadding
+import com.nuvio.app.core.ui.verticalBarWidth
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
@@ -124,6 +129,8 @@ import com.nuvio.app.features.details.components.CommentDetailSheet
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
 import com.nuvio.app.features.details.components.DetailCastSection
 import com.nuvio.app.features.details.components.DetailCommentsSection
+import com.nuvio.app.features.details.components.DetailEpisodeRatingMap
+import com.nuvio.app.features.details.components.hasEpisodeRatingMap
 import com.nuvio.app.features.details.components.DetailFloatingHeader
 import com.nuvio.app.features.details.components.DetailHero
 import com.nuvio.app.features.details.components.DetailMetaInfo
@@ -1222,7 +1229,10 @@ fun MetaDetailsScreen(
                             !isLeavingDetails &&
                             !isHeroCollapsed.value
                     }
-                    val onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { _, _ -> }
+                    var heroBackdropPainter by remember(backdropUrl) { mutableStateOf<Painter?>(null) }
+                    val onBackdropLoaded: (Painter, ImageBitmap?) -> Unit = { painter, _ ->
+                        heroBackdropPainter = painter
+                    }
                     val onHeroTrailerReady: () -> Unit = {
                         if (!heroTrailerFinished) {
                             heroTrailerReady = true
@@ -1256,15 +1266,26 @@ fun MetaDetailsScreen(
                                 )
                             } else when (backgroundMode) {
                                 MetaScreenBackgroundMode.Normal -> Unit
-                                MetaScreenBackgroundMode.Cinematic -> if (deferredMetaWorkAllowed && backdropUrl != null) {
-                                    AsyncImage(
-                                        model = backdropUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .blur(30.dp),
-                                        contentScale = ContentScale.Crop,
-                                    )
+                                MetaScreenBackgroundMode.Cinematic -> if (backdropUrl != null) {
+                                    val cinematicModifier = Modifier
+                                        .fillMaxSize()
+                                        .blur(30.dp)
+                                    val heroPainter = heroBackdropPainter
+                                    if (heroPainter != null) {
+                                        Image(
+                                            painter = heroPainter,
+                                            contentDescription = null,
+                                            modifier = cinematicModifier,
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    } else if (deferredMetaWorkAllowed) {
+                                        AsyncImage(
+                                            model = backdropUrl,
+                                            contentDescription = null,
+                                            modifier = cinematicModifier,
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    }
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -1462,12 +1483,48 @@ fun MetaDetailsScreen(
                                     stickyBackground = heroGradientColor ?: colorScheme.background,
                                 )
 
+                                if (
+                                    metaScreenSettingsUiState.showRatingMap &&
+                                    metaScreenSettingsUiState.episodeRatingsVisibility.showRatings &&
+                                    hasEpisodes &&
+                                    meta.hasEpisodeRatingMap()
+                                ) {
+                                    item(key = "detail-rating-map") {
+                                        val ratingMapWatchedKeys = watchedUiState.watchedKeys
+                                        val isRatingMapEpisodeWatched = remember(meta, ratingMapWatchedKeys, progressByVideoId) {
+                                            { episode: MetaVideo ->
+                                                isEpisodeWatchedForActions(
+                                                    meta = meta,
+                                                    episode = episode,
+                                                    watchedKeys = ratingMapWatchedKeys,
+                                                    progressByVideoId = progressByVideoId,
+                                                )
+                                            }
+                                        }
+                                        DetailSectionContainer(
+                                            horizontalPadding = contentHorizontalPadding,
+                                            contentMaxWidth = if (isTablet && !useTabletLayout) contentMaxWidth else Dp.Unspecified,
+                                        ) {
+                                            DetailEpisodeRatingMap(
+                                                meta = meta,
+                                                episodeRatingsVisibility = metaScreenSettingsUiState.episodeRatingsVisibility,
+                                                isEpisodeWatched = isRatingMapEpisodeWatched,
+                                                onEpisodeClick = onEpisodePlayClick,
+                                                onEpisodeLongPress = { video ->
+                                                    selectedEpisodeZoomAnchor = null
+                                                    selectedEpisodeForActions = video
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
                                 item(key = "detail-bottom-spacer") {
                                     Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(32.dp)))
                                 }
                             }
 
-                            if (!useTabletLayout && backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx.intValue > 0) {
+                            if (!useTabletLayout && backgroundMode.usesBackdropBackground && heroHeightPx.intValue > 0) {
                                 val blendColor = dominantBackdropColor.takeIf { dominantColorEnabled }
                                     ?: colorScheme.background
                                 Box(
@@ -2089,6 +2146,7 @@ private fun DetailHeaderOverlay(
         NuvioBackButton(
             onClick = onBack,
             modifier = Modifier
+                .padding(LocalVerticalBarPadding.current)
                 .padding(
                     start = 12.dp,
                     top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
@@ -2099,16 +2157,18 @@ private fun DetailHeaderOverlay(
         )
     }
 
-    DetailFloatingHeader(
-        meta = meta,
-        isSaved = isSaved,
-        progress = headerProgress,
-        backgroundColor = backgroundColor,
-        onBack = onBack,
-        onToggleSaved = onToggleSaved,
-        onRecommend = onRecommend,
-        modifier = Modifier.zIndex(2f),
-    )
+    if (verticalBarWidth() == 0.dp) {
+        DetailFloatingHeader(
+            meta = meta,
+            isSaved = isSaved,
+            progress = headerProgress,
+            backgroundColor = backgroundColor,
+            onBack = onBack,
+            onToggleSaved = onToggleSaved,
+            onRecommend = onRecommend,
+            modifier = Modifier.zIndex(2f),
+        )
+    }
 }
 
 private const val RATING_SHEET_OPEN_DELAY_MS = 350L
@@ -2419,7 +2479,7 @@ private fun DetailSectionContainer(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            content()
+            CompositionLocalProvider(LocalVerticalBarPadding provides PaddingValues(), content)
         }
     }
 }

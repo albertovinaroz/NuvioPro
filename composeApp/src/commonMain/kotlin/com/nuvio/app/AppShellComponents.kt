@@ -660,7 +660,7 @@ internal fun AppLoadingContent(
 }
 
 @Composable
-private fun AppLoadingProfileAvatar(
+internal fun AppLoadingProfileAvatar(
     profile: NuvioProfile,
     modifier: Modifier = Modifier,
 ) {

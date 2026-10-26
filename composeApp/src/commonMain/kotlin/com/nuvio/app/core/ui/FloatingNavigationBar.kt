@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
@@ -75,6 +76,9 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.DrawableResource
+import androidx.compose.runtime.mutableIntStateOf
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectSettings
 
 internal class FloatingNavigationItem(
     val label: String,
@@ -82,7 +86,7 @@ internal class FloatingNavigationItem(
     val onClick: () -> Unit,
     val icon: ImageVector? = null,
     val drawable: DrawableResource? = null,
-    val content: (@Composable (onClick: () -> Unit) -> Unit)? = null,
+    val content: (@Composable (onClick: () -> Unit, defaultIconColorOverride: Color?) -> Unit)? = null,
     /** Unselected look; the filled [icon]/[drawable] shows only under the selection pill. */
     val outlineIcon: ImageVector? = null,
     val outlineDrawable: DrawableResource? = null,
@@ -138,6 +142,11 @@ internal fun FloatingNavigationBar(
     nativeBackdrop: Boolean = false,
     onGlassBoundsChanged: ((Rect) -> Unit)? = null,
     glassStyle: LiquidGlassStyle = LiquidGlassStyle.Default,
+    liquidGlassBarEffects: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.floatingBar,
+    liquidGlassSelectionEffects: LiquidGlassEffectSettings = LiquidGlassEffectDefaults.selectionLens,
+    defaultIconColorOverride: Color? = null,
+    scrollBounceTrigger: Int = 0,
+    scrollBounceDirection: Float = 0f,
 ) {
     if (items.isEmpty()) return
     val showGlow = !floatingNavigationGlowSupported || glowEnabled
@@ -179,9 +188,23 @@ internal fun FloatingNavigationBar(
             JellyMotion(visualSelectedIndex, items.size)
         }
     }
+    val lastScrollBounceTrigger = remember(motion) { mutableIntStateOf(scrollBounceTrigger) }
+    LaunchedEffect(motion, scrollBounceTrigger) {
+        if (scrollBounceTrigger == lastScrollBounceTrigger.intValue) return@LaunchedEffect
+        lastScrollBounceTrigger.intValue = scrollBounceTrigger
+        motion.bounce(scrollBounceDirection)
+    }
     // Not state: only the draw pass that reports the glass bounds reads it.
     val glassCoordinates = remember { object { var value: LayoutCoordinates? = null } }
     val barBackdrop = rememberLayerBackdrop()
+    val floatingBarEffects = liquidGlassBarEffects.sanitized(
+        LiquidGlassEffectDefaults.floatingBar,
+        LiquidGlassEffectDefaults.floatingBarLimits,
+    ).forNavigationMaterial(glassStyle, glassStyle.usesLens && isLiquidRefractionSupported())
+    val selectionLensEffects = liquidGlassSelectionEffects.sanitized(
+        LiquidGlassEffectDefaults.selectionLens,
+        LiquidGlassEffectDefaults.selectionLensLimits,
+    )
     val selectionLensActive = backdrop != null &&
         selectedIndex >= 0 &&
         glassStyle.usesBackdrop &&
@@ -301,6 +324,7 @@ internal fun FloatingNavigationBar(
                                 backdrop = backdrop,
                                 modifier = Modifier.matchParentSize(),
                                 style = glassStyle,
+                                settings = floatingBarEffects,
                                 exportedBackdrop = if (selectionLensActive) barBackdrop else null,
                             )
                         }
@@ -333,6 +357,7 @@ internal fun FloatingNavigationBar(
                                 motion = motion,
                                 count = items.size,
                                 style = glassStyle,
+                                settings = selectionLensEffects,
                                 modifier = Modifier.matchParentSize(),
                             )
                         }
@@ -347,7 +372,7 @@ internal fun FloatingNavigationBar(
                                 }
                             },
                         ) {
-                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize(), inlineLabels = inlineLabels)
+                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize(), inlineLabels = inlineLabels, inactiveColorOverride = defaultIconColorOverride)
                         }
                         if (selectedIndex >= 0) {
                             Box(
@@ -383,6 +408,7 @@ private fun JellySelectionLens(
     motion: JellyMotion,
     count: Int,
     style: LiquidGlassStyle,
+    settings: LiquidGlassEffectSettings,
     modifier: Modifier,
 ) {
     Box(
@@ -412,7 +438,7 @@ private fun JellySelectionLens(
                         refractionHeight = size.minDimension * 0.3f,
                         refractionAmount = size.minDimension * 0.5f,
                         depthEffect = true,
-                        chromaticAberration = style.chromaticAberration,
+                        chromaticAberration = settings.chromaticAberration,
                     )
                 },
                 highlight = if (style.edgeHighlight) SelectionLensHighlight else null,
@@ -422,11 +448,67 @@ private fun JellySelectionLens(
     )
 }
 
+internal data class NavigationGlassMode(
+    val bar: Boolean,
+    val barRefraction: Boolean,
+    val selectionLens: Boolean,
+)
+
+/**
+ * The material is the only nav bar switch: SOLID (or the app-wide glass toggle being off, or no
+ * RenderEffect) draws the solid pill. Lens refraction needs RuntimeShader (Android 13+); below
+ * that the bar keeps its blur and the selected tab falls back to the solid jelly pill.
+ */
+internal fun resolveNavigationGlass(
+    style: LiquidGlassStyle,
+    hasBackdrop: Boolean,
+    hasSelection: Boolean,
+    glassSupported: Boolean,
+    refractionSupported: Boolean,
+): NavigationGlassMode {
+    val bar = hasBackdrop && style.usesBackdrop && glassSupported
+    return NavigationGlassMode(
+        bar = bar,
+        barRefraction = bar && style.usesLens && refractionSupported,
+        selectionLens = bar && refractionSupported && style.selectionLens && hasSelection,
+    )
+}
+
+internal fun LiquidGlassEffectSettings.forNavigationMaterial(
+    style: LiquidGlassStyle,
+    refraction: Boolean,
+): LiquidGlassEffectSettings = copy(
+    blurRadiusDp = if (style.usesBlur) blurRadiusDp else 0f,
+    refractionHeightDp = if (refraction) refractionHeightDp else 0f,
+    refractionAmountDp = if (refraction) refractionAmountDp else 0f,
+)
+
 internal fun visualNavIndex(logicalIndex: Int, count: Int, isRtl: Boolean): Int =
     if (logicalIndex in 0 until count && isRtl) count - 1 - logicalIndex else logicalIndex
 
 internal fun logicalNavIndex(visualIndex: Int, count: Int, isRtl: Boolean): Int =
     if (visualIndex in 0 until count && isRtl) count - 1 - visualIndex else visualIndex
+
+/**
+ * Converts the selected visual slot into an offset from Box's logical-start alignment.
+ * That alignment is left in LTR and right in RTL, so the physical translation must mirror.
+ */
+/**
+ * Converts a selected visual slot to an offset local to the already translated navigation row.
+ * JellyMotion's physical panelOffset is applied once by the shared parent graphics layer; applying
+ * it here as well would make the selected lens drift twice as far as the visible tabs.
+ */
+internal fun liquidGlassSelectionTranslationX(
+    position: Float,
+    count: Int,
+    tabWidthPx: Float,
+    insetPx: Float,
+    isRtl: Boolean,
+): Float = if (isRtl) {
+    -insetPx - tabWidthPx * (count - 1 - position)
+} else {
+    insetPx + tabWidthPx * position
+}
 
 internal suspend fun PointerInputScope.detectJellyTabGestures(
     motion: JellyMotion,
