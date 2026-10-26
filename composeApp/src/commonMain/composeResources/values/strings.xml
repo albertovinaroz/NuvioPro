@@ -1630,7 +1630,6 @@
     <string name="settings_simkl_visit">Visit Simkl</string>
     <string name="settings_wetrakr_description">Scrobble what you watch to WeTrakr, straight from Nuvio. Support is on the way once WeTrakr's API opens up.</string>
     <string name="settings_wetrakr_coming_soon">Coming soon</string>
-    <string name="settings_wetrakr_visit">Visit WeTrakr</string>
     <string name="settings_simkl_invalid_callback">Simkl did not accept the sign-in callback. Please try again.</string>
     <string name="settings_simkl_authorization_expired">Simkl code expired. Start again.</string>
     <string name="settings_simkl_sign_in_failed">Could not complete Simkl sign in. Please try again.</string>
