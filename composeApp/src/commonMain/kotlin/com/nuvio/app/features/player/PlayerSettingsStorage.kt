@@ -27,6 +27,8 @@ internal expect object PlayerSettingsStorage {
     fun saveSkipBackwardSeconds(seconds: Int)
     fun loadSkipForwardSeconds(): Int?
     fun saveSkipForwardSeconds(seconds: Int)
+    fun loadToolbarLayout(): String?
+    fun saveToolbarLayout(layout: String)
     fun loadTouchGesturesEnabled(): Boolean?
     fun saveTouchGesturesEnabled(enabled: Boolean)
     fun loadSwipeToSeekEnabled(): Boolean?
@@ -94,7 +96,9 @@ internal expect object PlayerSettingsStorage {
     fun loadAndroidLibmpvHardwareDecodingEnabled(): Boolean?
     fun saveAndroidLibmpvHardwareDecodingEnabled(enabled: Boolean)
     fun loadAndroidLibmpvYuv420pEnabled(): Boolean?
+    fun loadAndroidExoChaptersEnabled(): Boolean?
     fun saveAndroidLibmpvYuv420pEnabled(enabled: Boolean)
+    fun saveAndroidExoChaptersEnabled(enabled: Boolean)
     fun loadDecoderPriority(): Int?
     fun saveDecoderPriority(priority: Int)
     fun loadMapDV7ToHevc(): Boolean?

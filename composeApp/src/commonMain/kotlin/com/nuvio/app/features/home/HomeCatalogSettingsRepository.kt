@@ -251,7 +251,6 @@ object HomeCatalogSettingsRepository {
             return
         }
         normalizePreferences()
-        enforcePinnedCollectionsAtTop()
         publish()
         persist()
     }
@@ -266,7 +265,6 @@ object HomeCatalogSettingsRepository {
         }
         lastCollectionSync = syncInput
         normalizePreferences()
-        enforcePinnedCollectionsAtTop()
         publish()
         persist()
         HomeRepository.applyCurrentSettings()
@@ -382,7 +380,7 @@ object HomeCatalogSettingsRepository {
     }
 
     fun setHeroSourceEnabled(key: String, enabled: Boolean) {
-        updatePreference(key, pushRemote = false) { preference ->
+        updatePreference(key, pushRemote = false, heroSourcesChanged = true) { preference ->
             if (!enabled) {
                 preference.copy(heroSourceEnabled = false)
             } else if (selectedHeroSourceCount(excludingKey = key) >= HERO_SOURCE_SELECTION_LIMIT) {
@@ -471,6 +469,7 @@ object HomeCatalogSettingsRepository {
             updatedPreferences[itemKey] = current.copy(order = index)
         }
         preferences = updatedPreferences
+        enforcePinnedCollectionsAtTop()
         publish()
         persist()
         HomeRepository.applyCurrentSettings()
@@ -563,6 +562,7 @@ object HomeCatalogSettingsRepository {
             )
         }
         preferences = normalized.toMap()
+        enforcePinnedCollectionsAtTop()
     }
 
     private fun publish() {
@@ -639,6 +639,7 @@ object HomeCatalogSettingsRepository {
     private fun updatePreference(
         key: String,
         pushRemote: Boolean = true,
+        heroSourcesChanged: Boolean = false,
         transform: (StoredHomeCatalogPreference) -> StoredHomeCatalogPreference,
     ) {
         ensureLoaded()
@@ -648,7 +649,7 @@ object HomeCatalogSettingsRepository {
         preferences = preferences + (key to updated)
         publish()
         persist()
-        HomeRepository.applyCurrentSettings()
+        HomeRepository.applyCurrentSettings(heroSourcesChanged = heroSourcesChanged)
         if (pushRemote) {
             HomeCatalogSettingsSyncService.triggerPush()
         }
@@ -684,6 +685,7 @@ object HomeCatalogSettingsRepository {
             updatedPreferences[itemKey] = current.copy(order = index)
         }
         preferences = updatedPreferences
+        enforcePinnedCollectionsAtTop()
 
         publish()
         persist()

@@ -461,6 +461,10 @@
     <string name="compose_player_shadow_strength">Shadow Strength</string>
     <string name="compose_player_panel_episodes">Episodes</string>
     <string name="compose_player_panel_sources">Sources</string>
+    <string name="compose_player_chapters">Chapters</string>
+    <string name="compose_player_panel_chapters">Chapters (%1$d)</string>
+    <string name="compose_player_chapter_number">Chapter %1$d</string>
+    <string name="compose_player_chapter_remaining">%1$s left</string>
     <string name="compose_player_panel_streams">Streams</string>
     <string name="compose_player_playback_error">Playback error</string>
     <string name="compose_player_playing">Playing</string>
@@ -1511,6 +1515,8 @@
     <string name="settings_playback_vod_cache_size">VOD Cache Size</string>
     <string name="settings_playback_vod_cache_size_value">%1$d MB</string>
     <string name="settings_playback_vod_cache_warning">Disk writes continue while a cached stream plays. A new size applies the next time the app starts.</string>
+    <string name="settings_playback_exo_chapters">Show Chapters</string>
+    <string name="settings_playback_exo_chapters_description">Mark chapters on the progress bar and list them in the player. With ExoPlayer this makes a few small extra requests once playback starts to read MKV and MP4 chapters.</string>
     <string name="settings_tmdb_api_key_label">API key</string>
     <string name="settings_tmdb_api_key_override_description">Use your own TMDB API key, or leave blank to use the default.</string>
     <string name="settings_tmdb_personal_api_key">Personal API key</string>
@@ -1547,6 +1553,8 @@
     <string name="settings_tmdb_module_trailers_description">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="settings_tmdb_preferred_language">Language</string>
     <string name="settings_tmdb_preferred_language_description">TMDB metadata language for title, logo, and enabled fields</string>
+    <string name="settings_tmdb_original_title_language">Original language</string>
+    <string name="settings_tmdb_original_title_language_description">Show titles, title logos, posters, and backdrops in their original language. Falls back to the language above when unavailable.</string>
     <string name="settings_tmdb_section_localization">LOCALIZATION</string>
     <string name="settings_tmdb_section_modules">MODULES</string>
     <string name="settings_tmdb_section_title">TMDB ENRICHMENT</string>
@@ -2979,4 +2987,16 @@
     <string name="settings_advanced_dns_doh_format">%1$s (DNS over HTTPS)</string>
     <string name="settings_advanced_dns_note">Used for all of Nuvio's connections on this device: addons, metadata, images, sync, trackers and the ExoPlayer engine. Your phone's DNS stays the same for other apps. The libmpv engine and web sign-in pages still use the system DNS.</string>
     <string name="compose_player_ends_at">Ends at %1$s</string>
+    <string name="settings_playback_toolbar_layout">Player buttons</string>
+    <string name="settings_playback_toolbar_layout_description">Choose which buttons stay on the bar, which sit behind the arrow, and their order.</string>
+    <string name="settings_playback_toolbar_shown">Always shown</string>
+    <string name="settings_playback_toolbar_hidden">Behind the arrow</string>
+    <string name="settings_playback_toolbar_empty">No buttons here.</string>
+    <string name="settings_playback_toolbar_move_up">Move up</string>
+    <string name="settings_playback_toolbar_move_down">Move down</string>
+    <string name="settings_playback_toolbar_hide">Move behind the arrow</string>
+    <string name="settings_playback_toolbar_show">Always show</string>
+    <string name="settings_playback_toolbar_note">Buttons that do not apply to the current video, such as Next Episode on a movie, are skipped.</string>
+    <string name="player_toolbar_button_resize">Resize</string>
+    <string name="player_toolbar_button_quality">Quality</string>
 </resources>

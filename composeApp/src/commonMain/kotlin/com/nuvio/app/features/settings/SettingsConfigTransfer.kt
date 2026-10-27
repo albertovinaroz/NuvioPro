@@ -696,6 +696,7 @@ internal object SettingsConfigTransfer {
         PlayerSettingsStorage.loadHoldToSpeedEnabled()?.let { put("hold_to_speed_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadHoldToSpeedValue()?.let { put("hold_to_speed_value", encodeSyncFloat(it)) }
         PlayerSettingsStorage.loadSkipBackwardSeconds()?.let { put("skip_backward_seconds", encodeSyncInt(it)) }
+        PlayerSettingsStorage.loadToolbarLayout()?.let { put("player_toolbar_layout", encodeSyncString(it)) }
         PlayerSettingsStorage.loadSkipForwardSeconds()?.let { put("skip_forward_seconds", encodeSyncInt(it)) }
         PlayerSettingsStorage.loadTouchGesturesEnabled()?.let { put("touch_gestures_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadSwipeToSeekEnabled()?.let { put("swipe_to_seek_enabled", encodeSyncBoolean(it)) }
@@ -799,6 +800,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncBoolean("hold_to_speed_enabled")?.let { PlayerSettingsStorage.saveHoldToSpeedEnabled(it) }
         payload.decodeSyncFloat("hold_to_speed_value")?.let { PlayerSettingsStorage.saveHoldToSpeedValue(it) }
         payload.decodeSyncInt("skip_backward_seconds")?.let { PlayerSettingsStorage.saveSkipBackwardSeconds(it) }
+        payload.decodeSyncString("player_toolbar_layout")?.let { PlayerSettingsStorage.saveToolbarLayout(it) }
         payload.decodeSyncInt("skip_forward_seconds")?.let { PlayerSettingsStorage.saveSkipForwardSeconds(it) }
         payload.decodeSyncBoolean("touch_gestures_enabled")?.let { PlayerSettingsStorage.saveTouchGesturesEnabled(it) }
         payload.decodeSyncBoolean("swipe_to_seek_enabled")?.let { PlayerSettingsStorage.saveSwipeToSeekEnabled(it) }
@@ -1010,6 +1012,7 @@ internal object SettingsConfigTransfer {
         TmdbSettingsStorage.loadUseSeasonPosters()?.let { put("use_season_posters", encodeSyncBoolean(it)) }
         TmdbSettingsStorage.loadUseMoreLikeThis()?.let { put("use_more_like_this", encodeSyncBoolean(it)) }
         TmdbSettingsStorage.loadUseCollections()?.let { put("use_collections", encodeSyncBoolean(it)) }
+        TmdbSettingsStorage.loadTitleLanguage()?.let { put("title_language", encodeSyncString(it)) }
     }
 
     private fun importTmdbSettings(payload: JsonObject) {
@@ -1028,6 +1031,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncBoolean("use_season_posters")?.let { TmdbSettingsStorage.saveUseSeasonPosters(it) }
         payload.decodeSyncBoolean("use_more_like_this")?.let { TmdbSettingsStorage.saveUseMoreLikeThis(it) }
         payload.decodeSyncBoolean("use_collections")?.let { TmdbSettingsStorage.saveUseCollections(it) }
+        payload.decodeSyncString("title_language")?.let { TmdbSettingsStorage.saveTitleLanguage(it) }
     }
 
     private fun exportMdbListSettings(includeCredentials: Boolean): JsonObject = buildJsonObject {

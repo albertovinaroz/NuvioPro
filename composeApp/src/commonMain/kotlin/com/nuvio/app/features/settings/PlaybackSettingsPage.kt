@@ -128,6 +128,7 @@ internal fun LazyListScope.playbackSettingsContent(
     androidLibmpvVideoOutput: AndroidLibmpvVideoOutput,
     androidLibmpvHardwareDecodingEnabled: Boolean,
     androidLibmpvYuv420pEnabled: Boolean,
+    androidExoChaptersEnabled: Boolean,
     decoderPriority: Int,
     mapDV7ToHevc: Boolean,
     tunnelingEnabled: Boolean,
@@ -152,6 +153,7 @@ internal fun LazyListScope.playbackSettingsContent(
             androidLibmpvVideoOutput = androidLibmpvVideoOutput,
             androidLibmpvHardwareDecodingEnabled = androidLibmpvHardwareDecodingEnabled,
             androidLibmpvYuv420pEnabled = androidLibmpvYuv420pEnabled,
+            androidExoChaptersEnabled = androidExoChaptersEnabled,
             decoderPriority = decoderPriority,
             mapDV7ToHevc = mapDV7ToHevc,
             tunnelingEnabled = tunnelingEnabled,
@@ -348,6 +350,7 @@ private fun PlaybackSettingsSection(
     androidLibmpvVideoOutput: AndroidLibmpvVideoOutput,
     androidLibmpvHardwareDecodingEnabled: Boolean,
     androidLibmpvYuv420pEnabled: Boolean,
+    androidExoChaptersEnabled: Boolean,
     decoderPriority: Int,
     mapDV7ToHevc: Boolean,
     tunnelingEnabled: Boolean,
@@ -377,6 +380,7 @@ private fun PlaybackSettingsSection(
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showHoldToSpeedValueDialog by remember { mutableStateOf(false) }
     var skipDirectionDialog by remember { mutableStateOf<Boolean?>(null) } // true = forward
+    var showToolbarLayoutDialog by remember { mutableStateOf(false) }
     var showIosAudioOutputDialog by remember { mutableStateOf(false) }
     var showIosHardwareDecoderDialog by remember { mutableStateOf(false) }
     var showIosTargetPrimariesDialog by remember { mutableStateOf(false) }
@@ -429,6 +433,15 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setUseLegacyPlayerLayout,
                 )
+                if (!autoPlayPlayerSettings.useLegacyPlayerLayout) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_toolbar_layout),
+                        description = stringResource(Res.string.settings_playback_toolbar_layout_description),
+                        isTablet = isTablet,
+                        onClick = { showToolbarLayoutDialog = true },
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_show_loading_overlay),
@@ -436,6 +449,14 @@ private fun PlaybackSettingsSection(
                     checked = showLoadingOverlay,
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setShowLoadingOverlay,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_exo_chapters),
+                    description = stringResource(Res.string.settings_playback_exo_chapters_description),
+                    checked = autoPlayPlayerSettings.androidExoChaptersEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setAndroidExoChaptersEnabled,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
@@ -1990,6 +2011,14 @@ private fun PlaybackSettingsSection(
                 showLibmpvVideoOutputDialog = false
             },
             onDismiss = { showLibmpvVideoOutputDialog = false },
+        )
+    }
+
+    if (showToolbarLayoutDialog) {
+        PlayerToolbarSettingsDialog(
+            layout = autoPlayPlayerSettings.toolbarLayout,
+            onLayoutChange = PlayerSettingsRepository::setToolbarLayout,
+            onDismiss = { showToolbarLayoutDialog = false },
         )
     }
 
