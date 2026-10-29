@@ -679,6 +679,7 @@ private fun EpisodeNavigatorStickyBar(
 ) {
     val density = LocalDensity.current
     val floatingHeaderPx = with(density) { detailFloatingHeaderHeight().toPx() }
+    val pinFadePx = with(density) { 12.dp.toPx() }
     var barHeightPx by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
@@ -726,7 +727,17 @@ private fun EpisodeNavigatorStickyBar(
                     ?: Int.MAX_VALUE
                 translationY = (floatingHeaderPx - offset).coerceIn(0f, floatingHeaderPx)
             }
-            .onSizeChanged { barHeightPx = it.height },
+            .onSizeChanged { barHeightPx = it.height }
+            // Transparent in place (no dark band over the cinematic/dominant backdrop), but opaque
+            // once pinned under the floating header so the episodes don't show through it.
+            .drawBehind {
+                val offset = listState.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.key == STICKY_BAR_KEY }
+                    ?.offset
+                    ?: Int.MAX_VALUE
+                val pinned = ((floatingHeaderPx - offset) / pinFadePx).coerceIn(0f, 1f)
+                if (pinned > 0f) drawRect(background, alpha = pinned)
+            },
     ) {
         EpisodeSectionContainer(horizontalPadding, contentMaxWidth, bottom = 0.dp, modifier = Modifier.padding(vertical = 10.dp)) {
             EpisodeNavigatorBar(
